@@ -1,0 +1,120 @@
+// ──────────────────────────────────────────────
+// REX - Workflow Detail / Edit Page (visual editor)
+// ──────────────────────────────────────────────
+
+"use client";
+
+import { useEffect, useState } from "react";
+import { useAuth } from "@/lib/auth-context";
+import { api } from "@/lib/api";
+import type { WorkflowDetail } from "@/lib/api";
+import { useRouter, useParams } from "next/navigation";
+import { WorkflowEditor } from "@/components/workflow-editor";
+import type { CanvasNode, CanvasEdge } from "@/components/workflow-editor";
+
+export default function WorkflowDetailPage() {
+  const { token, loading: authLoading } = useAuth();
+  const [workflow, setWorkflow] = useState<WorkflowDetail | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
+  const router = useRouter();
+  const params = useParams();
+  const workflowId = params.id as string;
+
+  useEffect(() => {
+    if (authLoading) return;
+    if (!token) {
+      router.push("/login");
+      return;
+    }
+    loadWorkflow();
+  }, [authLoading, token, workflowId]);
+
+  async function loadWorkflow() {
+    if (!token) return;
+    try {
+      const res = await api.workflows.get(token, workflowId);
+      setWorkflow(res.data);
+    } catch {
+      router.push("/dashboard");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleSave(data: {
+    name: string;
+    description: string;
+    nodes: CanvasNode[];
+    edges: CanvasEdge[];
+  }) {
+    if (!token) return;
+    setSaving(true);
+    setSaveStatus("saving");
+
+    try {
+      await api.workflows.update(token, workflowId, {
+        name: data.name.trim(),
+        description: data.description.trim(),
+        nodes: data.nodes.map((n) => ({
+          id: n.id,
+          type: n.type,
+          label: n.label,
+          position: n.position,
+          config: n.config,
+        })),
+        edges: data.edges.map((e) => ({
+          id: e.id,
+          source: e.source,
+          target: e.target,
+        })),
+      });
+      setSaveStatus("saved");
+      setTimeout(() => setSaveStatus("idle"), 2000);
+    } catch {
+      setSaveStatus("error");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleExecute() {
+    if (!token) return;
+    setSaveStatus("saving");
+    try {
+      await api.workflows.execute(token, workflowId, {});
+      setSaveStatus("saved");
+      setTimeout(() => setSaveStatus("idle"), 2000);
+    } catch {
+      setSaveStatus("error");
+    }
+  }
+
+  if (authLoading || loading || !workflow) return null;
+
+  return (
+    <WorkflowEditor
+      initialNodes={workflow.nodes.map((n) => ({
+        id: n.id,
+        type: n.type,
+        label: n.label || n.type,
+        position: n.position ?? { x: 100, y: 100 },
+        config: n.config ?? {},
+      }))}
+      initialEdges={workflow.edges.map((e) => ({
+        id: e.id,
+        source: e.source,
+        target: e.target,
+      }))}
+      workflowName={workflow.name}
+      workflowDescription={workflow.description}
+      saving={saving}
+      saveStatus={saveStatus}
+      onSave={handleSave}
+      onExecute={handleExecute}
+      onBack={() => router.push("/dashboard")}
+      showExecute
+    />
+  );
+}
