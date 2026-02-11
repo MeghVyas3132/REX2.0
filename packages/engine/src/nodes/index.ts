@@ -17,6 +17,7 @@ import { ConditionNode } from "./condition.js";
 import { CodeNode } from "./code.js";
 import { TransformerNode } from "./transformer.js";
 import { OutputNode } from "./output.js";
+import { FileUploadNode } from "./file-upload.js";
 
 export function registerAllNodes(): void {
   registerNode(WebhookTriggerNode);
@@ -32,6 +33,7 @@ export function registerAllNodes(): void {
   registerNode(CodeNode);
   registerNode(TransformerNode);
   registerNode(OutputNode);
+  registerNode(FileUploadNode);
 }
 
 export {
@@ -48,4 +50,5 @@ export {
   CodeNode,
   TransformerNode,
   OutputNode,
+  FileUploadNode,
 };

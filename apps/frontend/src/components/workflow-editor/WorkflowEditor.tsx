@@ -450,6 +450,97 @@ export function WorkflowEditor({
     };
   }
 
+  // ── Smart output renderer ──────────────────
+
+  function renderNodeOutput(nodeId: string, output: Record<string, unknown> | null) {
+    if (!output) return null;
+
+    // Find the node type
+    const node = nodes.find((n: CanvasNode) => n.id === nodeId);
+    const nodeType = node?.type ?? "";
+
+    // LLM nodes — show content as readable text with metadata
+    if (nodeType === "llm" && typeof output.content === "string") {
+      return (
+        <div className="wf-output-readable">
+          <div className="wf-output-text">{output.content}</div>
+          <div className="wf-output-meta">
+            {output.model ? <span>Model: {String(output.model)}</span> : null}
+            {output.provider ? <span>Provider: {String(output.provider)}</span> : null}
+            {(output.usage && typeof output.usage === "object") ? (
+              <span>Tokens: {String((output.usage as Record<string, unknown>).totalTokens ?? "—")}</span>
+            ) : null}
+          </div>
+        </div>
+      );
+    }
+
+    // HTTP request nodes — show status + body
+    if (nodeType === "http-request") {
+      const status = output.statusCode ?? output.status;
+      const body = output.body ?? output.data ?? output.response;
+      return (
+        <div className="wf-output-readable">
+          {status ? <div className="wf-output-meta"><span>Status: {String(status)}</span></div> : null}
+          <pre className="wf-output-panel-content">{typeof body === "string" ? body : JSON.stringify(body, null, 2)}</pre>
+        </div>
+      );
+    }
+
+    // Data cleaner / transformer — show cleaned data
+    if ((nodeType === "data-cleaner" || nodeType === "transformer") && output.data) {
+      return (
+        <div className="wf-output-readable">
+          <pre className="wf-output-panel-content">{typeof output.data === "string" ? output.data : JSON.stringify(output.data, null, 2)}</pre>
+          {output.summary ? <div className="wf-output-meta"><span>{String(output.summary)}</span></div> : null}
+        </div>
+      );
+    }
+
+    // Log / Output nodes — show message
+    if ((nodeType === "log" || nodeType === "output") && (output.message || output.data)) {
+      const display = output.message ?? output.data;
+      return (
+        <div className="wf-output-readable">
+          <div className="wf-output-text">{typeof display === "string" ? display : JSON.stringify(display, null, 2)}</div>
+        </div>
+      );
+    }
+
+    // File Upload nodes — show file info + data preview
+    if (nodeType === "file-upload") {
+      const fname = output.fileName as string | undefined;
+      const format = output.fileFormat as string | undefined;
+      const prev = output.preview as string | undefined;
+      const data = output.data;
+      const rowCount = output.rowCount as number | undefined;
+      return (
+        <div className="wf-output-readable">
+          <div className="wf-output-meta">
+            {fname ? <span>File: {fname}</span> : null}
+            {format ? <span>Format: {format.toUpperCase()}</span> : null}
+            {rowCount ? <span>Rows: {rowCount}</span> : null}
+          </div>
+          {prev ? <div className="wf-output-text" style={{ fontSize: 12, color: "#888", marginBottom: 8 }}>{prev}</div> : null}
+          {Array.isArray(data) ? (
+            <pre className="wf-output-panel-content">{JSON.stringify(data.slice(0, 10), null, 2)}{data.length > 10 ? `\n... and ${data.length - 10} more rows` : ""}</pre>
+          ) : typeof data === "string" ? (
+            <div className="wf-output-text">{data.length > 2000 ? data.slice(0, 2000) + "\n... (truncated)" : data}</div>
+          ) : (
+            <pre className="wf-output-panel-content">{JSON.stringify(data, null, 2)}</pre>
+          )}
+        </div>
+      );
+    }
+
+    // Fallback — show raw JSON for unknown types
+    return (
+      <pre className="wf-output-panel-content">
+        {JSON.stringify(output, null, 2)}
+      </pre>
+    );
+  }
+
   // ── Render ────────────────────────────────────
 
   const selectedNode = nodes.find((n) => n.id === selectedNodeId);
@@ -645,9 +736,12 @@ export function WorkflowEditor({
         {selectedNode && (
           <NodeConfigPanel
             node={selectedNode}
+            nodes={nodes}
+            edges={edges}
             onUpdate={handleNodeUpdate}
             onDelete={handleNodeDelete}
             onClose={() => setSelectedNodeId(null)}
+            token={token}
           />
         )}
 
@@ -668,9 +762,9 @@ export function WorkflowEditor({
                 </span>
               )}
             </div>
-            <pre className="wf-output-panel-content">
-              {JSON.stringify(nodeOutputs[selectedNodeId], null, 2)}
-            </pre>
+            <div className="wf-output-panel-body">
+              {renderNodeOutput(selectedNodeId, nodeOutputs[selectedNodeId])}
+            </div>
             {nodeStatuses[selectedNodeId]?.error && (
               <div className="wf-output-panel-error">
                 {nodeStatuses[selectedNodeId].error}

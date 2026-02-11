@@ -138,6 +138,29 @@ export const api = {
         }
       ),
   },
+
+  files: {
+    parse: (
+      token: string,
+      fileContent: string,
+      fileName: string,
+      fileFormat: string
+    ) =>
+      apiCall<{
+        success: boolean;
+        data: {
+          fileName: string;
+          fileFormat: string;
+          parsedData: unknown;
+          rowCount?: number;
+          preview: string;
+        };
+      }>("/api/files/parse", {
+        method: "POST",
+        body: { fileContent, fileName, fileFormat },
+        token,
+      }),
+  },
 };
 
 // Client-side types

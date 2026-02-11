@@ -53,7 +53,8 @@ export type NodeType =
   | "condition"
   | "code"
   | "transformer"
-  | "output";
+  | "output"
+  | "file-upload";
 
 export const NODE_TYPES: NodeType[] = [
   "webhook-trigger",
@@ -69,6 +70,7 @@ export const NODE_TYPES: NodeType[] = [
   "code",
   "transformer",
   "output",
+  "file-upload",
 ];
 
 export type LLMProviderType = "gemini" | "groq";

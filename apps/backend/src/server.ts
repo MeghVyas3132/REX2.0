@@ -17,6 +17,7 @@ import { registerApiKeyRoutes } from "./routes/apikey.routes.js";
 import { registerWorkflowRoutes } from "./routes/workflow.routes.js";
 import { registerWebhookRoutes } from "./routes/webhook.routes.js";
 import { registerChatRoutes } from "./routes/chat.routes.js";
+import { registerFileUploadRoutes } from "./routes/file-upload.routes.js";
 import { startScheduler } from "./services/scheduler.service.js";
 
 const logger = createLogger("server");
@@ -30,6 +31,7 @@ async function bootstrap(): Promise<void> {
       level: config.logLevel,
       timestamp: true,
     },
+    bodyLimit: 10 * 1024 * 1024, // 10 MB for file uploads
   });
 
   // Database
@@ -74,6 +76,7 @@ async function bootstrap(): Promise<void> {
   registerWorkflowRoutes(app, workflowService, executionService);
   registerWebhookRoutes(app, db, executionService);
   registerChatRoutes(app, apiKeyService);
+  registerFileUploadRoutes(app);
 
   // Start scheduler for cron/interval workflows
   startScheduler(db, executionService);

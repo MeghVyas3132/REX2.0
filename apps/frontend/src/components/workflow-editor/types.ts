@@ -254,6 +254,26 @@ export const NODE_TYPE_DEFS: NodeTypeDefinition[] = [
     defaultConfig: {},
     configFields: [],
   },
+  {
+    type: "file-upload",
+    label: "File Upload",
+    category: "action",
+    description: "Upload CSV, JSON, TXT, or PDF files",
+    defaultConfig: { fileFormat: "csv", fileName: "", parsedData: null },
+    configFields: [
+      {
+        key: "fileFormat",
+        label: "File Format",
+        type: "select",
+        options: [
+          { value: "csv", label: "CSV" },
+          { value: "json", label: "JSON" },
+          { value: "txt", label: "Text" },
+          { value: "pdf", label: "PDF" },
+        ],
+      },
+    ],
+  },
 ];
 
 export function getNodeTypeDef(type: string): NodeTypeDefinition | undefined {
