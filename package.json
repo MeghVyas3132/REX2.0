@@ -1,0 +1,20 @@
+{
+  "name": "rex",
+  "version": "0.1.0",
+  "private": true,
+  "packageManager": "pnpm@9.15.4",
+  "scripts": {
+    "build": "turbo run build",
+    "dev": "turbo run dev",
+    "lint": "turbo run lint",
+    "typecheck": "turbo run typecheck",
+    "db:generate": "pnpm --filter @rex/database db:generate",
+    "db:migrate": "pnpm --filter @rex/database db:migrate",
+    "db:seed": "pnpm --filter @rex/database db:seed",
+    "clean": "turbo run clean && rm -rf node_modules"
+  },
+  "devDependencies": {
+    "turbo": "^2.3.0",
+    "typescript": "^5.7.0"
+  }
+}
