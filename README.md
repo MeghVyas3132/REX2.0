@@ -1,210 +1,189 @@
-# REX - AI Workflow Automation Engine
+# REX -- AI Workflow Automation Engine
 
-Production-foundation MVP of a DAG-based workflow automation platform. Backend inspired by n8n, built as a monorepo with strict separation of concerns.
+REX is a production-grade workflow automation engine designed for building, executing, and managing AI-powered automation pipelines. It provides a visual drag-and-drop editor for composing directed acyclic graphs (DAGs) of processing nodes, a distributed execution engine backed by BullMQ, and a REST API for programmatic control.
+
+The system is architected as a monorepo with strict separation between domain logic, infrastructure, and presentation layers. Every workflow is validated as a DAG before execution, ensuring deterministic topological ordering and cycle-free processing.
+
+---
 
 ## Architecture
 
-```
-apps/
-  backend/     Fastify 5 REST API (auth, workflows, webhooks, queue)
-  worker/      BullMQ worker (executes workflows off-queue)
-  frontend/    Next.js 15 App Router (dark monochrome UI)
+REX follows a layered monorepo architecture with five shared packages and three deployable applications.
 
-packages/
-  types/       Shared TypeScript interfaces
-  utils/       Encryption (AES-256-GCM), cleaning, logging (Pino), config
-  database/    Drizzle ORM schema, PostgreSQL connection, migrations
-  llm/         LLM provider abstraction (Gemini, Groq)
-  engine/      Node registry, DAG validator, execution engine
-```
+### Shared Packages
 
-## Tech Stack
+- **@rex/types** -- TypeScript type definitions shared across all packages and applications. Defines node interfaces, workflow structures, execution models, LLM provider contracts, and API schemas.
 
-| Layer     | Technology                     |
-|-----------|-------------------------------|
-| Frontend  | Next.js 15, React 19, TypeScript |
-| Backend   | Fastify 5, TypeScript          |
-| Worker    | BullMQ 5, ioredis              |
-| Database  | PostgreSQL 16, Drizzle ORM     |
-| Auth      | JWT (fastify/jwt), bcrypt      |
-| Queue     | Redis 7 + BullMQ               |
-| LLM       | Gemini API, Groq API           |
-| Encryption| AES-256-GCM + scrypt           |
-| Logging   | Pino (structured JSON)         |
-| Infra     | Docker Compose (5 containers)  |
+- **@rex/utils** -- Common utilities including structured logging (Pino), AES-256-GCM encryption for API key storage, configuration management, and data cleaning operations.
+
+- **@rex/database** -- PostgreSQL persistence layer using Drizzle ORM. Contains schema definitions for users, workflows, executions, execution steps, and encrypted API keys.
+
+- **@rex/llm** -- LLM provider abstraction layer with factory pattern. Supports Gemini and Groq providers with a unified interface for prompt generation, token tracking, and response normalization.
+
+- **@rex/engine** -- Core execution engine. Implements DAG validation (Kahn's algorithm for topological sort), node registry, and the sequential execution pipeline with per-step result tracking.
+
+### Applications
+
+- **Backend API** (Fastify) -- REST API server handling authentication (JWT), workflow CRUD, execution triggering, API key management, webhook ingestion, and scheduled workflow polling. Runs on port 4000.
+
+- **Worker** (BullMQ) -- Distributed job processor. Consumes execution jobs from Redis, loads workflow definitions from PostgreSQL, resolves node implementations from the engine registry, and persists step-level results back to the database.
+
+- **Frontend** (Next.js) -- Web application with a visual workflow editor. Provides drag-and-drop node composition, real-time execution status polling with per-node feedback, and a dark monochrome interface.
+
+---
 
 ## Node Types
 
-| Type              | Purpose                                      |
-|-------------------|----------------------------------------------|
-| `webhook_trigger` | HTTP POST trigger for external integrations   |
-| `manual_trigger`  | On-demand execution with arbitrary payload    |
-| `data_cleaner`    | Trim, normalize case, remove chars, mask PII  |
-| `llm`             | LLM inference (Gemini/Groq) with templates    |
-| `json_validator`  | Schema validation (required fields, types)    |
-| `storage`         | Key-value read/write (in-memory for MVP)      |
-| `log`             | Structured logging at configurable level      |
+REX ships with 13 built-in node types organized into four categories.
 
-## Prerequisites
+### Triggers
 
-- Docker and Docker Compose
-- No local Node.js or npm required
+| Node | Description |
+|------|-------------|
+| Manual Trigger | Starts a workflow on demand via the UI or API |
+| Webhook Trigger | Starts a workflow when an external HTTP POST is received |
+| Schedule Trigger | Starts a workflow on a cron expression or fixed interval |
 
-## Quick Start
+### Actions
 
-```bash
-# Clone and enter project
-cd REX2.0
+| Node | Description |
+|------|-------------|
+| LLM | Sends a prompt to Gemini or Groq with template interpolation and configurable parameters |
+| HTTP Request | Makes HTTP requests to external APIs with method, headers, body, and timeout control |
+| Code | Executes user-provided JavaScript with sandboxed context and timeout enforcement |
+| Transformer | Transforms data using JavaScript expressions or declarative field mappings |
 
-# Copy environment file
-cp .env.example .env
-# Edit .env and set your ENCRYPTION_MASTER_KEY and JWT_SECRET
+### Logic
 
-# Start all services
-docker compose up --build
+| Node | Description |
+|------|-------------|
+| Condition | Evaluates a field against a value using operators (equals, contains, greater than, exists, etc.) |
+| JSON Validator | Validates input data against required fields and field type constraints |
+| Data Cleaner | Applies cleaning operations: trim, normalize case, remove special characters, mask PII |
 
-# Services:
-#   Frontend   → http://localhost:3000
-#   Backend    → http://localhost:4000
-#   PostgreSQL → localhost:5432
-#   Redis      → localhost:6379
-```
+### Output
 
-## Database Setup
+| Node | Description |
+|------|-------------|
+| Log | Writes structured log entries at configurable severity levels |
+| Output | Terminal node that collects and structures all upstream data as the final workflow result |
+| Storage | Persists execution data to the step output with a keyed storage identifier |
 
-Migrations and seeding run inside Docker containers:
+---
 
-```bash
-# Run migrations (creates all tables)
-docker compose exec backend npx tsx node_modules/@rex/database/src/migrate.ts
+## Execution Model
 
-# Seed 10 example workflows for demo@rex.dev (password: demo1234)
-docker compose exec backend npx tsx node_modules/@rex/database/src/seed.ts
-```
+1. A workflow is submitted for execution via the API or the visual editor.
+2. The backend creates an execution record with status `pending` and enqueues a job to BullMQ.
+3. The worker picks up the job, loads the workflow definition, and validates the DAG.
+4. Nodes are executed in topological order. Each node receives merged outputs from all parent nodes.
+5. Per-step results (status, output, duration, errors) are persisted to the database in real time.
+6. On failure, remaining nodes are marked as `skipped` and the execution is recorded as `failed`.
+7. The frontend polls the execution endpoint and updates node status badges on the canvas.
 
-Or directly in the database package container context:
+Scheduled workflows are managed by a background scheduler service that checks for active schedule-trigger nodes at a fixed interval, computes effective run timing from cron expressions or interval configuration, and enqueues executions automatically.
 
-```bash
-docker compose exec backend sh -c "cd node_modules/@rex/database && npx tsx src/migrate.ts"
-docker compose exec backend sh -c "cd node_modules/@rex/database && npx tsx src/seed.ts"
-```
+---
 
-## API Endpoints
+## Security
 
-### Auth
-```
-POST /api/auth/register   { email, name, password }
-POST /api/auth/login      { email, password }
-GET  /api/auth/me          [Bearer token]
-```
+- **Authentication**: JWT-based with bcrypt password hashing. Tokens are issued on login and verified on every protected route using scoped Fastify hooks.
+
+- **API Key Encryption**: User-provided LLM API keys are encrypted at rest using AES-256-GCM with scrypt key derivation. Keys are decrypted only at execution time inside the worker process.
+
+- **Code Execution Sandboxing**: The Code node runs user JavaScript inside a restricted Function constructor with a curated set of globals (JSON, Math, Date, Array, Object, String). Network access and filesystem operations are not exposed.
+
+- **Rate Limiting**: Global rate limiting on all API endpoints. Webhook endpoints have separate, configurable rate limits.
+
+---
+
+## Visual Workflow Editor
+
+The frontend includes a full-featured visual editor for building workflows:
+
+- Drag and drop nodes from a categorized palette onto an infinite canvas.
+- Connect nodes by dragging from output to input ports, rendered as SVG bezier curves.
+- Configure each node through a detail panel with type-specific form fields.
+- Pan and zoom the canvas for navigation across large workflows.
+- Execute workflows directly from the editor with real-time status feedback.
+- Per-node execution badges indicate completed, running, failed, or skipped states.
+- Error details are surfaced inline on the canvas when a node fails.
+
+---
+
+## Technology Stack
+
+| Layer | Technology |
+|-------|------------|
+| Language | TypeScript 5 (strict mode) |
+| Frontend | Next.js 15, React 19 |
+| Backend API | Fastify 5 |
+| Job Queue | BullMQ 5, Redis |
+| Database | PostgreSQL 16, Drizzle ORM |
+| LLM Providers | Google Gemini, Groq |
+| Logging | Pino 9 |
+| Monorepo | pnpm workspaces, Turborepo |
+| Deployment | Docker Compose (5 containers) |
+
+---
+
+## Infrastructure
+
+The system deploys as five Docker containers:
+
+- **rex-postgres** -- PostgreSQL 16 with persistent volume
+- **rex-redis** -- Redis for BullMQ job queue
+- **rex-backend** -- Fastify API server
+- **rex-worker** -- BullMQ job consumer
+- **rex-frontend** -- Next.js application server
+
+All inter-service communication happens over the Docker bridge network. The backend and frontend are the only containers with exposed ports (4000 and 3000 respectively).
+
+---
+
+## API Reference
+
+### Authentication
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/api/auth/register` | Create account |
+| POST | `/api/auth/login` | Authenticate and receive JWT |
+| GET | `/api/auth/me` | Get current user |
 
 ### Workflows
-```
-GET    /api/workflows                        List workflows
-POST   /api/workflows                        Create workflow
-GET    /api/workflows/:id                    Get workflow
-PATCH  /api/workflows/:id                    Update workflow
-DELETE /api/workflows/:id                    Delete workflow
-POST   /api/workflows/:id/execute            Execute workflow
-GET    /api/workflows/:id/executions         List executions
-GET    /api/workflows/:id/executions/:eid    Get execution + steps
-```
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/api/workflows` | Create workflow |
+| GET | `/api/workflows` | List workflows (paginated) |
+| GET | `/api/workflows/:id` | Get workflow detail |
+| PATCH | `/api/workflows/:id` | Update workflow |
+| DELETE | `/api/workflows/:id` | Delete workflow |
+| POST | `/api/workflows/:id/execute` | Trigger execution |
+| GET | `/api/workflows/:id/executions` | List executions |
 
-### Webhooks (public, rate-limited)
-```
-POST /api/webhooks/:workflowId              Trigger webhook workflow
-```
+### Executions
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/executions/:id` | Get execution detail with step results |
 
-### API Keys (BYOK)
-```
-GET    /api/keys              List stored keys
-POST   /api/keys              Store encrypted key { provider, key, label }
-DELETE /api/keys/:id          Remove key
-```
+### API Keys
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/api/keys` | Store encrypted API key |
+| GET | `/api/keys` | List keys (metadata only) |
+| DELETE | `/api/keys/:id` | Delete key |
 
-## Seeded Workflows
+### Webhooks
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/api/webhooks/:workflowId` | Trigger workflow via webhook |
 
-| # | Name                        | Trigger  | Nodes Used                        |
-|---|-----------------------------|---------|------------------------------------|
-| 1 | Smart Form Cleaner          | Webhook | cleaner, validator, storage, log   |
-| 2 | Resume Bullet Enhancer      | Manual  | cleaner, llm, log                  |
-| 3 | CSV Data Cleaner            | Webhook | cleaner, validator, log            |
-| 4 | Log Severity Classifier     | Webhook | cleaner, llm, storage, log         |
-| 5 | PII Scrubber                | Webhook | cleaner, validator, storage, log   |
-| 6 | Customer Feedback Analyzer  | Manual  | cleaner, llm, validator, storage   |
-| 7 | Email Content Standardizer  | Webhook | cleaner, validator, storage, log   |
-| 8 | API Payload Sanitizer       | Webhook | validator, cleaner, validator, log |
-| 9 | AI Data Enrichment Pipeline | Manual  | cleaner, llm, validator, storage, log |
-| 10| Incident Report Processor   | Webhook | cleaner, llm, validator, storage, log |
+### System
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/health` | Health check |
 
-## BYOK (Bring Your Own Key)
-
-LLM nodes require API keys. Keys are encrypted at rest with AES-256-GCM using scrypt key derivation from `ENCRYPTION_MASTER_KEY`. Store keys via the Settings page or POST /api/keys.
-
-Supported providers:
-- **Gemini** (generativelanguage.googleapis.com)
-- **Groq** (api.groq.com, OpenAI-compatible)
-
-## Execution Flow
-
-1. User triggers workflow (manual, webhook, or via API)
-2. Backend creates execution record, enqueues job to BullMQ
-3. Worker picks up job, loads workflow from DB
-4. DAG validator runs Kahn's algorithm for topological sort
-5. Engine executes nodes sequentially in resolved order
-6. Each step result (input, output, duration, status) persisted to DB
-7. Execution status updated (completed/failed)
-
-## Environment Variables
-
-See `.env.example` for all variables. Key ones:
-
-| Variable              | Description                      |
-|----------------------|----------------------------------|
-| `DATABASE_URL`        | PostgreSQL connection string     |
-| `REDIS_URL`           | Redis connection string          |
-| `JWT_SECRET`          | JWT signing secret               |
-| `ENCRYPTION_MASTER_KEY` | 32+ char key for AES-256-GCM  |
-| `BACKEND_PORT`        | Backend port (default 4000)      |
-| `FRONTEND_PORT`       | Frontend port (default 3000)     |
-| `WORKER_CONCURRENCY`  | Parallel job processing (default 5) |
-
-## Project Structure
-
-```
-REX2.0/
-├── docker-compose.yml
-├── .env / .env.example
-├── pnpm-workspace.yaml
-├── turbo.json
-├── tsconfig.base.json
-├── apps/
-│   ├── backend/
-│   │   ├── Dockerfile
-│   │   └── src/
-│   │       ├── server.ts            Fastify bootstrap
-│   │       ├── routes/              auth, apikey, workflow, webhook
-│   │       ├── services/            auth, apikey, workflow, execution
-│   │       ├── queue/client.ts      BullMQ queue producer
-│   │       ├── validation/          Zod schemas
-│   │       └── types/               Fastify augmentation
-│   ├── worker/
-│   │   ├── Dockerfile
-│   │   └── src/
-│   │       ├── worker.ts            BullMQ consumer
-│   │       └── handler.ts           Execution handler
-│   └── frontend/
-│       ├── Dockerfile
-│       └── src/
-│           ├── app/                 Next.js App Router pages
-│           └── lib/                 API client, auth context
-└── packages/
-    ├── types/src/                   Shared interfaces
-    ├── utils/src/                   Encryption, cleaning, logger
-    ├── database/src/                Schema, connection, seed
-    ├── llm/src/                     Gemini/Groq providers
-    └── engine/src/                  Nodes, DAG, execution engine
-```
+---
 
 ## License
 
