@@ -29,8 +29,23 @@ export function NodeConfigPanel({
   }
 
   function handleConfigChange(key: string, value: string) {
+    const updates: Record<string, string> = { [key]: value };
+
+    // Auto-switch model when provider changes on LLM nodes
+    if (key === "provider" && node.type === "llm") {
+      const currentModel = (node.config["model"] as string) ?? "";
+      const geminiModels = ["gemini-2.0-flash", "gemini-pro", "gemini-pro-vision", "gemini-ultra", ""];
+      const groqModels = ["llama-3.3-70b-versatile", "llama-3.1-8b-instant", "mixtral-8x7b-32768", ""];
+
+      if (value === "groq" && (geminiModels.includes(currentModel) || currentModel.startsWith("gemini"))) {
+        updates["model"] = "llama-3.3-70b-versatile";
+      } else if (value === "gemini" && (groqModels.includes(currentModel) || currentModel.startsWith("llama") || currentModel.startsWith("mixtral"))) {
+        updates["model"] = "gemini-2.0-flash";
+      }
+    }
+
     onUpdate(node.id, {
-      config: { ...node.config, [key]: value },
+      config: { ...node.config, ...updates },
     });
   }
 

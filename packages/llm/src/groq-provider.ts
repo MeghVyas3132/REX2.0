@@ -20,7 +20,7 @@ export class GroqProvider implements LLMProvider {
 
   constructor(apiKey: string, model?: string) {
     this.apiKey = apiKey;
-    this.model = model ?? PROVIDER_MODELS.groq;
+    this.model = (model && model.trim()) || PROVIDER_MODELS.groq;
   }
 
   async generate(prompt: string, options: LLMRequestOptions = {}): Promise<LLMResponse> {

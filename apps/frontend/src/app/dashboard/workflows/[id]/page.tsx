@@ -102,6 +102,7 @@ export default function WorkflowDetailPage() {
           status: s.status,
           durationMs: s.durationMs,
           error: s.error,
+          output: s.output,
         })),
         errorMessage: res.data.errorMessage,
       };
@@ -128,6 +129,8 @@ export default function WorkflowDetailPage() {
       }))}
       workflowName={workflow.name}
       workflowDescription={workflow.description}
+      workflowId={workflowId}
+      token={token || undefined}
       saving={saving}
       saveStatus={saveStatus}
       onSave={handleSave}

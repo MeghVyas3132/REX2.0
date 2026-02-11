@@ -16,6 +16,7 @@ import { registerAuthRoutes } from "./routes/auth.routes.js";
 import { registerApiKeyRoutes } from "./routes/apikey.routes.js";
 import { registerWorkflowRoutes } from "./routes/workflow.routes.js";
 import { registerWebhookRoutes } from "./routes/webhook.routes.js";
+import { registerChatRoutes } from "./routes/chat.routes.js";
 import { startScheduler } from "./services/scheduler.service.js";
 
 const logger = createLogger("server");
@@ -72,6 +73,7 @@ async function bootstrap(): Promise<void> {
   registerApiKeyRoutes(app, apiKeyService);
   registerWorkflowRoutes(app, workflowService, executionService);
   registerWebhookRoutes(app, db, executionService);
+  registerChatRoutes(app, apiKeyService);
 
   // Start scheduler for cron/interval workflows
   startScheduler(db, executionService);

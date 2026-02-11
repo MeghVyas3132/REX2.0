@@ -13,6 +13,13 @@ import { sanitizeErrorMessage, startTimer, measureDuration } from "@rex/utils";
 
 const GEMINI_API_BASE = "https://generativelanguage.googleapis.com/v1beta/models";
 
+// Map deprecated model names to their current replacements
+const DEPRECATED_MODEL_MAP: Record<string, string> = {
+  "gemini-pro": "gemini-2.0-flash",
+  "gemini-pro-vision": "gemini-2.0-flash",
+  "gemini-ultra": "gemini-2.0-flash",
+};
+
 export class GeminiProvider implements LLMProvider {
   readonly provider: LLMProviderType = "gemini";
   private readonly apiKey: string;
@@ -20,7 +27,8 @@ export class GeminiProvider implements LLMProvider {
 
   constructor(apiKey: string, model?: string) {
     this.apiKey = apiKey;
-    this.model = model ?? PROVIDER_MODELS.gemini;
+    const requested = (model && model.trim()) || PROVIDER_MODELS.gemini;
+    this.model = DEPRECATED_MODEL_MAP[requested] ?? requested;
   }
 
   async generate(prompt: string, options: LLMRequestOptions = {}): Promise<LLMResponse> {

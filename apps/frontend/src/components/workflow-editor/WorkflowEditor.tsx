@@ -9,7 +9,9 @@ import type { CanvasNode, CanvasEdge, ViewTransform, NodeTypeDefinition } from "
 import { NodePalette } from "./NodePalette";
 import { CanvasNodeComponent } from "./CanvasNode";
 import { NodeConfigPanel } from "./NodeConfigPanel";
+import { ChatPanel } from "./ChatPanel";
 import "./workflow-editor.css";
+import "./chat-panel.css";
 
 // ── Helpers ─────────────────────────────────────
 
@@ -38,6 +40,8 @@ export interface WorkflowEditorProps {
   initialEdges?: CanvasEdge[];
   workflowName?: string;
   workflowDescription?: string;
+  workflowId?: string;
+  token?: string;
   saving?: boolean;
   saveStatus?: "idle" | "saving" | "saved" | "error";
   onSave: (data: {
@@ -60,6 +64,7 @@ export interface ExecutionPollResult {
     status: string;
     durationMs: number | null;
     error: string | null;
+    output: Record<string, unknown> | null;
   }[];
   errorMessage: string | null;
 }
@@ -69,8 +74,10 @@ export interface ExecutionPollResult {
 export function WorkflowEditor({
   initialNodes = [],
   initialEdges = [],
-  workflowName = "",
+  workflowName = "Untitled Workflow",
   workflowDescription: _workflowDescription = "",
+  workflowId: wfId,
+  token,
   saving = false,
   saveStatus = "idle",
   onSave,
@@ -89,7 +96,9 @@ export function WorkflowEditor({
 
   // Execution state
   const [executionStatus, setExecutionStatus] = useState<string | null>(null);
+  const [executionId, setExecutionId] = useState<string | null>(null);
   const [nodeStatuses, setNodeStatuses] = useState<Record<string, { status: string; durationMs: number | null; error: string | null }>>({});
+  const [nodeOutputs, setNodeOutputs] = useState<Record<string, Record<string, unknown> | null>>({});
   const [executionError, setExecutionError] = useState<string | null>(null);
   const [isRunning, setIsRunning] = useState(false);
 
@@ -356,7 +365,9 @@ export function WorkflowEditor({
     setIsRunning(true);
     setExecutionError(null);
     setNodeStatuses({});
+    setNodeOutputs({});
     setExecutionStatus("pending");
+    setExecutionId(null);
 
     try {
       const execId = await onExecute();
@@ -365,6 +376,8 @@ export function WorkflowEditor({
         setExecutionStatus(null);
         return;
       }
+
+      setExecutionId(execId);
 
       // Poll for status
       let attempts = 0;
@@ -389,14 +402,17 @@ export function WorkflowEditor({
 
           // Update per-node statuses
           const statuses: Record<string, { status: string; durationMs: number | null; error: string | null }> = {};
+          const outputs: Record<string, Record<string, unknown> | null> = {};
           for (const step of result.steps) {
             statuses[step.nodeId] = {
               status: step.status,
               durationMs: step.durationMs,
               error: step.error,
             };
+            outputs[step.nodeId] = step.output ?? null;
           }
           setNodeStatuses(statuses);
+          setNodeOutputs(outputs);
 
           if (result.status === "completed" || result.status === "failed") {
             setIsRunning(false);
@@ -466,7 +482,7 @@ export function WorkflowEditor({
           value={description}
           onChange={(e) => setDescription(e.target.value)}
           placeholder="Description (optional)"
-          style={{ fontWeight: 400, color: "#999", minWidth: 200 }}
+          style={{ fontWeight: 400, color: "#999" }}
         />
         <div className="wf-toolbar-spacer" />
 
@@ -508,6 +524,16 @@ export function WorkflowEditor({
              executionStatus === "failed" ? "Failed" :
              executionStatus}
           </span>
+        )}
+
+        {executionId && wfId && (executionStatus === "completed" || executionStatus === "failed") && (
+          <a
+            href={`/dashboard/workflows/${wfId}/executions/${executionId}`}
+            className="wf-btn-secondary"
+            style={{ fontSize: 11, textDecoration: "none", padding: "4px 10px", border: "1px solid #444", borderRadius: 6, color: "#ccc" }}
+          >
+            View Results
+          </a>
         )}
 
         <button
@@ -624,7 +650,53 @@ export function WorkflowEditor({
             onClose={() => setSelectedNodeId(null)}
           />
         )}
+
+        {/* Execution output panel */}
+        {selectedNodeId && nodeOutputs[selectedNodeId] && (
+          <div className="wf-output-panel">
+            <div className="wf-output-panel-header">
+              <span>Execution Output</span>
+              {nodeStatuses[selectedNodeId] && (
+                <span
+                  style={{
+                    fontSize: 11,
+                    color: nodeStatuses[selectedNodeId].status === "completed" ? "#22c55e" : "#ef4444",
+                  }}
+                >
+                  {nodeStatuses[selectedNodeId].status} 
+                  {nodeStatuses[selectedNodeId].durationMs != null && ` (${nodeStatuses[selectedNodeId].durationMs}ms)`}
+                </span>
+              )}
+            </div>
+            <pre className="wf-output-panel-content">
+              {JSON.stringify(nodeOutputs[selectedNodeId], null, 2)}
+            </pre>
+            {nodeStatuses[selectedNodeId]?.error && (
+              <div className="wf-output-panel-error">
+                {nodeStatuses[selectedNodeId].error}
+              </div>
+            )}
+          </div>
+        )}
       </div>
+
+      {/* Chat Panel */}
+      <ChatPanel
+        token={token || ""}
+        workflow={{ name, description, nodes, edges }}
+        executionStatus={executionStatus || undefined}
+        nodeStatuses={
+          Object.keys(nodeStatuses).length > 0
+            ? (() => {
+                const mapped: Record<string, { status: string; error: string | null }> = {};
+                for (const [k, v] of Object.entries(nodeStatuses)) {
+                  mapped[k] = { status: (v as any).status, error: (v as any).error ?? null };
+                }
+                return mapped;
+              })()
+            : undefined
+        }
+      />
     </div>
   );
 }

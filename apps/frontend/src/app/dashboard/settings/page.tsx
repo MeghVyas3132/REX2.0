@@ -65,8 +65,8 @@ export default function SettingsPage() {
     try {
       await api.keys.delete(token, keyId);
       await loadKeys();
-    } catch {
-      // Delete failed
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to delete key");
     }
   }
 
@@ -107,12 +107,14 @@ export default function SettingsPage() {
           <div style={styles.cardHeader}>
             <h2 style={styles.cardTitle}>API Keys</h2>
             <button
-              onClick={() => setShowForm(!showForm)}
+              onClick={() => { setShowForm(!showForm); setError(""); }}
               style={styles.addBtn}
             >
               {showForm ? "Cancel" : "Add Key"}
             </button>
           </div>
+
+          {error && !showForm && <p style={styles.error}>{error}</p>}
 
           {showForm && (
             <form onSubmit={handleAdd} style={styles.form}>
@@ -180,6 +182,7 @@ export default function SettingsPage() {
                     <td style={styles.td}>{new Date(k.createdAt).toLocaleDateString()}</td>
                     <td style={styles.td}>
                       <button
+                        type="button"
                         onClick={() => handleDelete(k.id)}
                         style={styles.deleteBtn}
                       >

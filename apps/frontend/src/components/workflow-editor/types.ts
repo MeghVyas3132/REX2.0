@@ -109,7 +109,7 @@ export const NODE_TYPE_DEFS: NodeTypeDefinition[] = [
     label: "LLM",
     category: "action",
     description: "Call a language model",
-    defaultConfig: { provider: "gemini", model: "gemini-pro", prompt: "" },
+    defaultConfig: { provider: "gemini", model: "gemini-2.0-flash", prompt: "" },
     configFields: [
       {
         key: "provider",
@@ -120,7 +120,7 @@ export const NODE_TYPE_DEFS: NodeTypeDefinition[] = [
           { value: "groq", label: "Groq" },
         ],
       },
-      { key: "model", label: "Model", type: "text", placeholder: "gemini-pro" },
+      { key: "model", label: "Model", type: "text", placeholder: "gemini-2.0-flash" },
       { key: "prompt", label: "Prompt", type: "textarea", placeholder: "Enter your prompt or use {{variable}} for interpolation" },
       { key: "systemPrompt", label: "System Prompt", type: "textarea", placeholder: "Optional system instructions" },
       { key: "temperature", label: "Temperature", type: "number", placeholder: "0.7" },

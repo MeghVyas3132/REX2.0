@@ -23,7 +23,7 @@ export default function NewWorkflowPage() {
     nodes: CanvasNode[];
     edges: CanvasEdge[];
   }) {
-    if (!token || !data.name.trim() || data.nodes.length === 0) return;
+    if (!token || !data.name.trim()) return;
     setSaving(true);
     setSaveStatus("saving");
 
@@ -63,6 +63,7 @@ export default function NewWorkflowPage() {
       onBack={() => router.push("/dashboard")}
       saving={saving}
       saveStatus={saveStatus}
+      token={token || undefined}
     />
   );
 }

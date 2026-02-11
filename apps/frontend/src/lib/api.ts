@@ -13,9 +13,11 @@ interface ApiCallOptions {
 async function apiCall<T>(path: string, options: ApiCallOptions = {}): Promise<T> {
   const { method = "GET", body, token } = options;
 
-  const headers: Record<string, string> = {
-    "Content-Type": "application/json",
-  };
+  const headers: Record<string, string> = {};
+
+  if (body) {
+    headers["Content-Type"] = "application/json";
+  }
 
   if (token) {
     headers["Authorization"] = `Bearer ${token}`;
@@ -111,6 +113,30 @@ export const api = {
       ),
     delete: (token: string, keyId: string) =>
       apiCall<{ success: boolean }>(`/api/keys/${keyId}`, { method: "DELETE", token }),
+  },
+
+  chat: {
+    send: (
+      token: string,
+      message: string,
+      workflow: {
+        name: string;
+        description: string;
+        nodes: Array<{ id: string; type: string; label: string; config: Record<string, unknown> }>;
+        edges: Array<{ id: string; source: string; target: string }>;
+      },
+      executionStatus?: string | null,
+      nodeStatuses?: Record<string, { status: string; error: string | null }>,
+      history?: Array<{ role: "user" | "assistant"; content: string }>
+    ) =>
+      apiCall<{ success: boolean; data: { message: string; usage: { totalTokens: number } } }>(
+        "/api/chat",
+        {
+          method: "POST",
+          body: { message, workflow, executionStatus, nodeStatuses, history },
+          token,
+        }
+      ),
   },
 };
 

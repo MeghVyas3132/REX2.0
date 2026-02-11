@@ -16,6 +16,7 @@
     "@rex/utils": "workspace:*",
     "@rex/database": "workspace:*",
     "@rex/engine": "workspace:*",
+    "@rex/llm": "workspace:*",
     "fastify": "^5.2.0",
     "@fastify/cors": "^10.0.0",
     "@fastify/jwt": "^9.0.0",
