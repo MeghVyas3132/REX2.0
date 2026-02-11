@@ -610,3 +610,84 @@
 .wf-save-indicator.error {
   color: #ef4444;
 }
+
+/* ── Execution status on nodes ──────────────── */
+
+.wf-node.exec-completed {
+  border-color: #22c55e;
+  box-shadow: 0 0 0 1px #22c55e;
+}
+
+.wf-node.exec-running {
+  border-color: #eab308;
+  box-shadow: 0 0 0 1px #eab308;
+  animation: exec-pulse 1.5s ease-in-out infinite;
+}
+
+.wf-node.exec-failed {
+  border-color: #ef4444;
+  box-shadow: 0 0 0 1px #ef4444;
+}
+
+.wf-node.exec-skipped {
+  border-color: #555;
+  opacity: 0.6;
+}
+
+@keyframes exec-pulse {
+  0%, 100% { box-shadow: 0 0 0 1px #eab308; }
+  50% { box-shadow: 0 0 8px 2px #eab30844; }
+}
+
+.wf-node-exec-badge {
+  font-size: 9px;
+  font-weight: 700;
+  padding: 1px 5px;
+  border-radius: 3px;
+  margin-left: auto;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.wf-node-exec-badge.completed {
+  background: #22c55e22;
+  color: #22c55e;
+}
+
+.wf-node-exec-badge.running {
+  background: #eab30822;
+  color: #eab308;
+}
+
+.wf-node-exec-badge.failed {
+  background: #ef444422;
+  color: #ef4444;
+}
+
+.wf-node-exec-badge.skipped {
+  background: #55555522;
+  color: #888;
+}
+
+/* ── Execution error banner ─────────────────── */
+
+.wf-exec-error {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 16px;
+  background: #1a0a0a;
+  border-bottom: 1px solid #3a1a1a;
+  color: #ef4444;
+  font-size: 12px;
+  flex-shrink: 0;
+}
+
+.wf-exec-error button {
+  background: transparent;
+  border: none;
+  color: #ef4444;
+  cursor: pointer;
+  font-size: 14px;
+  padding: 0 4px;
+}

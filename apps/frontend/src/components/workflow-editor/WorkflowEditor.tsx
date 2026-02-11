@@ -46,9 +46,22 @@ export interface WorkflowEditorProps {
     nodes: CanvasNode[];
     edges: CanvasEdge[];
   }) => void;
-  onExecute?: () => void;
+  onExecute?: () => Promise<string | undefined>;
+  onPollExecution?: (executionId: string) => Promise<ExecutionPollResult | null>;
   onBack: () => void;
   showExecute?: boolean;
+}
+
+export interface ExecutionPollResult {
+  status: string;
+  steps: {
+    nodeId: string;
+    nodeType: string;
+    status: string;
+    durationMs: number | null;
+    error: string | null;
+  }[];
+  errorMessage: string | null;
 }
 
 // ── Component ───────────────────────────────────
@@ -62,6 +75,7 @@ export function WorkflowEditor({
   saveStatus = "idle",
   onSave,
   onExecute,
+  onPollExecution,
   onBack,
   showExecute = false,
 }: WorkflowEditorProps) {
@@ -72,6 +86,12 @@ export function WorkflowEditor({
   const [description, setDescription] = useState(_workflowDescription);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [transform, setTransform] = useState<ViewTransform>({ x: 0, y: 0, scale: 1 });
+
+  // Execution state
+  const [executionStatus, setExecutionStatus] = useState<string | null>(null);
+  const [nodeStatuses, setNodeStatuses] = useState<Record<string, { status: string; durationMs: number | null; error: string | null }>>({});
+  const [executionError, setExecutionError] = useState<string | null>(null);
+  const [isRunning, setIsRunning] = useState(false);
 
   // Drag state
   const [draggingNodeId, setDraggingNodeId] = useState<string | null>(null);
@@ -329,6 +349,76 @@ export function WorkflowEditor({
     onSave({ name, description, nodes, edges });
   }, [name, description, nodes, edges, onSave]);
 
+  // ── Execute + Poll ────────────────────────────
+
+  const handleExecute = useCallback(async () => {
+    if (!onExecute || !onPollExecution) return;
+    setIsRunning(true);
+    setExecutionError(null);
+    setNodeStatuses({});
+    setExecutionStatus("pending");
+
+    try {
+      const execId = await onExecute();
+      if (!execId) {
+        setIsRunning(false);
+        setExecutionStatus(null);
+        return;
+      }
+
+      // Poll for status
+      let attempts = 0;
+      const maxAttempts = 120; // 2 minutes at 1s intervals
+      const poll = async () => {
+        if (attempts >= maxAttempts) {
+          setExecutionStatus("timeout");
+          setExecutionError("Execution timed out waiting for results");
+          setIsRunning(false);
+          return;
+        }
+
+        attempts++;
+        try {
+          const result = await onPollExecution(execId);
+          if (!result) return;
+
+          setExecutionStatus(result.status);
+          if (result.errorMessage) {
+            setExecutionError(result.errorMessage);
+          }
+
+          // Update per-node statuses
+          const statuses: Record<string, { status: string; durationMs: number | null; error: string | null }> = {};
+          for (const step of result.steps) {
+            statuses[step.nodeId] = {
+              status: step.status,
+              durationMs: step.durationMs,
+              error: step.error,
+            };
+          }
+          setNodeStatuses(statuses);
+
+          if (result.status === "completed" || result.status === "failed") {
+            setIsRunning(false);
+            return;
+          }
+
+          // Continue polling
+          setTimeout(poll, 1000);
+        } catch {
+          setTimeout(poll, 2000);
+        }
+      };
+
+      // Start polling after a short delay
+      setTimeout(poll, 500);
+    } catch {
+      setExecutionStatus("failed");
+      setExecutionError("Failed to start execution");
+      setIsRunning(false);
+    }
+  }, [onExecute, onPollExecution]);
+
   // ── Compute edge paths ────────────────────────
 
   function getNodeCenter(node: CanvasNode, side: "out" | "in") {
@@ -401,9 +491,23 @@ export function WorkflowEditor({
         <div className="wf-toolbar-sep" />
 
         {showExecute && onExecute && (
-          <button className="wf-btn-run" onClick={onExecute}>
-            Run Workflow
+          <button
+            className="wf-btn-run"
+            onClick={handleExecute}
+            disabled={isRunning}
+          >
+            {isRunning ? "Running..." : "Run Workflow"}
           </button>
+        )}
+
+        {executionStatus && (
+          <span className={`wf-save-indicator ${executionStatus === "completed" ? "saved" : executionStatus === "failed" ? "error" : "saving"}`}>
+            {executionStatus === "pending" ? "Pending..." :
+             executionStatus === "running" ? "Executing..." :
+             executionStatus === "completed" ? "Completed" :
+             executionStatus === "failed" ? "Failed" :
+             executionStatus}
+          </span>
         )}
 
         <button
@@ -420,6 +524,14 @@ export function WorkflowEditor({
           </span>
         )}
       </div>
+
+      {/* Execution error banner */}
+      {executionError && (
+        <div className="wf-exec-error">
+          <span>{executionError}</span>
+          <button onClick={() => setExecutionError(null)}>x</button>
+        </div>
+      )}
 
       {/* Body */}
       <div className="wf-body">
@@ -493,6 +605,7 @@ export function WorkflowEditor({
                 node={node}
                 selected={node.id === selectedNodeId}
                 dragging={node.id === draggingNodeId}
+                executionStatus={nodeStatuses[node.id]?.status}
                 onMouseDown={handleNodeMouseDown}
                 onClick={handleNodeClick}
                 onPortMouseDown={handlePortMouseDown}

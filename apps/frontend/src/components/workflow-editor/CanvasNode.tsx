@@ -12,6 +12,7 @@ interface CanvasNodeProps {
   node: CanvasNode;
   selected: boolean;
   dragging: boolean;
+  executionStatus?: string;
   onMouseDown: (e: React.MouseEvent, nodeId: string) => void;
   onClick: (e: React.MouseEvent, nodeId: string) => void;
   onPortMouseDown: (e: React.MouseEvent, nodeId: string, portType: "in" | "out") => void;
@@ -22,6 +23,7 @@ export function CanvasNodeComponent({
   node,
   selected,
   dragging,
+  executionStatus,
   onMouseDown,
   onClick,
   onPortMouseDown,
@@ -82,6 +84,7 @@ export function CanvasNodeComponent({
     "wf-node",
     selected ? "selected" : "",
     dragging ? "dragging" : "",
+    executionStatus ? `exec-${executionStatus}` : "",
   ]
     .filter(Boolean)
     .join(" ");
@@ -123,6 +126,14 @@ export function CanvasNodeComponent({
         <span className="wf-node-type">
           {def?.label ?? node.type}
         </span>
+        {executionStatus && (
+          <span className={`wf-node-exec-badge ${executionStatus}`}>
+            {executionStatus === "completed" ? "OK" :
+             executionStatus === "running" ? "..." :
+             executionStatus === "failed" ? "ERR" :
+             executionStatus === "skipped" ? "SKIP" : ""}
+          </span>
+        )}
       </div>
 
       {/* Label */}
