@@ -4,13 +4,14 @@
 
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useAuth } from "@/lib/auth-context";
 import { api } from "@/lib/api";
 import type { WorkflowDetail } from "@/lib/api";
 import { useRouter, useParams } from "next/navigation";
 import { WorkflowEditor } from "@/components/workflow-editor";
 import type { CanvasNode, CanvasEdge } from "@/components/workflow-editor";
+import type { ExecutionPollResult } from "@/components/workflow-editor/WorkflowEditor";
 
 export default function WorkflowDetailPage() {
   const { token, loading: authLoading } = useAuth();
@@ -79,17 +80,35 @@ export default function WorkflowDetailPage() {
     }
   }
 
-  async function handleExecute() {
-    if (!token) return;
-    setSaveStatus("saving");
+  const handleExecute = useCallback(async (): Promise<string | undefined> => {
+    if (!token) return undefined;
     try {
-      await api.workflows.execute(token, workflowId, {});
-      setSaveStatus("saved");
-      setTimeout(() => setSaveStatus("idle"), 2000);
+      const res = await api.workflows.execute(token, workflowId, {});
+      return res.data.executionId;
     } catch {
-      setSaveStatus("error");
+      return undefined;
     }
-  }
+  }, [token, workflowId]);
+
+  const handlePollExecution = useCallback(async (executionId: string): Promise<ExecutionPollResult | null> => {
+    if (!token) return null;
+    try {
+      const res = await api.executions.get(token, executionId);
+      return {
+        status: res.data.status,
+        steps: res.data.steps.map((s) => ({
+          nodeId: s.nodeId,
+          nodeType: s.nodeType,
+          status: s.status,
+          durationMs: s.durationMs,
+          error: s.error,
+        })),
+        errorMessage: res.data.errorMessage,
+      };
+    } catch {
+      return null;
+    }
+  }, [token]);
 
   if (authLoading || loading || !workflow) return null;
 
@@ -113,6 +132,7 @@ export default function WorkflowDetailPage() {
       saveStatus={saveStatus}
       onSave={handleSave}
       onExecute={handleExecute}
+      onPollExecution={handlePollExecution}
       onBack={() => router.push("/dashboard")}
       showExecute
     />
