@@ -1,0 +1,29 @@
+{
+  "name": "@rex/worker",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/worker.js",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsx watch src/worker.ts",
+    "start": "node dist/worker.js",
+    "clean": "rm -rf dist",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@rex/types": "workspace:*",
+    "@rex/utils": "workspace:*",
+    "@rex/database": "workspace:*",
+    "@rex/engine": "workspace:*",
+    "bullmq": "^5.30.0",
+    "drizzle-orm": "^0.38.0",
+    "ioredis": "^5.4.0",
+    "pino": "^9.6.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.7.0"
+  }
+}
