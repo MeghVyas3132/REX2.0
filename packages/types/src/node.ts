@@ -43,20 +43,32 @@ export interface ValidationResult {
 export type NodeType =
   | "webhook-trigger"
   | "manual-trigger"
+  | "schedule-trigger"
   | "data-cleaner"
   | "llm"
   | "json-validator"
   | "storage"
-  | "log";
+  | "log"
+  | "http-request"
+  | "condition"
+  | "code"
+  | "transformer"
+  | "output";
 
 export const NODE_TYPES: NodeType[] = [
   "webhook-trigger",
   "manual-trigger",
+  "schedule-trigger",
   "data-cleaner",
   "llm",
   "json-validator",
   "storage",
   "log",
+  "http-request",
+  "condition",
+  "code",
+  "transformer",
+  "output",
 ];
 
 export type LLMProviderType = "gemini" | "groq";
