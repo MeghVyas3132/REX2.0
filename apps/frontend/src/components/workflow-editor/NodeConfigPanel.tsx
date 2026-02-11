@@ -113,6 +113,19 @@ export function NodeConfigPanel({
             )}
           </div>
         ))}
+
+        {/* API key notice for LLM nodes */}
+        {node.type === "llm" && (
+          <div className="wf-panel-notice">
+            <p className="wf-panel-notice-text">
+              This node requires an API key to run. Make sure you have added your
+              provider key in settings.
+            </p>
+            <a href="/dashboard/settings" className="wf-panel-notice-link">
+              Manage API Keys
+            </a>
+          </div>
+        )}
       </div>
 
       <div className="wf-panel-footer">

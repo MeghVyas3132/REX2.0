@@ -49,6 +49,12 @@ export function NodePalette({ onDragStart }: NodePaletteProps) {
           </div>
         );
       })}
+
+      <div className="wf-palette-footer">
+        <a href="/dashboard/settings" className="wf-palette-settings-link">
+          API Keys &amp; Settings
+        </a>
+      </div>
     </div>
   );
 }
