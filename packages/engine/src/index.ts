@@ -11,9 +11,15 @@ export { registerAllNodes } from "./nodes/index.js";
 export {
   WebhookTriggerNode,
   ManualTriggerNode,
+  ScheduleTriggerNode,
   DataCleanerNode,
   LLMNode,
   JSONValidatorNode,
   StorageNode,
   LogNode,
+  HTTPRequestNode,
+  ConditionNode,
+  CodeNode,
+  TransformerNode,
+  OutputNode,
 } from "./nodes/index.js";
