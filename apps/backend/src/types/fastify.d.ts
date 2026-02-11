@@ -1,0 +1,11 @@
+// ──────────────────────────────────────────────
+// REX - Fastify Type Declarations
+// ──────────────────────────────────────────────
+
+import type { FastifyInstance } from "fastify";
+
+declare module "fastify" {
+  interface FastifyInstance {
+    authenticate: (request: FastifyRequest, reply: FastifyReply) => Promise<void>;
+  }
+}
