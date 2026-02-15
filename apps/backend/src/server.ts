@@ -18,7 +18,11 @@ import { registerWorkflowRoutes } from "./routes/workflow.routes.js";
 import { registerWebhookRoutes } from "./routes/webhook.routes.js";
 import { registerChatRoutes } from "./routes/chat.routes.js";
 import { registerFileUploadRoutes } from "./routes/file-upload.routes.js";
+import { registerKnowledgeRoutes } from "./routes/knowledge.routes.js";
+import { registerTemplateRoutes } from "./routes/template.routes.js";
 import { startScheduler } from "./services/scheduler.service.js";
+import { createKnowledgeService } from "./services/knowledge.service.js";
+import { createTemplateService } from "./services/template.service.js";
 
 const logger = createLogger("server");
 
@@ -69,6 +73,8 @@ async function bootstrap(): Promise<void> {
   const apiKeyService = createApiKeyService(db);
   const workflowService = createWorkflowService(db);
   const executionService = createExecutionService(db);
+  const knowledgeService = createKnowledgeService(db);
+  const templateService = createTemplateService(workflowService);
 
   // Routes
   registerAuthRoutes(app, authService);
@@ -77,6 +83,8 @@ async function bootstrap(): Promise<void> {
   registerWebhookRoutes(app, db, executionService);
   registerChatRoutes(app, apiKeyService);
   registerFileUploadRoutes(app);
+  registerKnowledgeRoutes(app, knowledgeService);
+  registerTemplateRoutes(app, templateService);
 
   // Start scheduler for cron/interval workflows
   startScheduler(db, executionService);
