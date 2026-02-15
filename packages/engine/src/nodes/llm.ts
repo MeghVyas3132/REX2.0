@@ -41,8 +41,8 @@ export const LLMNode: BaseNodeDefinition = {
       throw new Error("LLMNode: missing nodeConfig in metadata");
     }
 
-    const providerType = nodeConfig["provider"] as LLMProviderType;
-    const model = nodeConfig["model"] as string | undefined;
+    const requestedProvider = nodeConfig["provider"] as LLMProviderType;
+    const requestedModel = nodeConfig["model"] as string | undefined;
 
     // Resolve prompt — support template interpolation
     let prompt: string;
@@ -70,16 +70,42 @@ export const LLMNode: BaseNodeDefinition = {
         + "\n" + fileData.content;
     }
 
+    const knowledgeData = detectKnowledgeData(input.data);
+    if (knowledgeData) {
+      context.logger.info("Knowledge context detected from retrieval", {
+        nodeId: context.nodeId,
+        query: knowledgeData.query,
+        matches: knowledgeData.matches.length,
+      });
+      prompt = prompt + "\n\n--- Retrieved Knowledge Context ---\n"
+        + `Query: ${knowledgeData.query}\n`
+        + formatKnowledgeMatches(knowledgeData.matches);
+    }
+
     context.logger.info("Executing LLM request", {
       nodeId: context.nodeId,
-      provider: providerType,
-      model: model ?? "default",
+      provider: requestedProvider,
+      model: requestedModel ?? "default",
       promptLength: prompt.length,
     });
 
-    // Get decrypted API key through context
-    const apiKey = await context.getApiKey(providerType);
-    const provider = createLLMProvider(providerType, apiKey, model);
+    const resolvedProvider = await resolveProviderAndApiKey(
+      context,
+      requestedProvider,
+      requestedModel
+    );
+    if (resolvedProvider.fallbackFrom) {
+      context.logger.warn("Configured LLM provider key missing, using fallback provider", {
+        nodeId: context.nodeId,
+        requestedProvider: resolvedProvider.fallbackFrom,
+        fallbackProvider: resolvedProvider.providerType,
+      });
+    }
+    const provider = createLLMProvider(
+      resolvedProvider.providerType,
+      resolvedProvider.apiKey,
+      resolvedProvider.model
+    );
 
     const options: LLMRequestOptions = {
       maxTokens: (nodeConfig["maxTokens"] as number) ?? 2048,
@@ -92,11 +118,13 @@ export const LLMNode: BaseNodeDefinition = {
 
     context.logger.info("LLM request completed", {
       nodeId: context.nodeId,
-      provider: providerType,
+      provider: resolvedProvider.providerType,
       model: response.model,
       totalTokens: response.usage.totalTokens,
       durationMs: response.durationMs,
     });
+
+    const retryDirective = evaluateRetryDirective(nodeConfig, response.content);
 
     return {
       data: {
@@ -107,10 +135,77 @@ export const LLMNode: BaseNodeDefinition = {
       },
       metadata: {
         durationMs: response.durationMs,
+        providerFallback:
+          resolvedProvider.fallbackFrom
+            ? {
+                from: resolvedProvider.fallbackFrom,
+                to: resolvedProvider.providerType,
+              }
+            : undefined,
+        retry: retryDirective ?? undefined,
       },
     };
   },
 };
+
+interface ResolvedProvider {
+  providerType: LLMProviderType;
+  apiKey: string;
+  model: string | undefined;
+  fallbackFrom?: LLMProviderType;
+}
+
+async function resolveProviderAndApiKey(
+  context: NodeExecutionContext,
+  requestedProvider: LLMProviderType,
+  requestedModel: string | undefined
+): Promise<ResolvedProvider> {
+  try {
+    const apiKey = await context.getApiKey(requestedProvider);
+    return {
+      providerType: requestedProvider,
+      apiKey,
+      model: requestedModel,
+    };
+  } catch (error) {
+    if (!isMissingApiKeyError(error)) {
+      throw error;
+    }
+  }
+
+  const fallbackProviders = LLM_PROVIDERS.filter(
+    (provider) => provider !== requestedProvider
+  ) as LLMProviderType[];
+
+  for (const fallbackProvider of fallbackProviders) {
+    try {
+      const apiKey = await context.getApiKey(fallbackProvider);
+      // Use fallback provider's default model to avoid model/provider mismatch.
+      return {
+        providerType: fallbackProvider,
+        apiKey,
+        model: undefined,
+        fallbackFrom: requestedProvider,
+      };
+    } catch (error) {
+      if (!isMissingApiKeyError(error)) {
+        throw error;
+      }
+    }
+  }
+
+  throw new Error(
+    `No API key found for configured provider "${requestedProvider}" or fallback providers. ` +
+      "Please add an API key in settings."
+  );
+}
+
+function isMissingApiKeyError(error: unknown): boolean {
+  if (!(error instanceof Error)) {
+    return false;
+  }
+  return /no .*api key found for user/i.test(error.message);
+}
 
 function interpolateTemplate(
   template: string,
@@ -138,6 +233,63 @@ interface DetectedFileData {
   rowCount: number | null;
   preview: string | null;
   content: string;
+}
+
+interface DetectedKnowledgeMatch {
+  rank: number;
+  title: string;
+  score: number;
+  content: string;
+}
+
+interface DetectedKnowledgeData {
+  query: string;
+  matches: DetectedKnowledgeMatch[];
+}
+
+function evaluateRetryDirective(
+  nodeConfig: Record<string, unknown>,
+  content: string
+): { requested: boolean; reason: string } | null {
+  const requiredText = asNonEmptyString(nodeConfig["qualityCheckRequiredText"]);
+  if (requiredText && !content.toLowerCase().includes(requiredText.toLowerCase())) {
+    return {
+      requested: true,
+      reason: `Missing required text: "${requiredText}"`,
+    };
+  }
+
+  const minLength = toPositiveInteger(nodeConfig["qualityCheckMinLength"]);
+  if (minLength !== null && content.length < minLength) {
+    return {
+      requested: true,
+      reason: `Response length ${content.length} below minimum ${minLength}`,
+    };
+  }
+
+  return null;
+}
+
+function toPositiveInteger(value: unknown): number | null {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    const normalized = Math.floor(value);
+    return normalized > 0 ? normalized : null;
+  }
+  if (typeof value === "string" && value.trim().length > 0) {
+    const parsed = Number(value);
+    if (!Number.isFinite(parsed)) {
+      return null;
+    }
+    const normalized = Math.floor(parsed);
+    return normalized > 0 ? normalized : null;
+  }
+  return null;
+}
+
+function asNonEmptyString(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : null;
 }
 
 /**
@@ -189,4 +341,64 @@ function detectFileData(data: Record<string, unknown>): DetectedFileData | null 
   }
 
   return { fileName, fileFormat, rowCount, preview, content };
+}
+
+function detectKnowledgeData(data: Record<string, unknown>): DetectedKnowledgeData | null {
+  const raw = data["_knowledge"];
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
+    return null;
+  }
+
+  const query =
+    typeof (raw as Record<string, unknown>)["query"] === "string"
+      ? ((raw as Record<string, unknown>)["query"] as string)
+      : "";
+  const rawMatches = (raw as Record<string, unknown>)["matches"];
+  if (!Array.isArray(rawMatches) || rawMatches.length === 0) {
+    return null;
+  }
+
+  const matches: DetectedKnowledgeMatch[] = [];
+  for (let i = 0; i < rawMatches.length; i++) {
+    const match = rawMatches[i];
+    if (!match || typeof match !== "object" || Array.isArray(match)) continue;
+    const asRecord = match as Record<string, unknown>;
+    const content = typeof asRecord["content"] === "string" ? asRecord["content"] : "";
+    if (!content) continue;
+    matches.push({
+      rank: i + 1,
+      title: typeof asRecord["title"] === "string" ? asRecord["title"] : "Untitled",
+      score:
+        typeof asRecord["score"] === "number" && Number.isFinite(asRecord["score"])
+          ? asRecord["score"]
+          : 0,
+      content,
+    });
+  }
+
+  if (matches.length === 0) {
+    return null;
+  }
+
+  return {
+    query: query || "(unspecified query)",
+    matches,
+  };
+}
+
+function formatKnowledgeMatches(matches: DetectedKnowledgeMatch[]): string {
+  const lines: string[] = [];
+  const capped = matches.slice(0, 12);
+
+  for (const match of capped) {
+    lines.push(
+      `[${match.rank}] ${match.title} (score=${match.score.toFixed(4)})\n${match.content}`
+    );
+  }
+
+  if (matches.length > capped.length) {
+    lines.push(`... ${matches.length - capped.length} more retrieved chunks omitted`);
+  }
+
+  return lines.join("\n\n");
 }
