@@ -69,6 +69,7 @@ export default function WorkflowDetailPage() {
           id: e.id,
           source: e.source,
           target: e.target,
+          condition: e.condition,
         })),
       });
       setSaveStatus("saved");
@@ -126,6 +127,7 @@ export default function WorkflowDetailPage() {
         id: e.id,
         source: e.source,
         target: e.target,
+        condition: e.condition,
       }))}
       workflowName={workflow.name}
       workflowDescription={workflow.description}

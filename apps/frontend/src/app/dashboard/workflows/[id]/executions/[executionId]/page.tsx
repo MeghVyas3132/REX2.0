@@ -48,6 +48,7 @@ export default function ExecutionDetailPage() {
         <div style={styles.brand}>REX</div>
         <div style={styles.navLinks}>
           <Link href="/dashboard" style={styles.navLink}>Workflows</Link>
+          <Link href="/dashboard/templates" style={styles.navLink}>Templates</Link>
           <Link href="/dashboard/settings" style={styles.navLink}>Settings</Link>
         </div>
       </nav>

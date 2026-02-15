@@ -42,6 +42,7 @@ export default function NewWorkflowPage() {
           id: e.id,
           source: e.source,
           target: e.target,
+          condition: e.condition,
         })),
       });
       setSaveStatus("saved");
