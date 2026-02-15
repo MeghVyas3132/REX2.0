@@ -756,7 +756,7 @@
 /* ── Execution Output Panel ─────────────────── */
 
 .wf-output-panel {
-  width: 340px;
+  width: 380px;
   background: #0d0d0d;
   border-left: 1px solid #2a2a2a;
   display: flex;
@@ -771,12 +771,13 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 10px 14px;
+  padding: 12px 16px;
   border-bottom: 1px solid #2a2a2a;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 600;
   color: #e5e5e5;
   flex-shrink: 0;
+  background: #111;
 }
 
 .wf-output-panel-content {
@@ -794,23 +795,158 @@
 }
 
 .wf-output-panel-error {
-  padding: 8px 14px;
+  padding: 10px 16px;
   border-top: 1px solid #3a1a1a;
-  font-size: 11px;
+  font-size: 12px;
   font-family: monospace;
   color: #ef4444;
   background: #1a0a0a;
   flex-shrink: 0;
 }
 
-/* ── Readable output styles ───────────────── */
-
 .wf-output-panel-body {
   flex: 1;
   overflow-y: auto;
   min-height: 0;
+  padding: 8px;
 }
 
+/* ── Output Card ─────────────────────────────── */
+
+.wf-out-card {
+  background: #141414;
+  border: 1px solid #252525;
+  border-radius: 12px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Metadata badges row */
+.wf-out-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 12px 14px 8px;
+}
+
+.wf-out-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.2px;
+}
+
+.wf-out-badge-provider {
+  background: rgba(59, 130, 246, 0.12);
+  color: #60a5fa;
+  border: 1px solid rgba(59, 130, 246, 0.2);
+}
+
+.wf-out-badge-model {
+  background: rgba(168, 85, 247, 0.12);
+  color: #c084fc;
+  border: 1px solid rgba(168, 85, 247, 0.2);
+}
+
+.wf-out-badge-tokens {
+  background: rgba(34, 197, 94, 0.12);
+  color: #4ade80;
+  border: 1px solid rgba(34, 197, 94, 0.2);
+}
+
+.wf-out-badge-success {
+  background: rgba(34, 197, 94, 0.12);
+  color: #4ade80;
+  border: 1px solid rgba(34, 197, 94, 0.2);
+}
+
+.wf-out-badge-error {
+  background: rgba(239, 68, 68, 0.12);
+  color: #f87171;
+  border: 1px solid rgba(239, 68, 68, 0.2);
+}
+
+/* Content area */
+.wf-out-content {
+  padding: 12px 16px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+/* Heading-like line inside content */
+.wf-out-heading {
+  font-size: 13px;
+  font-weight: 600;
+  color: #f0f0f0;
+  margin-top: 8px;
+  margin-bottom: 2px;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+/* Paragraph text */
+.wf-out-paragraph {
+  font-size: 13px;
+  line-height: 1.75;
+  color: #d4d4d4;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* Numbered / bullet list item */
+.wf-out-list-item {
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+  padding: 4px 0;
+  font-size: 13px;
+  line-height: 1.6;
+  color: #d4d4d4;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+.wf-out-bullet {
+  color: #a78bfa;
+  font-weight: 600;
+  flex-shrink: 0;
+  min-width: 18px;
+  text-align: right;
+}
+
+/* Code / JSON block */
+.wf-out-code {
+  margin: 0;
+  padding: 12px;
+  background: #0a0a0a;
+  border: 1px solid #1e1e1e;
+  border-radius: 8px;
+  font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+  font-size: 11px;
+  line-height: 1.6;
+  color: #a3e635;
+  white-space: pre-wrap;
+  word-break: break-word;
+  overflow-x: auto;
+}
+
+/* Footer metadata */
+.wf-out-footer {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 14px;
+  border-top: 1px solid #1e1e1e;
+  font-size: 10px;
+  color: #555;
+  font-family: monospace;
+}
+
+/* Keep old classes for backwards compat */
 .wf-output-readable {
   display: flex;
   flex-direction: column;
