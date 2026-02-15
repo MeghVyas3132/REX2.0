@@ -2,9 +2,16 @@
 // REX - Execution Service
 // ──────────────────────────────────────────────
 
-import { eq, desc, count } from "drizzle-orm";
+import { and, eq, desc, count } from "drizzle-orm";
 import type { Database } from "@rex/database";
-import { executions, executionSteps } from "@rex/database";
+import {
+  executions,
+  executionSteps,
+  executionStepAttempts,
+  executionRetrievalEvents,
+  executionContextSnapshots,
+  workflows,
+} from "@rex/database";
 import { createLogger } from "@rex/utils";
 import type { ExecutionStepResult } from "@rex/types";
 import { enqueueExecution } from "../queue/client.js";
@@ -17,13 +24,30 @@ export interface ExecutionService {
     workflowId: string,
     payload: Record<string, unknown>
   ): Promise<{ executionId: string }>;
-  getById(executionId: string): Promise<ExecutionRecord | null>;
+  getById(userId: string, executionId: string): Promise<ExecutionRecord | null>;
   listByWorkflow(
+    userId: string,
     workflowId: string,
     page: number,
     limit: number
   ): Promise<{ data: ExecutionRecord[]; total: number }>;
   getSteps(executionId: string): Promise<StepRecord[]>;
+  listStepAttempts(
+    userId: string,
+    executionId: string,
+    options: StepAttemptListOptions
+  ): Promise<{ data: StepAttemptRecord[]; total: number }>;
+  getRetrievalEvents(executionId: string): Promise<RetrievalEventRecord[]>;
+  listRetrievalEvents(
+    userId: string,
+    executionId: string,
+    options: RetrievalEventListOptions
+  ): Promise<{ data: RetrievalEventRecord[]; total: number }>;
+  listContextSnapshots(
+    userId: string,
+    executionId: string,
+    options: ContextSnapshotListOptions
+  ): Promise<{ data: ExecutionContextSnapshotRecord[]; total: number }>;
   updateStatus(
     executionId: string,
     status: string,
@@ -54,6 +78,76 @@ export interface StepRecord {
   durationMs: number | null;
   error: string | null;
   createdAt: Date;
+}
+
+export interface StepAttemptRecord {
+  id: string;
+  executionId: string;
+  nodeId: string;
+  nodeType: string;
+  attempt: number;
+  status: "completed" | "retry" | "failed";
+  durationMs: number;
+  reason: string | null;
+  createdAt: Date;
+}
+
+export interface StepAttemptListOptions {
+  nodeId?: string;
+  status?: "completed" | "retry" | "failed";
+  page: number;
+  limit: number;
+}
+
+export interface RetrievalEventRecord {
+  id: string;
+  executionId: string;
+  nodeId: string;
+  nodeType: string;
+  query: string;
+  topK: number;
+  attempt: number;
+  maxAttempts: number;
+  status: string;
+  matchesCount: number;
+  durationMs: number;
+  errorMessage: string | null;
+  scopeType: string | null;
+  corpusId: string | null;
+  workflowIdScope: string | null;
+  executionIdScope: string | null;
+  strategy: string | null;
+  retrieverKey: string | null;
+  branchIndex: number | null;
+  selected: boolean | null;
+  createdAt: Date;
+}
+
+export interface RetrievalEventListOptions {
+  nodeId?: string;
+  status?: "success" | "empty" | "failed";
+  strategy?: "single" | "merge" | "first-non-empty" | "best-score" | "adaptive";
+  retrieverKey?: string;
+  selected?: boolean;
+  page: number;
+  limit: number;
+}
+
+export interface ExecutionContextSnapshotRecord {
+  id: string;
+  executionId: string;
+  sequence: number;
+  reason: "init" | "step" | "final" | "error";
+  nodeId: string | null;
+  nodeType: string | null;
+  state: unknown;
+  createdAt: Date;
+}
+
+export interface ContextSnapshotListOptions {
+  reason?: "init" | "step" | "final" | "error";
+  page: number;
+  limit: number;
 }
 
 export function createExecutionService(db: Database): ExecutionService {
@@ -90,31 +184,35 @@ export function createExecutionService(db: Database): ExecutionService {
       return { executionId: execution.id };
     },
 
-    async getById(executionId) {
+    async getById(userId, executionId) {
       const [execution] = await db
         .select()
         .from(executions)
-        .where(eq(executions.id, executionId))
+        .innerJoin(workflows, eq(workflows.id, executions.workflowId))
+        .where(and(eq(executions.id, executionId), eq(workflows.userId, userId)))
         .limit(1);
 
-      return (execution as ExecutionRecord) ?? null;
+      return (execution?.executions as ExecutionRecord | undefined) ?? null;
     },
 
-    async listByWorkflow(workflowId, page, limit) {
+    async listByWorkflow(userId, workflowId, page, limit) {
       const offset = (page - 1) * limit;
 
       const [data, totalResult] = await Promise.all([
         db
           .select()
           .from(executions)
-          .where(eq(executions.workflowId, workflowId))
+          .innerJoin(workflows, eq(workflows.id, executions.workflowId))
+          .where(and(eq(executions.workflowId, workflowId), eq(workflows.userId, userId)))
           .orderBy(desc(executions.createdAt))
           .limit(limit)
-          .offset(offset),
+          .offset(offset)
+          .then((rows) => rows.map((row) => row.executions)),
         db
           .select({ total: count() })
           .from(executions)
-          .where(eq(executions.workflowId, workflowId)),
+          .innerJoin(workflows, eq(workflows.id, executions.workflowId))
+          .where(and(eq(executions.workflowId, workflowId), eq(workflows.userId, userId))),
       ]);
 
       return {
@@ -130,6 +228,137 @@ export function createExecutionService(db: Database): ExecutionService {
         .where(eq(executionSteps.executionId, executionId));
 
       return steps as StepRecord[];
+    },
+
+    async listStepAttempts(userId, executionId, options) {
+      const owned = await isExecutionOwnedByUser(db, userId, executionId);
+      if (!owned) {
+        throw new Error("Execution not found or access denied");
+      }
+
+      const conditions = [eq(executionStepAttempts.executionId, executionId)];
+      if (options.nodeId) {
+        conditions.push(eq(executionStepAttempts.nodeId, options.nodeId));
+      }
+      if (options.status) {
+        conditions.push(eq(executionStepAttempts.status, options.status));
+      }
+
+      const whereClause = conditions.length === 1 ? conditions[0] : and(...conditions);
+      const offset = (options.page - 1) * options.limit;
+
+      const [data, totalResult] = await Promise.all([
+        db
+          .select()
+          .from(executionStepAttempts)
+          .where(whereClause)
+          .orderBy(desc(executionStepAttempts.createdAt))
+          .limit(options.limit)
+          .offset(offset),
+        db
+          .select({ total: count() })
+          .from(executionStepAttempts)
+          .where(whereClause),
+      ]);
+
+      return {
+        data: data as StepAttemptRecord[],
+        total: totalResult[0]?.total ?? 0,
+      };
+    },
+
+    async getRetrievalEvents(executionId) {
+      const events = await db
+        .select()
+        .from(executionRetrievalEvents)
+        .where(eq(executionRetrievalEvents.executionId, executionId))
+        .orderBy(
+          executionRetrievalEvents.createdAt,
+          executionRetrievalEvents.nodeId,
+          executionRetrievalEvents.attempt
+        );
+
+      return events as RetrievalEventRecord[];
+    },
+
+    async listRetrievalEvents(userId, executionId, options) {
+      const owned = await isExecutionOwnedByUser(db, userId, executionId);
+      if (!owned) {
+        throw new Error("Execution not found or access denied");
+      }
+
+      const conditions = [eq(executionRetrievalEvents.executionId, executionId)];
+      if (options.nodeId) {
+        conditions.push(eq(executionRetrievalEvents.nodeId, options.nodeId));
+      }
+      if (options.status) {
+        conditions.push(eq(executionRetrievalEvents.status, options.status));
+      }
+      if (options.strategy) {
+        conditions.push(eq(executionRetrievalEvents.strategy, options.strategy));
+      }
+      if (options.retrieverKey) {
+        conditions.push(eq(executionRetrievalEvents.retrieverKey, options.retrieverKey));
+      }
+      if (typeof options.selected === "boolean") {
+        conditions.push(eq(executionRetrievalEvents.selected, options.selected));
+      }
+
+      const whereClause = conditions.length === 1 ? conditions[0] : and(...conditions);
+      const offset = (options.page - 1) * options.limit;
+
+      const [data, totalResult] = await Promise.all([
+        db
+          .select()
+          .from(executionRetrievalEvents)
+          .where(whereClause)
+          .orderBy(desc(executionRetrievalEvents.createdAt))
+          .limit(options.limit)
+          .offset(offset),
+        db
+          .select({ total: count() })
+          .from(executionRetrievalEvents)
+          .where(whereClause),
+      ]);
+
+      return {
+        data: data as RetrievalEventRecord[],
+        total: totalResult[0]?.total ?? 0,
+      };
+    },
+
+    async listContextSnapshots(userId, executionId, options) {
+      const owned = await isExecutionOwnedByUser(db, userId, executionId);
+      if (!owned) {
+        throw new Error("Execution not found or access denied");
+      }
+
+      const conditions = [eq(executionContextSnapshots.executionId, executionId)];
+      if (options.reason) {
+        conditions.push(eq(executionContextSnapshots.reason, options.reason));
+      }
+
+      const whereClause = conditions.length === 1 ? conditions[0] : and(...conditions);
+      const offset = (options.page - 1) * options.limit;
+
+      const [data, totalResult] = await Promise.all([
+        db
+          .select()
+          .from(executionContextSnapshots)
+          .where(whereClause)
+          .orderBy(desc(executionContextSnapshots.sequence))
+          .limit(options.limit)
+          .offset(offset),
+        db
+          .select({ total: count() })
+          .from(executionContextSnapshots)
+          .where(whereClause),
+      ]);
+
+      return {
+        data: data as ExecutionContextSnapshotRecord[],
+        total: totalResult[0]?.total ?? 0,
+      };
     },
 
     async updateStatus(executionId, status, errorMessage = null) {
@@ -164,4 +393,19 @@ export function createExecutionService(db: Database): ExecutionService {
       });
     },
   };
+}
+
+async function isExecutionOwnedByUser(
+  db: Database,
+  userId: string,
+  executionId: string
+): Promise<boolean> {
+  const [owned] = await db
+    .select({ id: executions.id })
+    .from(executions)
+    .innerJoin(workflows, eq(workflows.id, executions.workflowId))
+    .where(and(eq(executions.id, executionId), eq(workflows.userId, userId)))
+    .limit(1);
+
+  return Boolean(owned);
 }
