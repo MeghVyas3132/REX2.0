@@ -3,7 +3,7 @@
 // ──────────────────────────────────────────────
 
 import { Queue } from "bullmq";
-import type { ExecutionJobPayload } from "@rex/types";
+import type { ExecutionJobPayload, KnowledgeIngestionJobPayload } from "@rex/types";
 import { loadConfig, createLogger } from "@rex/utils";
 
 const logger = createLogger("queue");
@@ -47,6 +47,26 @@ export async function enqueueExecution(payload: ExecutionJobPayload): Promise<st
   }, "Execution job enqueued");
 
   return job.id ?? payload.executionId;
+}
+
+export async function enqueueKnowledgeIngestion(
+  payload: KnowledgeIngestionJobPayload
+): Promise<string> {
+  const queue = getQueue();
+
+  // BullMQ custom job ids cannot contain ":" in this runtime version.
+  const jobId = `ingest-${payload.documentId}`;
+  const job = await queue.add("ingest-knowledge-document", payload, {
+    jobId,
+  });
+
+  logger.info({
+    jobId: job.id,
+    corpusId: payload.corpusId,
+    documentId: payload.documentId,
+  }, "Knowledge ingestion job enqueued");
+
+  return job.id ?? jobId;
 }
 
 export async function closeQueue(): Promise<void> {
