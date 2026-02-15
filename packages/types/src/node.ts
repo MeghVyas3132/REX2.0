@@ -2,6 +2,14 @@
 // REX - Node Types
 // ──────────────────────────────────────────────
 
+import type { ExecutionContextPatch, ExecutionContextState } from "./execution.js";
+import type {
+  RuntimeKnowledgeNodeQueryInput,
+  RuntimeKnowledgeQueryResult,
+  RuntimeKnowledgeNodeIngestionInput,
+  RuntimeKnowledgeIngestionResult,
+} from "./knowledge.js";
+
 export interface NodeExecutionContext {
   executionId: string;
   workflowId: string;
@@ -10,6 +18,16 @@ export interface NodeExecutionContext {
   nodeId: string;
   logger: NodeLogger;
   getApiKey: (provider: LLMProviderType) => Promise<string>;
+  getExecutionContext: () => Readonly<ExecutionContextState>;
+  updateExecutionContext: (patch: ExecutionContextPatch) => void;
+  getMemory: <T = unknown>(key: string) => T | undefined;
+  setMemory: (key: string, value: unknown) => void;
+  retrieveKnowledge?: (
+    query: RuntimeKnowledgeNodeQueryInput
+  ) => Promise<RuntimeKnowledgeQueryResult>;
+  ingestKnowledge?: (
+    input: RuntimeKnowledgeNodeIngestionInput
+  ) => Promise<RuntimeKnowledgeIngestionResult>;
 }
 
 export interface NodeLogger {
@@ -54,7 +72,13 @@ export type NodeType =
   | "code"
   | "transformer"
   | "output"
-  | "file-upload";
+  | "file-upload"
+  | "memory-write"
+  | "memory-read"
+  | "execution-control"
+  | "evaluation"
+  | "knowledge-ingest"
+  | "knowledge-retrieve";
 
 export const NODE_TYPES: NodeType[] = [
   "webhook-trigger",
@@ -71,6 +95,12 @@ export const NODE_TYPES: NodeType[] = [
   "transformer",
   "output",
   "file-upload",
+  "memory-write",
+  "memory-read",
+  "execution-control",
+  "evaluation",
+  "knowledge-ingest",
+  "knowledge-retrieve",
 ];
 
 export type LLMProviderType = "gemini" | "groq";
