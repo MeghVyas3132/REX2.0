@@ -18,6 +18,12 @@ import { CodeNode } from "./code.js";
 import { TransformerNode } from "./transformer.js";
 import { OutputNode } from "./output.js";
 import { FileUploadNode } from "./file-upload.js";
+import { MemoryWriteNode } from "./memory-write.js";
+import { MemoryReadNode } from "./memory-read.js";
+import { ExecutionControlNode } from "./execution-control.js";
+import { EvaluationNode } from "./evaluation.js";
+import { KnowledgeIngestNode } from "./knowledge-ingest.js";
+import { KnowledgeRetrieveNode } from "./knowledge-retrieve.js";
 
 export function registerAllNodes(): void {
   registerNode(WebhookTriggerNode);
@@ -34,6 +40,12 @@ export function registerAllNodes(): void {
   registerNode(TransformerNode);
   registerNode(OutputNode);
   registerNode(FileUploadNode);
+  registerNode(MemoryWriteNode);
+  registerNode(MemoryReadNode);
+  registerNode(ExecutionControlNode);
+  registerNode(EvaluationNode);
+  registerNode(KnowledgeIngestNode);
+  registerNode(KnowledgeRetrieveNode);
 }
 
 export {
@@ -51,4 +63,10 @@ export {
   TransformerNode,
   OutputNode,
   FileUploadNode,
+  MemoryWriteNode,
+  MemoryReadNode,
+  ExecutionControlNode,
+  EvaluationNode,
+  KnowledgeIngestNode,
+  KnowledgeRetrieveNode,
 };
