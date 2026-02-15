@@ -18,3 +18,11 @@ export {
   isNonEmptyString,
   omitKeys,
 } from "./helpers.js";
+export {
+  chunkText,
+  estimateTokens,
+  buildDeterministicEmbedding,
+  cosineSimilarity,
+  parseEmbedding,
+} from "./knowledge.js";
+export type { TextChunk, ChunkingOptions } from "./knowledge.js";
