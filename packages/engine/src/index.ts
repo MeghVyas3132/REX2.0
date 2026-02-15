@@ -22,4 +22,11 @@ export {
   CodeNode,
   TransformerNode,
   OutputNode,
+  FileUploadNode,
+  MemoryWriteNode,
+  MemoryReadNode,
+  ExecutionControlNode,
+  EvaluationNode,
+  KnowledgeIngestNode,
+  KnowledgeRetrieveNode,
 } from "./nodes/index.js";
