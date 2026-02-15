@@ -6,7 +6,7 @@ import { eq, and, desc, sql, count } from "drizzle-orm";
 import type { Database } from "@rex/database";
 import { workflows } from "@rex/database";
 import { createLogger } from "@rex/utils";
-import type { WorkflowNode, WorkflowEdge } from "@rex/types";
+import type { WorkflowNode, WorkflowEdge, WorkflowTemplateId } from "@rex/types";
 
 const logger = createLogger("workflow-service");
 
@@ -16,7 +16,8 @@ export interface WorkflowService {
     name: string,
     description: string,
     nodes: WorkflowNode[],
-    edges: WorkflowEdge[]
+    edges: WorkflowEdge[],
+    sourceTemplate?: WorkflowTemplateSourceInput
   ): Promise<WorkflowRecord>;
   getById(userId: string, workflowId: string): Promise<WorkflowRecord | null>;
   list(userId: string, page: number, limit: number): Promise<{ data: WorkflowRecord[]; total: number }>;
@@ -33,8 +34,17 @@ export interface WorkflowRecord {
   nodes: unknown;
   edges: unknown;
   version: number;
+  sourceTemplateId: string | null;
+  sourceTemplateVersion: number | null;
+  sourceTemplateParams: Record<string, unknown> | null;
   createdAt: Date;
   updatedAt: Date;
+}
+
+export interface WorkflowTemplateSourceInput {
+  templateId: WorkflowTemplateId;
+  templateVersion: number;
+  templateParams?: Record<string, unknown>;
 }
 
 interface WorkflowUpdateInput {
@@ -47,7 +57,7 @@ interface WorkflowUpdateInput {
 
 export function createWorkflowService(db: Database): WorkflowService {
   return {
-    async create(userId, name, description, nodes, edges) {
+    async create(userId, name, description, nodes, edges, sourceTemplate) {
       logger.info({ userId, name }, "Creating workflow");
 
       const [workflow] = await db
@@ -58,6 +68,11 @@ export function createWorkflowService(db: Database): WorkflowService {
           description,
           nodes: JSON.parse(JSON.stringify(nodes)),
           edges: JSON.parse(JSON.stringify(edges)),
+          sourceTemplateId: sourceTemplate?.templateId ?? null,
+          sourceTemplateVersion: sourceTemplate?.templateVersion ?? null,
+          sourceTemplateParams: sourceTemplate?.templateParams
+            ? JSON.parse(JSON.stringify(sourceTemplate.templateParams))
+            : null,
         })
         .returning();
 
