@@ -14,6 +14,7 @@ export interface CanvasEdge {
   id: string;
   source: string;
   target: string;
+  condition?: string | boolean;
 }
 
 export interface Point {
@@ -109,7 +110,14 @@ export const NODE_TYPE_DEFS: NodeTypeDefinition[] = [
     label: "LLM",
     category: "action",
     description: "Call a language model",
-    defaultConfig: { provider: "gemini", model: "gemini-2.0-flash", prompt: "" },
+    defaultConfig: {
+      provider: "gemini",
+      model: "gemini-2.0-flash",
+      prompt: "",
+      retryEnabled: "false",
+      retryMaxAttempts: 3,
+      retryDelayMs: 0,
+    },
     configFields: [
       {
         key: "provider",
@@ -125,6 +133,19 @@ export const NODE_TYPE_DEFS: NodeTypeDefinition[] = [
       { key: "systemPrompt", label: "System Prompt", type: "textarea", placeholder: "Optional system instructions" },
       { key: "temperature", label: "Temperature", type: "number", placeholder: "0.7" },
       { key: "maxTokens", label: "Max Tokens", type: "number", placeholder: "2048" },
+      {
+        key: "retryEnabled",
+        label: "Retry Enabled",
+        type: "select",
+        options: [
+          { value: "false", label: "No" },
+          { value: "true", label: "Yes" },
+        ],
+      },
+      { key: "retryMaxAttempts", label: "Retry Max Attempts", type: "number", placeholder: "3" },
+      { key: "retryDelayMs", label: "Retry Delay (ms)", type: "number", placeholder: "500" },
+      { key: "qualityCheckRequiredText", label: "Quality: Required Text", type: "text", placeholder: "must include this phrase" },
+      { key: "qualityCheckMinLength", label: "Quality: Min Length", type: "number", placeholder: "120" },
     ],
   },
   {
@@ -170,6 +191,142 @@ export const NODE_TYPE_DEFS: NodeTypeDefinition[] = [
     defaultConfig: { expression: "" },
     configFields: [
       { key: "expression", label: "Expression", type: "textarea", placeholder: "({ name: data.user, count: data.items.length })" },
+    ],
+  },
+  {
+    type: "storage",
+    label: "Storage",
+    category: "action",
+    description: "Persist data in execution memory",
+    defaultConfig: { storageKey: "default", persistToExecutionContext: "true" },
+    configFields: [
+      { key: "storageKey", label: "Storage Key", type: "text", placeholder: "default" },
+      {
+        key: "persistToExecutionContext",
+        label: "Persist to Execution Memory",
+        type: "select",
+        options: [
+          { value: "true", label: "Yes" },
+          { value: "false", label: "No" },
+        ],
+      },
+    ],
+  },
+  {
+    type: "memory-write",
+    label: "Memory Write",
+    category: "logic",
+    description: "Write values into execution memory",
+    defaultConfig: { memoryKey: "", operation: "set", valuePath: "", outputKey: "_memoryValue" },
+    configFields: [
+      { key: "memoryKey", label: "Memory Key", type: "text", placeholder: "session.summary" },
+      {
+        key: "operation",
+        label: "Operation",
+        type: "select",
+        options: [
+          { value: "set", label: "Set" },
+          { value: "append", label: "Append" },
+          { value: "increment", label: "Increment" },
+        ],
+      },
+      { key: "valuePath", label: "Value Path", type: "text", placeholder: "content" },
+      { key: "valueTemplate", label: "Value Template", type: "textarea", placeholder: "{{content}}" },
+      { key: "incrementBy", label: "Increment By", type: "number", placeholder: "1" },
+      { key: "outputKey", label: "Output Key", type: "text", placeholder: "_memoryValue" },
+      {
+        key: "includeInOutput",
+        label: "Include In Output",
+        type: "select",
+        options: [
+          { value: "true", label: "Yes" },
+          { value: "false", label: "No" },
+        ],
+      },
+    ],
+  },
+  {
+    type: "memory-read",
+    label: "Memory Read",
+    category: "logic",
+    description: "Read values from execution memory",
+    defaultConfig: { memoryKey: "", outputKey: "_memoryValue", required: "false" },
+    configFields: [
+      { key: "memoryKey", label: "Memory Key", type: "text", placeholder: "session.summary" },
+      { key: "outputKey", label: "Output Key", type: "text", placeholder: "_memoryValue" },
+      {
+        key: "required",
+        label: "Required",
+        type: "select",
+        options: [
+          { value: "false", label: "No" },
+          { value: "true", label: "Yes" },
+        ],
+      },
+      { key: "defaultValue", label: "Default Value", type: "text", placeholder: "fallback value" },
+    ],
+  },
+  {
+    type: "execution-control",
+    label: "Execution Control",
+    category: "logic",
+    description: "Adjust retry/loop counters or terminate run",
+    defaultConfig: { action: "increment-retry", value: 1 },
+    configFields: [
+      {
+        key: "action",
+        label: "Action",
+        type: "select",
+        options: [
+          { value: "increment-retry", label: "Increment Retry" },
+          { value: "increment-loop", label: "Increment Loop" },
+          { value: "reset-retry", label: "Reset Retry" },
+          { value: "reset-loop", label: "Reset Loop" },
+          { value: "set-max-retries", label: "Set Max Retries" },
+          { value: "set-max-loops", label: "Set Max Loops" },
+          { value: "terminate", label: "Terminate" },
+          { value: "clear-terminate", label: "Clear Terminate" },
+        ],
+      },
+      { key: "value", label: "Value", type: "number", placeholder: "1" },
+      { key: "reason", label: "Terminate Reason", type: "text", placeholder: "Optional reason" },
+    ],
+  },
+  {
+    type: "evaluation",
+    label: "Evaluation",
+    category: "logic",
+    description: "Evaluate output quality and request retry",
+    defaultConfig: {
+      valuePath: "content",
+      requestRetryOnFail: "false",
+      strict: "false",
+    },
+    configFields: [
+      { key: "valuePath", label: "Value Path", type: "text", placeholder: "content" },
+      { key: "requiredText", label: "Required Text", type: "text", placeholder: "must include this phrase" },
+      { key: "minLength", label: "Min Length", type: "number", placeholder: "100" },
+      { key: "maxLength", label: "Max Length", type: "number", placeholder: "8000" },
+      {
+        key: "requestRetryOnFail",
+        label: "Retry On Fail",
+        type: "select",
+        options: [
+          { value: "false", label: "No" },
+          { value: "true", label: "Yes" },
+        ],
+      },
+      { key: "retryReasonPrefix", label: "Retry Reason Prefix", type: "text", placeholder: "Evaluation failed" },
+      { key: "retryDelayMs", label: "Retry Delay (ms)", type: "number", placeholder: "300" },
+      {
+        key: "strict",
+        label: "Strict (throw on fail)",
+        type: "select",
+        options: [
+          { value: "false", label: "No" },
+          { value: "true", label: "Yes" },
+        ],
+      },
     ],
   },
   {
@@ -222,6 +379,139 @@ export const NODE_TYPE_DEFS: NodeTypeDefinition[] = [
         label: "Operations (comma-separated)",
         type: "text",
         placeholder: "trim, normalize-case, remove-special-chars",
+      },
+    ],
+  },
+  {
+    type: "knowledge-ingest",
+    label: "Knowledge Ingest",
+    category: "action",
+    description: "Ingest runtime documents into a knowledge corpus",
+    defaultConfig: {
+      required: "false",
+      documentsPath: "documents",
+      contentPath: "documentText",
+      titlePath: "documentTitle",
+      titleTemplate: "Runtime Document",
+      sourceType: "inline",
+      outputKey: "_knowledgeIngestion",
+      scopeType: "user",
+    },
+    configFields: [
+      { key: "corpusId", label: "Corpus ID", type: "text", placeholder: "Optional fixed corpus id" },
+      {
+        key: "scopeType",
+        label: "Scope",
+        type: "select",
+        options: [
+          { value: "user", label: "User" },
+          { value: "workflow", label: "Workflow" },
+          { value: "execution", label: "Execution" },
+        ],
+      },
+      { key: "workflowIdScope", label: "Workflow Scope ID", type: "text", placeholder: "Optional workflow id" },
+      { key: "executionIdScope", label: "Execution Scope ID", type: "text", placeholder: "Optional execution id" },
+      { key: "documentsPath", label: "Documents Path", type: "text", placeholder: "documents" },
+      { key: "contentPath", label: "Single Content Path", type: "text", placeholder: "documentText" },
+      { key: "contentTemplate", label: "Content Template", type: "textarea", placeholder: "{{query}} context..." },
+      { key: "titlePath", label: "Title Path", type: "text", placeholder: "documentTitle" },
+      { key: "titleTemplate", label: "Title Template", type: "text", placeholder: "Runtime Document" },
+      {
+        key: "sourceType",
+        label: "Source Type",
+        type: "select",
+        options: [
+          { value: "inline", label: "Inline" },
+          { value: "upload", label: "Upload" },
+          { value: "api", label: "API" },
+        ],
+      },
+      { key: "outputKey", label: "Output Key", type: "text", placeholder: "_knowledgeIngestion" },
+      {
+        key: "required",
+        label: "Required",
+        type: "select",
+        options: [
+          { value: "false", label: "No" },
+          { value: "true", label: "Yes" },
+        ],
+      },
+    ],
+  },
+  {
+    type: "knowledge-retrieve",
+    label: "Knowledge Retrieve",
+    category: "logic",
+    description: "Retrieve top-K context from scoped corpus",
+    defaultConfig: {
+      queryPath: "query",
+      topK: 8,
+      strategy: "single",
+      minMatches: 1,
+      failOnEmpty: "false",
+      failOnError: "false",
+      outputKey: "_knowledge",
+      setAsPrimary: "true",
+      scopeType: "user",
+    },
+    configFields: [
+      { key: "corpusId", label: "Corpus ID", type: "text", placeholder: "Optional fixed corpus id" },
+      {
+        key: "scopeType",
+        label: "Scope",
+        type: "select",
+        options: [
+          { value: "user", label: "User" },
+          { value: "workflow", label: "Workflow" },
+          { value: "execution", label: "Execution" },
+        ],
+      },
+      { key: "workflowIdScope", label: "Workflow Scope ID", type: "text", placeholder: "Optional workflow id" },
+      { key: "executionIdScope", label: "Execution Scope ID", type: "text", placeholder: "Optional execution id" },
+      { key: "queryPath", label: "Query Path", type: "text", placeholder: "query" },
+      { key: "queryTemplate", label: "Query Template", type: "text", placeholder: "{{query}}" },
+      { key: "topK", label: "Top K", type: "number", placeholder: "8" },
+      {
+        key: "strategy",
+        label: "Strategy",
+        type: "select",
+        options: [
+          { value: "single", label: "Single" },
+          { value: "first-non-empty", label: "First Non Empty" },
+          { value: "merge", label: "Merge" },
+          { value: "best-score", label: "Best Score" },
+          { value: "adaptive", label: "Adaptive" },
+        ],
+      },
+      { key: "retrieverKey", label: "Retriever Key", type: "text", placeholder: "semantic" },
+      { key: "minMatches", label: "Min Matches", type: "number", placeholder: "1" },
+      { key: "outputKey", label: "Output Key", type: "text", placeholder: "_knowledge" },
+      {
+        key: "setAsPrimary",
+        label: "Set As Primary _knowledge",
+        type: "select",
+        options: [
+          { value: "true", label: "Yes" },
+          { value: "false", label: "No" },
+        ],
+      },
+      {
+        key: "failOnEmpty",
+        label: "Fail On Empty",
+        type: "select",
+        options: [
+          { value: "false", label: "No" },
+          { value: "true", label: "Yes" },
+        ],
+      },
+      {
+        key: "failOnError",
+        label: "Fail On Error",
+        type: "select",
+        options: [
+          { value: "false", label: "No" },
+          { value: "true", label: "Yes" },
+        ],
       },
     ],
   },
