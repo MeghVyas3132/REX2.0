@@ -452,6 +452,95 @@ export function WorkflowEditor({
 
   // ── Smart output renderer ──────────────────
 
+  /** Parse plain-text LLM content into structured blocks */
+  function parseLLMContent(text: string) {
+    const lines = text.split("\n");
+    const blocks: Array<{ type: "heading" | "list-item" | "paragraph" | "blank"; text: string }> = [];
+    let paraBuffer: string[] = [];
+
+    const flushPara = () => {
+      if (paraBuffer.length > 0) {
+        blocks.push({ type: "paragraph", text: paraBuffer.join("\n") });
+        paraBuffer = [];
+      }
+    };
+
+    for (const line of lines) {
+      const trimmed = line.trim();
+
+      // Blank line
+      if (!trimmed) { flushPara(); blocks.push({ type: "blank", text: "" }); continue; }
+
+      // Numbered list: "1. xxx" or "1) xxx"
+      if (/^\d+[\.\)]\s+/.test(trimmed)) { flushPara(); blocks.push({ type: "list-item", text: trimmed }); continue; }
+
+      // Bullet list: "- xxx" or "* xxx"
+      if (/^[-*•]\s+/.test(trimmed)) { flushPara(); blocks.push({ type: "list-item", text: trimmed }); continue; }
+
+      // Heading-like: short line ending with ":"
+      if (trimmed.endsWith(":") && trimmed.length < 80) { flushPara(); blocks.push({ type: "heading", text: trimmed }); continue; }
+
+      // Regular text
+      paraBuffer.push(line);
+    }
+    flushPara();
+    return blocks;
+  }
+
+  /** Render parsed LLM blocks into JSX */
+  function renderLLMBlocks(blocks: ReturnType<typeof parseLLMContent>) {
+    return blocks.map((block, i) => {
+      if (block.type === "blank") return <div key={i} style={{ height: 6 }} />;
+      if (block.type === "heading") return <div key={i} className="wf-out-heading">{block.text}</div>;
+      if (block.type === "list-item") {
+        const match = block.text.match(/^(\d+[\.\)]|-|\*|•)\s+(.*)$/);
+        const bullet = match?.[1] ?? "•";
+        const content = match?.[2] ?? block.text;
+        return (
+          <div key={i} className="wf-out-list-item">
+            <span className="wf-out-bullet">{bullet}</span>
+            <span>{content}</span>
+          </div>
+        );
+      }
+      return <div key={i} className="wf-out-paragraph">{block.text}</div>;
+    });
+  }
+
+  /** Render LLM-style content card (used by llm node AND output node when content is present) */
+  function renderLLMCard(output: Record<string, unknown>) {
+    const content = String(output.content ?? "");
+    const blocks = parseLLMContent(content);
+    const model = output.model as string | undefined;
+    const provider = output.provider as string | undefined;
+    const usage = output.usage as Record<string, unknown> | undefined;
+    const _output = output._output as Record<string, unknown> | undefined;
+
+    return (
+      <div className="wf-out-card">
+        {/* Metadata badges row */}
+        <div className="wf-out-badges">
+          {provider ? <span className="wf-out-badge wf-out-badge-provider">⚡ {provider}</span> : null}
+          {model ? <span className="wf-out-badge wf-out-badge-model">🧠 {model}</span> : null}
+          {usage?.totalTokens ? <span className="wf-out-badge wf-out-badge-tokens">📊 {String(usage.totalTokens)} tokens</span> : null}
+        </div>
+
+        {/* Content area */}
+        <div className="wf-out-content">
+          {renderLLMBlocks(blocks)}
+        </div>
+
+        {/* Footer metadata */}
+        {_output ? (
+          <div className="wf-out-footer">
+            {_output.executionId ? <span>Execution: {String(_output.executionId).slice(0, 8)}…</span> : null}
+            {_output.collectedAt ? <span>{new Date(String(_output.collectedAt)).toLocaleString()}</span> : null}
+          </div>
+        ) : null}
+      </div>
+    );
+  }
+
   function renderNodeOutput(nodeId: string, output: Record<string, unknown> | null) {
     if (!output) return null;
 
@@ -459,85 +548,99 @@ export function WorkflowEditor({
     const node = nodes.find((n: CanvasNode) => n.id === nodeId);
     const nodeType = node?.type ?? "";
 
-    // LLM nodes — show content as readable text with metadata
-    if (nodeType === "llm" && typeof output.content === "string") {
+    // ── Output node: detect upstream LLM data ──
+    if (nodeType === "output" || nodeType === "log") {
+      // If the output node has LLM content (forwarded from upstream), render as LLM card
+      if (typeof output.content === "string" && (output.model || output.provider)) {
+        return renderLLMCard(output);
+      }
+      // Otherwise, render general data card
+      const display = output.message ?? output.data ?? output;
       return (
-        <div className="wf-output-readable">
-          <div className="wf-output-text">{output.content}</div>
-          <div className="wf-output-meta">
-            {output.model ? <span>Model: {String(output.model)}</span> : null}
-            {output.provider ? <span>Provider: {String(output.provider)}</span> : null}
-            {(output.usage && typeof output.usage === "object") ? (
-              <span>Tokens: {String((output.usage as Record<string, unknown>).totalTokens ?? "—")}</span>
-            ) : null}
+        <div className="wf-out-card">
+          <div className="wf-out-content">
+            {typeof display === "string" ? (
+              <div className="wf-out-paragraph">{display}</div>
+            ) : (
+              <pre className="wf-out-code">{JSON.stringify(display, null, 2)}</pre>
+            )}
           </div>
         </div>
       );
     }
 
-    // HTTP request nodes — show status + body
+    // ── LLM nodes — rich card ──
+    if (nodeType === "llm" && typeof output.content === "string") {
+      return renderLLMCard(output);
+    }
+
+    // ── HTTP request nodes — status + body card ──
     if (nodeType === "http-request") {
       const status = output.statusCode ?? output.status;
       const body = output.body ?? output.data ?? output.response;
       return (
-        <div className="wf-output-readable">
-          {status ? <div className="wf-output-meta"><span>Status: {String(status)}</span></div> : null}
-          <pre className="wf-output-panel-content">{typeof body === "string" ? body : JSON.stringify(body, null, 2)}</pre>
+        <div className="wf-out-card">
+          {status ? (
+            <div className="wf-out-badges">
+              <span className={`wf-out-badge ${Number(status) < 400 ? "wf-out-badge-success" : "wf-out-badge-error"}`}>
+                {Number(status) < 400 ? "✅" : "❌"} Status {String(status)}
+              </span>
+            </div>
+          ) : null}
+          <div className="wf-out-content">
+            <pre className="wf-out-code">{typeof body === "string" ? body : JSON.stringify(body, null, 2)}</pre>
+          </div>
         </div>
       );
     }
 
-    // Data cleaner / transformer — show cleaned data
+    // ── Data cleaner / transformer — data card ──
     if ((nodeType === "data-cleaner" || nodeType === "transformer") && output.data) {
       return (
-        <div className="wf-output-readable">
-          <pre className="wf-output-panel-content">{typeof output.data === "string" ? output.data : JSON.stringify(output.data, null, 2)}</pre>
-          {output.summary ? <div className="wf-output-meta"><span>{String(output.summary)}</span></div> : null}
+        <div className="wf-out-card">
+          {output.summary ? (
+            <div className="wf-out-badges"><span className="wf-out-badge wf-out-badge-model">📋 {String(output.summary)}</span></div>
+          ) : null}
+          <div className="wf-out-content">
+            <pre className="wf-out-code">{typeof output.data === "string" ? output.data : JSON.stringify(output.data, null, 2)}</pre>
+          </div>
         </div>
       );
     }
 
-    // Log / Output nodes — show message
-    if ((nodeType === "log" || nodeType === "output") && (output.message || output.data)) {
-      const display = output.message ?? output.data;
-      return (
-        <div className="wf-output-readable">
-          <div className="wf-output-text">{typeof display === "string" ? display : JSON.stringify(display, null, 2)}</div>
-        </div>
-      );
-    }
-
-    // File Upload nodes — show file info + data preview
+    // ── File Upload nodes — file info + data card ──
     if (nodeType === "file-upload") {
       const fname = output.fileName as string | undefined;
       const format = output.fileFormat as string | undefined;
-      const prev = output.preview as string | undefined;
       const data = output.data;
       const rowCount = output.rowCount as number | undefined;
       return (
-        <div className="wf-output-readable">
-          <div className="wf-output-meta">
-            {fname ? <span>File: {fname}</span> : null}
-            {format ? <span>Format: {format.toUpperCase()}</span> : null}
-            {rowCount ? <span>Rows: {rowCount}</span> : null}
+        <div className="wf-out-card">
+          <div className="wf-out-badges">
+            {fname ? <span className="wf-out-badge wf-out-badge-provider">📁 {fname}</span> : null}
+            {format ? <span className="wf-out-badge wf-out-badge-model">{format.toUpperCase()}</span> : null}
+            {rowCount ? <span className="wf-out-badge wf-out-badge-tokens">{rowCount} rows</span> : null}
           </div>
-          {prev ? <div className="wf-output-text" style={{ fontSize: 12, color: "#888", marginBottom: 8 }}>{prev}</div> : null}
-          {Array.isArray(data) ? (
-            <pre className="wf-output-panel-content">{JSON.stringify(data.slice(0, 10), null, 2)}{data.length > 10 ? `\n... and ${data.length - 10} more rows` : ""}</pre>
-          ) : typeof data === "string" ? (
-            <div className="wf-output-text">{data.length > 2000 ? data.slice(0, 2000) + "\n... (truncated)" : data}</div>
-          ) : (
-            <pre className="wf-output-panel-content">{JSON.stringify(data, null, 2)}</pre>
-          )}
+          <div className="wf-out-content">
+            {Array.isArray(data) ? (
+              <pre className="wf-out-code">{JSON.stringify(data.slice(0, 10), null, 2)}{data.length > 10 ? `\n… and ${data.length - 10} more rows` : ""}</pre>
+            ) : typeof data === "string" ? (
+              <div className="wf-out-paragraph">{data.length > 2000 ? data.slice(0, 2000) + "\n… (truncated)" : data}</div>
+            ) : (
+              <pre className="wf-out-code">{JSON.stringify(data, null, 2)}</pre>
+            )}
+          </div>
         </div>
       );
     }
 
-    // Fallback — show raw JSON for unknown types
+    // ── Fallback — generic card ──
     return (
-      <pre className="wf-output-panel-content">
-        {JSON.stringify(output, null, 2)}
-      </pre>
+      <div className="wf-out-card">
+        <div className="wf-out-content">
+          <pre className="wf-out-code">{JSON.stringify(output, null, 2)}</pre>
+        </div>
+      </div>
     );
   }
 
