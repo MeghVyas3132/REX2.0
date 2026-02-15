@@ -4,10 +4,11 @@
 // ──────────────────────────────────────────────
 
 import { Worker } from "bullmq";
-import type { ExecutionJobPayload } from "@rex/types";
+import type { ExecutionJobPayload, KnowledgeIngestionJobPayload } from "@rex/types";
 import { getDatabase } from "@rex/database";
 import { loadConfig, createLogger } from "@rex/utils";
 import { handleExecutionJob } from "./handler.js";
+import { handleKnowledgeIngestionJob } from "./knowledge-handler.js";
 
 const logger = createLogger("worker");
 
@@ -20,10 +21,20 @@ async function bootstrap(): Promise<void> {
     queue: config.worker.queueName,
   }, "Starting REX Worker");
 
-  const worker = new Worker<ExecutionJobPayload>(
+  const worker = new Worker<ExecutionJobPayload | KnowledgeIngestionJobPayload>(
     config.worker.queueName,
     async (job) => {
-      await handleExecutionJob(job, db);
+      if (job.name === "execute-workflow") {
+        await handleExecutionJob(job as typeof job & { data: ExecutionJobPayload }, db);
+        return;
+      }
+
+      if (job.name === "ingest-knowledge-document") {
+        await handleKnowledgeIngestionJob(job as typeof job & { data: KnowledgeIngestionJobPayload }, db);
+        return;
+      }
+
+      throw new Error(`Unknown job name: ${job.name}`);
     },
     {
       connection: {
@@ -39,14 +50,18 @@ async function bootstrap(): Promise<void> {
   worker.on("completed", (job) => {
     logger.info({
       jobId: job.id,
-      executionId: job.data.executionId,
+      jobName: job.name,
+      executionId: "executionId" in job.data ? job.data.executionId : undefined,
+      documentId: "documentId" in job.data ? job.data.documentId : undefined,
     }, "Job completed");
   });
 
   worker.on("failed", (job, err) => {
     logger.error({
       jobId: job?.id,
-      executionId: job?.data.executionId,
+      jobName: job?.name,
+      executionId: job && "executionId" in job.data ? job.data.executionId : undefined,
+      documentId: job && "documentId" in job.data ? job.data.documentId : undefined,
       error: err.message,
       attempt: job?.attemptsMade,
     }, "Job failed");
