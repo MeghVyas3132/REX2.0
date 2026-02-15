@@ -59,6 +59,9 @@ export interface AppConfig {
   worker: {
     concurrency: number;
     queueName: string;
+    retrievalMaxRequestsPerExecution: number;
+    retrievalMaxFailuresPerExecution: number;
+    retrievalMaxDurationMsPerExecution: number;
   };
 
   rateLimit: {
@@ -108,6 +111,18 @@ export function loadConfig(): AppConfig {
     worker: {
       concurrency: getEnvAsNumber("WORKER_CONCURRENCY", 5),
       queueName: getEnvOrDefault("QUEUE_NAME", "workflow-execution"),
+      retrievalMaxRequestsPerExecution: getEnvAsNumber(
+        "RETRIEVAL_MAX_REQUESTS_PER_EXECUTION",
+        64
+      ),
+      retrievalMaxFailuresPerExecution: getEnvAsNumber(
+        "RETRIEVAL_MAX_FAILURES_PER_EXECUTION",
+        32
+      ),
+      retrievalMaxDurationMsPerExecution: getEnvAsNumber(
+        "RETRIEVAL_MAX_DURATION_MS_PER_EXECUTION",
+        120000
+      ),
     },
 
     rateLimit: {
