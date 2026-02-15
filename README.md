@@ -2,6 +2,8 @@
 
 REX is a production-grade workflow automation engine designed for building, executing, and managing AI-powered automation pipelines. It provides a visual drag-and-drop editor for composing directed acyclic graphs (DAGs) of processing nodes, a distributed execution engine backed by BullMQ, and a REST API for programmatic control.
 
+Workflows can also be instantiated from versioned RAG templates, while remaining editable in the same DAG model and execution runtime.
+
 The system is architected as a monorepo with strict separation between domain logic, infrastructure, and presentation layers. Every workflow is validated as a DAG before execution, ensuring deterministic topological ordering and cycle-free processing.
 
 ---
@@ -160,6 +162,14 @@ All inter-service communication happens over the Docker bridge network. The back
 | DELETE | `/api/workflows/:id` | Delete workflow |
 | POST | `/api/workflows/:id/execute` | Trigger execution |
 | GET | `/api/workflows/:id/executions` | List executions |
+
+### Templates
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/workflow-templates` | List available workflow templates |
+| GET | `/api/workflow-templates/:templateId` | Get template descriptor |
+| POST | `/api/workflow-templates/:templateId/preview` | Build and preview graph from template params |
+| POST | `/api/workflow-templates/:templateId/instantiate` | Create workflow from template |
 
 ### Executions
 | Method | Endpoint | Description |
