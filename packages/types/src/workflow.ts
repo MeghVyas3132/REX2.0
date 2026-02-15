@@ -16,6 +16,11 @@ export interface WorkflowEdge {
   id: string;
   source: string;
   target: string;
+  // Optional branch condition:
+  // "true"/"false" for boolean condition outputs,
+  // "pass"/"fail" for evaluation outputs,
+  // any custom route token to match `_route` / `_branch.route`.
+  condition?: string | boolean;
 }
 
 export interface Workflow {
@@ -27,6 +32,9 @@ export interface Workflow {
   nodes: WorkflowNode[];
   edges: WorkflowEdge[];
   version: number;
+  sourceTemplateId?: string | null;
+  sourceTemplateVersion?: number | null;
+  sourceTemplateParams?: Record<string, unknown> | null;
   createdAt: Date;
   updatedAt: Date;
 }
