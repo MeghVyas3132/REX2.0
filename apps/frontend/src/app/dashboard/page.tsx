@@ -43,6 +43,7 @@ export default function DashboardPage() {
         <div style={styles.brand}>REX</div>
         <div style={styles.navLinks}>
           <Link href="/dashboard" style={styles.navLinkActive}>Workflows</Link>
+          <Link href="/dashboard/templates" style={styles.navLink}>Templates</Link>
           <Link href="/dashboard/settings" style={styles.navLink}>Settings</Link>
         </div>
         <div style={styles.userSection}>
@@ -92,6 +93,12 @@ export default function DashboardPage() {
                   <span>v{wf.version}</span>
                   <span>{new Date(wf.updatedAt).toLocaleDateString()}</span>
                 </div>
+                {wf.sourceTemplateId ? (
+                  <div style={styles.templateMeta}>
+                    Template: {wf.sourceTemplateId}
+                    {wf.sourceTemplateVersion ? ` (v${wf.sourceTemplateVersion})` : ""}
+                  </div>
+                ) : null}
               </Link>
             ))}
           </div>
@@ -249,5 +256,10 @@ const styles: Record<string, React.CSSProperties> = {
     justifyContent: "space-between",
     fontSize: "12px",
     color: "#444444",
+  },
+  templateMeta: {
+    marginTop: "8px",
+    fontSize: "11px",
+    color: "#6b7280",
   },
 };
