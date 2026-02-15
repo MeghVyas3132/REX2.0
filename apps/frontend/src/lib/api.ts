@@ -95,6 +95,45 @@ export const api = {
       ),
   },
 
+  templates: {
+    list: (token: string) =>
+      apiCall<{ success: boolean; data: WorkflowTemplateClient[] }>(
+        "/api/workflow-templates",
+        { token }
+      ),
+    get: (token: string, templateId: string) =>
+      apiCall<{ success: boolean; data: WorkflowTemplateClient }>(
+        `/api/workflow-templates/${templateId}`,
+        { token }
+      ),
+    instantiate: (
+      token: string,
+      templateId: string,
+      payload: InstantiateTemplatePayload = {}
+    ) =>
+      apiCall<{ success: boolean; data: WorkflowDetail }>(
+        `/api/workflow-templates/${templateId}/instantiate`,
+        { method: "POST", body: payload, token }
+      ),
+    preview: (
+      token: string,
+      templateId: string,
+      payload: InstantiateTemplatePayload = {}
+    ) =>
+      apiCall<{ success: boolean; data: TemplatePreviewResult }>(
+        `/api/workflow-templates/${templateId}/preview`,
+        { method: "POST", body: payload, token }
+      ),
+  },
+
+  knowledge: {
+    listCorpora: (token: string, page = 1, limit = 100) =>
+      apiCall<{ success: boolean; data: KnowledgeCorpusClient[]; meta: PaginationMeta }>(
+        `/api/knowledge/corpora?page=${page}&limit=${limit}`,
+        { token }
+      ),
+  },
+
   executions: {
     get: (token: string, id: string) =>
       apiCall<{ success: boolean; data: ExecutionDetail }>(
@@ -170,6 +209,9 @@ export interface WorkflowListItem {
   description: string;
   status: string;
   version: number;
+  sourceTemplateId?: string | null;
+  sourceTemplateVersion?: number | null;
+  sourceTemplateParams?: Record<string, unknown> | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -192,6 +234,7 @@ export interface WorkflowEdgeClient {
   id: string;
   source: string;
   target: string;
+  condition?: string | boolean;
 }
 
 export interface CreateWorkflowPayload {
@@ -207,6 +250,55 @@ export interface UpdateWorkflowPayload {
   status?: string;
   nodes?: WorkflowNodeClient[];
   edges?: WorkflowEdgeClient[];
+}
+
+export interface WorkflowTemplateClient {
+  id: string;
+  version: number;
+  name: string;
+  description: string;
+  category: "rag" | "agentic" | "memory" | "multimodal";
+  maturity: "planned" | "in-progress";
+  defaultWorkflowName: string;
+  tags: string[];
+}
+
+export interface InstantiateTemplatePayload {
+  name?: string;
+  description?: string;
+  params?: TemplateRuntimeParamsPayload;
+}
+
+export interface TemplatePreviewResult {
+  template: WorkflowTemplateClient;
+  workflowName: string;
+  description: string;
+  params: TemplateRuntimeParamsPayload;
+  nodes: WorkflowNodeClient[];
+  edges: WorkflowEdgeClient[];
+}
+
+export interface TemplateRuntimeParamsPayload {
+  queryPath?: string;
+  topK?: number;
+  corpusId?: string;
+  scopeType?: "user" | "workflow" | "execution";
+  workflowId?: string;
+  executionId?: string;
+}
+
+export interface KnowledgeCorpusClient {
+  id: string;
+  userId: string;
+  name: string;
+  description: string;
+  scopeType: "user" | "workflow" | "execution";
+  workflowId: string | null;
+  executionId: string | null;
+  status: string;
+  metadata: unknown;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface ExecutionListItem {
