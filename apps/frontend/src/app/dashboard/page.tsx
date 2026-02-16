@@ -25,8 +25,12 @@ export default function DashboardPage() {
   async function loadWorkflows() {
     if (!token) return;
     try {
-      const res = await api.workflows.list(token);
-      setWorkflows(res.data);
+      const [workflowRes, activeRes] = await Promise.all([
+        api.workflows.list(token),
+        api.workflows.active(token, 1, 100),
+      ]);
+      const activeWorkflowIds = new Set(activeRes.data.map((item) => item.workflowId));
+      setWorkflows(workflowRes.data.filter((workflow) => !activeWorkflowIds.has(workflow.id)));
     } catch {
       // Handle error silently, show empty state
     } finally {
@@ -43,6 +47,9 @@ export default function DashboardPage() {
         <div style={styles.brand}>REX</div>
         <div style={styles.navLinks}>
           <Link href="/dashboard" style={styles.navLinkActive}>Workflows</Link>
+          <Link href="/dashboard/active-workflows" style={styles.navLink}>Active Workflows</Link>
+          <Link href="/dashboard/current-workflow" style={styles.navLink}>Current Workflow</Link>
+          <Link href="/dashboard/corpora" style={styles.navLink}>Corpora</Link>
           <Link href="/dashboard/templates" style={styles.navLink}>Templates</Link>
           <Link href="/dashboard/settings" style={styles.navLink}>Settings</Link>
         </div>

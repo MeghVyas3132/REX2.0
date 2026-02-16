@@ -94,6 +94,7 @@ export function CanvasNodeComponent({
   return (
     <div
       className={classNames}
+      data-node-id={node.id}
       style={{
         left: node.position.x,
         top: node.position.y,

@@ -450,6 +450,40 @@
   stroke-width: 3;
 }
 
+.wf-edge-success {
+  stroke: #4b5563;
+}
+
+.wf-edge-flow {
+  fill: none;
+  stroke: #d1d5db;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-dasharray: 10 140;
+  opacity: 0;
+  pointer-events: none;
+  filter: drop-shadow(0 0 2px rgba(209, 213, 219, 0.22));
+  animation: wf-edge-flow 2.6s cubic-bezier(0.25, 0.1, 0.25, 1) infinite;
+  animation-delay: var(--wf-flow-delay, 0ms);
+}
+
+@keyframes wf-edge-flow {
+  0% {
+    stroke-dashoffset: 0;
+    opacity: 0;
+  }
+  12% {
+    opacity: 0.5;
+  }
+  68% {
+    opacity: 0.38;
+  }
+  100% {
+    stroke-dashoffset: -320;
+    opacity: 0;
+  }
+}
+
 .wf-edge-temp {
   fill: none;
   stroke: #666;

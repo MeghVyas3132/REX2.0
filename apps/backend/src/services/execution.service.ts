@@ -2,7 +2,7 @@
 // REX - Execution Service
 // ──────────────────────────────────────────────
 
-import { and, eq, desc, count } from "drizzle-orm";
+import { and, eq, desc, count, inArray } from "drizzle-orm";
 import type { Database } from "@rex/database";
 import {
   executions,
@@ -31,6 +31,11 @@ export interface ExecutionService {
     page: number,
     limit: number
   ): Promise<{ data: ExecutionRecord[]; total: number }>;
+  listActiveByUser(
+    userId: string,
+    page: number,
+    limit: number
+  ): Promise<{ data: ActiveWorkflowExecutionRecord[]; total: number }>;
   getSteps(executionId: string): Promise<StepRecord[]>;
   listStepAttempts(
     userId: string,
@@ -77,6 +82,16 @@ export interface StepRecord {
   output: unknown;
   durationMs: number | null;
   error: string | null;
+  createdAt: Date;
+}
+
+export interface ActiveWorkflowExecutionRecord {
+  workflowId: string;
+  workflowName: string;
+  workflowStatus: string;
+  executionId: string;
+  executionStatus: string;
+  startedAt: Date | null;
   createdAt: Date;
 }
 
@@ -217,6 +232,50 @@ export function createExecutionService(db: Database): ExecutionService {
 
       return {
         data: data as ExecutionRecord[],
+        total: totalResult[0]?.total ?? 0,
+      };
+    },
+
+    async listActiveByUser(userId, page, limit) {
+      const offset = (page - 1) * limit;
+      const activeStatuses = ["pending", "running"];
+
+      const [data, totalResult] = await Promise.all([
+        db
+          .select({
+            workflowId: workflows.id,
+            workflowName: workflows.name,
+            workflowStatus: workflows.status,
+            executionId: executions.id,
+            executionStatus: executions.status,
+            startedAt: executions.startedAt,
+            createdAt: executions.createdAt,
+          })
+          .from(executions)
+          .innerJoin(workflows, eq(workflows.id, executions.workflowId))
+          .where(
+            and(
+              eq(workflows.userId, userId),
+              inArray(executions.status, activeStatuses)
+            )
+          )
+          .orderBy(desc(executions.createdAt))
+          .limit(limit)
+          .offset(offset),
+        db
+          .select({ total: count() })
+          .from(executions)
+          .innerJoin(workflows, eq(workflows.id, executions.workflowId))
+          .where(
+            and(
+              eq(workflows.userId, userId),
+              inArray(executions.status, activeStatuses)
+            )
+          ),
+      ]);
+
+      return {
+        data: data as ActiveWorkflowExecutionRecord[],
         total: totalResult[0]?.total ?? 0,
       };
     },

@@ -12,6 +12,7 @@ import { useRouter, useParams } from "next/navigation";
 import { WorkflowEditor } from "@/components/workflow-editor";
 import type { CanvasNode, CanvasEdge } from "@/components/workflow-editor";
 import type { ExecutionPollResult } from "@/components/workflow-editor/WorkflowEditor";
+import { saveWorkflowDraft, clearWorkflowDraft } from "@/lib/workflow-draft";
 
 export default function WorkflowDetailPage() {
   const { token, loading: authLoading } = useAuth();
@@ -73,6 +74,7 @@ export default function WorkflowDetailPage() {
         })),
       });
       setSaveStatus("saved");
+      clearWorkflowDraft();
       setTimeout(() => setSaveStatus("idle"), 2000);
     } catch {
       setSaveStatus("error");
@@ -136,6 +138,16 @@ export default function WorkflowDetailPage() {
       saving={saving}
       saveStatus={saveStatus}
       onSave={handleSave}
+      onStateChange={(data) => {
+        saveWorkflowDraft({
+          mode: "update",
+          workflowId,
+          name: data.name,
+          description: data.description,
+          nodes: data.nodes,
+          edges: data.edges,
+        });
+      }}
       onExecute={handleExecute}
       onPollExecution={handlePollExecution}
       onBack={() => router.push("/dashboard")}

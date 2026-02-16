@@ -65,6 +65,29 @@ export function registerWorkflowRoutes(
       });
     });
 
+    // List active workflow executions (pending/running)
+    scoped.get("/api/workflows/active", async (request: FastifyRequest, reply: FastifyReply) => {
+      const userId = (request.user as { sub: string }).sub;
+      const pagination = paginationSchema.parse(request.query);
+
+      const result = await executionService.listActiveByUser(
+        userId,
+        pagination.page,
+        pagination.limit
+      );
+
+      return reply.send({
+        success: true,
+        data: result.data,
+        meta: {
+          total: result.total,
+          page: pagination.page,
+          limit: pagination.limit,
+          totalPages: Math.max(1, Math.ceil(result.total / pagination.limit)),
+        },
+      });
+    });
+
     // Get single workflow
     scoped.get("/api/workflows/:workflowId", async (request: FastifyRequest, reply: FastifyReply) => {
       const userId = (request.user as { sub: string }).sub;

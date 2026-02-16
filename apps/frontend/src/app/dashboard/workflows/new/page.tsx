@@ -10,9 +10,15 @@ import { api } from "@/lib/api";
 import { useRouter } from "next/navigation";
 import { WorkflowEditor } from "@/components/workflow-editor";
 import type { CanvasNode, CanvasEdge } from "@/components/workflow-editor";
+import {
+  loadWorkflowDraft,
+  saveWorkflowDraft,
+  clearWorkflowDraft,
+} from "@/lib/workflow-draft";
 
 export default function NewWorkflowPage() {
   const { token, loading: authLoading } = useAuth();
+  const initialDraft = loadWorkflowDraft();
   const [saving, setSaving] = useState(false);
   const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const router = useRouter();
@@ -46,6 +52,7 @@ export default function NewWorkflowPage() {
         })),
       });
       setSaveStatus("saved");
+      clearWorkflowDraft();
       setTimeout(() => {
         router.push(`/dashboard/workflows/${res.data.id}`);
       }, 500);
@@ -60,7 +67,37 @@ export default function NewWorkflowPage() {
 
   return (
     <WorkflowEditor
+      key={`new-${initialDraft?.updatedAt ?? "empty"}`}
+      initialNodes={
+        initialDraft?.mode === "create"
+          ? (initialDraft.nodes as CanvasNode[])
+          : []
+      }
+      initialEdges={
+        initialDraft?.mode === "create"
+          ? (initialDraft.edges as CanvasEdge[])
+          : []
+      }
+      workflowName={
+        initialDraft?.mode === "create"
+          ? initialDraft.name
+          : "Untitled Workflow"
+      }
+      workflowDescription={
+        initialDraft?.mode === "create"
+          ? initialDraft.description
+          : ""
+      }
       onSave={handleSave}
+      onStateChange={(data) => {
+        saveWorkflowDraft({
+          mode: "create",
+          name: data.name,
+          description: data.description,
+          nodes: data.nodes,
+          edges: data.edges,
+        });
+      }}
       onBack={() => router.push("/dashboard")}
       saving={saving}
       saveStatus={saveStatus}

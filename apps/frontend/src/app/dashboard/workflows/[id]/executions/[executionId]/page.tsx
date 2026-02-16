@@ -8,7 +8,7 @@ import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 
 export default function ExecutionDetailPage() {
-  const { token, loading: authLoading } = useAuth();
+  const { user, token, loading: authLoading, logout } = useAuth();
   const [execution, setExecution] = useState<ExecutionDetail | null>(null);
   const [steps, setSteps] = useState<ExecutionStepClient[]>([]);
   const [loading, setLoading] = useState(true);
@@ -48,8 +48,15 @@ export default function ExecutionDetailPage() {
         <div style={styles.brand}>REX</div>
         <div style={styles.navLinks}>
           <Link href="/dashboard" style={styles.navLink}>Workflows</Link>
+          <Link href="/dashboard/active-workflows" style={styles.navLink}>Active Workflows</Link>
+          <Link href="/dashboard/current-workflow" style={styles.navLink}>Current Workflow</Link>
+          <Link href="/dashboard/corpora" style={styles.navLink}>Corpora</Link>
           <Link href="/dashboard/templates" style={styles.navLink}>Templates</Link>
           <Link href="/dashboard/settings" style={styles.navLink}>Settings</Link>
+        </div>
+        <div style={styles.userSection}>
+          <span style={styles.userName}>{user?.name}</span>
+          <button onClick={logout} style={styles.logoutBtn}>Sign Out</button>
         </div>
       </nav>
 
@@ -233,6 +240,26 @@ const styles: Record<string, React.CSSProperties> = {
     color: "#999999",
     fontSize: "14px",
     textDecoration: "none",
+  },
+  userSection: {
+    borderTop: "1px solid #2a2a2a",
+    paddingTop: "16px",
+    display: "flex",
+    flexDirection: "column",
+    gap: "8px",
+  },
+  userName: {
+    fontSize: "13px",
+    color: "#999999",
+  },
+  logoutBtn: {
+    background: "none",
+    border: "1px solid #2a2a2a",
+    color: "#666666",
+    padding: "6px 12px",
+    borderRadius: "4px",
+    cursor: "pointer",
+    fontSize: "12px",
   },
   main: {
     flex: 1,

@@ -33,6 +33,55 @@ function bezierPath(
 const NODE_WIDTH = 180;
 const NODE_HEIGHT = 58;
 
+function areNodeSizeMapsEqual(
+  a: Record<string, { width: number; height: number }>,
+  b: Record<string, { width: number; height: number }>
+): boolean {
+  const aKeys = Object.keys(a);
+  const bKeys = Object.keys(b);
+  if (aKeys.length !== bKeys.length) return false;
+  for (const key of aKeys) {
+    const left = a[key];
+    const right = b[key];
+    if (!left || !right) return false;
+    if (left.width !== right.width || left.height !== right.height) return false;
+  }
+  return true;
+}
+
+function buildEdgeFlowDelays(
+  edges: CanvasEdge[],
+  steps: ExecutionPollResult["steps"]
+): Record<string, number> {
+  const completionOrder = new Map<string, number>();
+  let order = 0;
+  for (const step of steps) {
+    if (step.status !== "completed") continue;
+    if (!completionOrder.has(step.nodeId)) {
+      completionOrder.set(step.nodeId, order);
+      order += 1;
+    }
+  }
+
+  const delays: Record<string, number> = {};
+  let flowIndex = 0;
+  for (const edge of edges) {
+    const sourceOrder = completionOrder.get(edge.source);
+    const targetOrder = completionOrder.get(edge.target);
+    if (
+      sourceOrder === undefined ||
+      targetOrder === undefined ||
+      targetOrder <= sourceOrder
+    ) {
+      continue;
+    }
+    delays[edge.id] = flowIndex * 140;
+    flowIndex += 1;
+  }
+
+  return delays;
+}
+
 // ── Props ───────────────────────────────────────
 
 export interface WorkflowEditorProps {
@@ -45,6 +94,12 @@ export interface WorkflowEditorProps {
   saving?: boolean;
   saveStatus?: "idle" | "saving" | "saved" | "error";
   onSave: (data: {
+    name: string;
+    description: string;
+    nodes: CanvasNode[];
+    edges: CanvasEdge[];
+  }) => void;
+  onStateChange?: (data: {
     name: string;
     description: string;
     nodes: CanvasNode[];
@@ -81,6 +136,7 @@ export function WorkflowEditor({
   saving = false,
   saveStatus = "idle",
   onSave,
+  onStateChange,
   onExecute,
   onPollExecution,
   onBack,
@@ -93,6 +149,7 @@ export function WorkflowEditor({
   const [description, setDescription] = useState(_workflowDescription);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [transform, setTransform] = useState<ViewTransform>({ x: 0, y: 0, scale: 1 });
+  const [nodeSizes, setNodeSizes] = useState<Record<string, { width: number; height: number }>>({});
 
   // Execution state
   const [executionStatus, setExecutionStatus] = useState<string | null>(null);
@@ -101,6 +158,7 @@ export function WorkflowEditor({
   const [nodeOutputs, setNodeOutputs] = useState<Record<string, Record<string, unknown> | null>>({});
   const [executionError, setExecutionError] = useState<string | null>(null);
   const [isRunning, setIsRunning] = useState(false);
+  const [edgeFlowDelays, setEdgeFlowDelays] = useState<Record<string, number>>({});
 
   // Drag state
   const [draggingNodeId, setDraggingNodeId] = useState<string | null>(null);
@@ -326,6 +384,34 @@ export function WorkflowEditor({
     setTransform((t) => ({ ...t, scale: Math.max(t.scale / 1.2, 0.2) }));
   const zoomReset = () => setTransform({ x: 0, y: 0, scale: 1 });
 
+  // ── Node size measurement (for accurate edge anchoring) ───────
+
+  useEffect(() => {
+    const measure = () => {
+      const root = canvasRef.current;
+      if (!root) return;
+      const next: Record<string, { width: number; height: number }> = {};
+      const elements = root.querySelectorAll<HTMLElement>(".wf-node[data-node-id]");
+      elements.forEach((el) => {
+        const nodeId = el.dataset["nodeId"];
+        if (!nodeId) return;
+        next[nodeId] = {
+          width: el.offsetWidth > 0 ? el.offsetWidth : NODE_WIDTH,
+          height: el.offsetHeight > 0 ? el.offsetHeight : NODE_HEIGHT,
+        };
+      });
+
+      setNodeSizes((prev) => (areNodeSizeMapsEqual(prev, next) ? prev : next));
+    };
+
+    const frame = window.requestAnimationFrame(measure);
+    window.addEventListener("resize", measure);
+    return () => {
+      window.cancelAnimationFrame(frame);
+      window.removeEventListener("resize", measure);
+    };
+  }, [nodes]);
+
   // ── Node update / delete ──────────────────────
 
   const handleNodeUpdate = useCallback(
@@ -358,6 +444,11 @@ export function WorkflowEditor({
     onSave({ name, description, nodes, edges });
   }, [name, description, nodes, edges, onSave]);
 
+  useEffect(() => {
+    if (!onStateChange) return;
+    onStateChange({ name, description, nodes, edges });
+  }, [name, description, nodes, edges, onStateChange]);
+
   // ── Execute + Poll ────────────────────────────
 
   const handleExecute = useCallback(async () => {
@@ -366,6 +457,7 @@ export function WorkflowEditor({
     setExecutionError(null);
     setNodeStatuses({});
     setNodeOutputs({});
+    setEdgeFlowDelays({});
     setExecutionStatus("pending");
     setExecutionId(null);
 
@@ -414,7 +506,14 @@ export function WorkflowEditor({
           setNodeStatuses(statuses);
           setNodeOutputs(outputs);
 
-          if (result.status === "completed" || result.status === "failed") {
+          if (result.status === "completed") {
+            setEdgeFlowDelays(buildEdgeFlowDelays(edges, result.steps));
+            setIsRunning(false);
+            return;
+          }
+
+          if (result.status === "failed") {
+            setEdgeFlowDelays({});
             setIsRunning(false);
             return;
           }
@@ -433,20 +532,21 @@ export function WorkflowEditor({
       setExecutionError("Failed to start execution");
       setIsRunning(false);
     }
-  }, [onExecute, onPollExecution]);
+  }, [onExecute, onPollExecution, edges]);
 
   // ── Compute edge paths ────────────────────────
 
   function getNodeCenter(node: CanvasNode, side: "out" | "in") {
+    const size = nodeSizes[node.id] ?? { width: NODE_WIDTH, height: NODE_HEIGHT };
     if (side === "out") {
       return {
-        x: node.position.x + NODE_WIDTH,
-        y: node.position.y + NODE_HEIGHT / 2,
+        x: node.position.x + size.width,
+        y: node.position.y + size.height / 2,
       };
     }
     return {
       x: node.position.x,
-      y: node.position.y + NODE_HEIGHT / 2,
+      y: node.position.y + size.height / 2,
     };
   }
 
@@ -520,9 +620,9 @@ export function WorkflowEditor({
       <div className="wf-out-card">
         {/* Metadata badges row */}
         <div className="wf-out-badges">
-          {provider ? <span className="wf-out-badge wf-out-badge-provider">⚡ {provider}</span> : null}
-          {model ? <span className="wf-out-badge wf-out-badge-model">🧠 {model}</span> : null}
-          {usage?.totalTokens ? <span className="wf-out-badge wf-out-badge-tokens">📊 {String(usage.totalTokens)} tokens</span> : null}
+          {provider ? <span className="wf-out-badge wf-out-badge-provider">Provider {provider}</span> : null}
+          {model ? <span className="wf-out-badge wf-out-badge-model">Model {model}</span> : null}
+          {usage?.totalTokens ? <span className="wf-out-badge wf-out-badge-tokens">Tokens {String(usage.totalTokens)}</span> : null}
         </div>
 
         {/* Content area */}
@@ -583,7 +683,7 @@ export function WorkflowEditor({
           {status ? (
             <div className="wf-out-badges">
               <span className={`wf-out-badge ${Number(status) < 400 ? "wf-out-badge-success" : "wf-out-badge-error"}`}>
-                {Number(status) < 400 ? "✅" : "❌"} Status {String(status)}
+                Status {String(status)}
               </span>
             </div>
           ) : null}
@@ -599,7 +699,7 @@ export function WorkflowEditor({
       return (
         <div className="wf-out-card">
           {output.summary ? (
-            <div className="wf-out-badges"><span className="wf-out-badge wf-out-badge-model">📋 {String(output.summary)}</span></div>
+            <div className="wf-out-badges"><span className="wf-out-badge wf-out-badge-model">Summary {String(output.summary)}</span></div>
           ) : null}
           <div className="wf-out-content">
             <pre className="wf-out-code">{typeof output.data === "string" ? output.data : JSON.stringify(output.data, null, 2)}</pre>
@@ -617,7 +717,7 @@ export function WorkflowEditor({
       return (
         <div className="wf-out-card">
           <div className="wf-out-badges">
-            {fname ? <span className="wf-out-badge wf-out-badge-provider">📁 {fname}</span> : null}
+            {fname ? <span className="wf-out-badge wf-out-badge-provider">File {fname}</span> : null}
             {format ? <span className="wf-out-badge wf-out-badge-model">{format.toUpperCase()}</span> : null}
             {rowCount ? <span className="wf-out-badge wf-out-badge-tokens">{rowCount} rows</span> : null}
           </div>
@@ -786,13 +886,23 @@ export function WorkflowEditor({
                 if (!srcNode || !tgtNode) return null;
                 const start = getNodeCenter(srcNode, "out");
                 const end = getNodeCenter(tgtNode, "in");
+                const flowDelay = edgeFlowDelays[edge.id];
+                const hasFlow = typeof flowDelay === "number";
                 return (
-                  <path
-                    key={edge.id}
-                    className="wf-edge"
-                    d={bezierPath(start.x, start.y, end.x, end.y)}
-                    onClick={() => handleEdgeClick(edge.id)}
-                  />
+                  <g key={edge.id}>
+                    <path
+                      className={`wf-edge ${hasFlow ? "wf-edge-success" : ""}`}
+                      d={bezierPath(start.x, start.y, end.x, end.y)}
+                      onClick={() => handleEdgeClick(edge.id)}
+                    />
+                    {hasFlow && (
+                      <path
+                        className="wf-edge-flow"
+                        d={bezierPath(start.x, start.y, end.x, end.y)}
+                        style={{ "--wf-flow-delay": `${flowDelay}ms` } as React.CSSProperties}
+                      />
+                    )}
+                  </g>
                 );
               })}
 

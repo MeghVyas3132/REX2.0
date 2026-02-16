@@ -93,6 +93,11 @@ export const api = {
         `/api/workflows/${workflowId}/executions?page=${page}`,
         { token }
       ),
+    active: (token: string, page = 1, limit = 20) =>
+      apiCall<{ success: boolean; data: ActiveWorkflowExecutionClient[]; meta: PaginationMeta }>(
+        `/api/workflows/active?page=${page}&limit=${limit}`,
+        { token }
+      ),
   },
 
   templates: {
@@ -131,6 +136,61 @@ export const api = {
       apiCall<{ success: boolean; data: KnowledgeCorpusClient[]; meta: PaginationMeta }>(
         `/api/knowledge/corpora?page=${page}&limit=${limit}`,
         { token }
+      ),
+    createCorpus: (
+      token: string,
+      payload: {
+        name: string;
+        description?: string;
+        scopeType?: "user" | "workflow" | "execution";
+        workflowId?: string;
+        executionId?: string;
+        metadata?: Record<string, unknown>;
+      }
+    ) =>
+      apiCall<{ success: boolean; data: { id: string } }>(
+        "/api/knowledge/corpora",
+        { method: "POST", body: payload, token }
+      ),
+    ingestDocument: (
+      token: string,
+      payload: {
+        corpusId: string;
+        title: string;
+        contentText: string;
+        sourceType?: "upload" | "inline" | "api";
+        mimeType?: string;
+        metadata?: Record<string, unknown>;
+      }
+    ) =>
+      apiCall<{ success: boolean; data: { documentId: string; jobId: string } }>(
+        "/api/knowledge/documents/ingest",
+        { method: "POST", body: payload, token }
+      ),
+    listDocuments: (token: string, corpusId: string, page = 1, limit = 50) =>
+      apiCall<{ success: boolean; data: KnowledgeDocumentClient[]; meta: PaginationMeta }>(
+        `/api/knowledge/corpora/${corpusId}/documents?page=${page}&limit=${limit}`,
+        { token }
+      ),
+    listChunks: (token: string, documentId: string, page = 1, limit = 100) =>
+      apiCall<{ success: boolean; data: KnowledgeChunkClient[]; meta: PaginationMeta }>(
+        `/api/knowledge/documents/${documentId}/chunks?page=${page}&limit=${limit}`,
+        { token }
+      ),
+    query: (
+      token: string,
+      payload: {
+        query: string;
+        topK?: number;
+        corpusId?: string;
+        scopeType?: "user" | "workflow" | "execution";
+        workflowId?: string;
+        executionId?: string;
+      }
+    ) =>
+      apiCall<{ success: boolean; data: KnowledgeQueryResultClient }>(
+        "/api/knowledge/query",
+        { method: "POST", body: payload, token }
       ),
   },
 
@@ -301,6 +361,47 @@ export interface KnowledgeCorpusClient {
   updatedAt: string;
 }
 
+export interface KnowledgeDocumentClient {
+  id: string;
+  corpusId: string;
+  userId: string;
+  sourceType: "upload" | "inline" | "api" | string;
+  title: string;
+  mimeType: string | null;
+  status: "pending" | "processing" | "ready" | "failed" | string;
+  error: string | null;
+  metadata: unknown;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface KnowledgeChunkClient {
+  id: string;
+  corpusId: string;
+  documentId: string;
+  chunkIndex: number;
+  content: string;
+  tokenCount: number | null;
+  embeddingModel: string;
+  metadata: unknown;
+  createdAt: string;
+}
+
+export interface KnowledgeQueryResultClient {
+  query: string;
+  matches: Array<{
+    corpusId: string;
+    documentId: string;
+    chunkId: string;
+    chunkIndex: number;
+    score: number;
+    content: string;
+    title: string;
+    sourceType: string;
+    metadata: unknown;
+  }>;
+}
+
 export interface ExecutionListItem {
   id: string;
   workflowId: string;
@@ -309,6 +410,16 @@ export interface ExecutionListItem {
   startedAt: string | null;
   finishedAt: string | null;
   errorMessage: string | null;
+}
+
+export interface ActiveWorkflowExecutionClient {
+  workflowId: string;
+  workflowName: string;
+  workflowStatus: string;
+  executionId: string;
+  executionStatus: "pending" | "running" | string;
+  startedAt: string | null;
+  createdAt: string;
 }
 
 export interface ExecutionDetail extends ExecutionListItem {
