@@ -114,6 +114,16 @@ export default function WorkflowDetailPage() {
     }
   }, [token]);
 
+  const handleStopExecution = useCallback(async (executionId: string): Promise<boolean> => {
+    if (!token) return false;
+    try {
+      await api.executions.stop(token, executionId);
+      return true;
+    } catch {
+      return false;
+    }
+  }, [token]);
+
   if (authLoading || loading || !workflow) return null;
 
   return (
@@ -150,6 +160,7 @@ export default function WorkflowDetailPage() {
       }}
       onExecute={handleExecute}
       onPollExecution={handlePollExecution}
+      onStopExecution={handleStopExecution}
       onBack={() => router.push("/dashboard")}
       showExecute
     />

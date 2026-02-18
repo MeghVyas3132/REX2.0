@@ -6,11 +6,14 @@ import { api } from "@/lib/api";
 import type { WorkflowListItem } from "@/lib/api";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { loadWorkflowDraft, clearWorkflowDraft } from "@/lib/workflow-draft";
 
 export default function DashboardPage() {
   const { user, token, loading: authLoading, logout } = useAuth();
   const [workflows, setWorkflows] = useState<WorkflowListItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [deletingWorkflowId, setDeletingWorkflowId] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const router = useRouter();
 
   useEffect(() => {
@@ -35,6 +38,31 @@ export default function DashboardPage() {
       // Handle error silently, show empty state
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function handleDeleteWorkflow(workflowId: string, workflowName: string) {
+    if (!token || deletingWorkflowId) return;
+
+    const confirmed = window.confirm(
+      `Delete workflow "${workflowName}"? This will also remove all related executions and data.`
+    );
+    if (!confirmed) return;
+
+    setDeletingWorkflowId(workflowId);
+    setError(null);
+    try {
+      await api.workflows.delete(token, workflowId);
+      setWorkflows((prev) => prev.filter((wf) => wf.id !== workflowId));
+
+      const draft = loadWorkflowDraft();
+      if (draft?.mode === "update" && draft.workflowId === workflowId) {
+        clearWorkflowDraft();
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to delete workflow");
+    } finally {
+      setDeletingWorkflowId(null);
     }
   }
 
@@ -67,6 +95,7 @@ export default function DashboardPage() {
             New Workflow
           </Link>
         </div>
+        {error ? <p style={styles.error}>{error}</p> : null}
 
         {loading ? (
           <p style={styles.muted}>Loading...</p>
@@ -78,35 +107,46 @@ export default function DashboardPage() {
         ) : (
           <div style={styles.grid}>
             {workflows.map((wf) => (
-              <Link
-                key={wf.id}
-                href={`/dashboard/workflows/${wf.id}`}
-                style={styles.card}
-              >
-                <div style={styles.cardHeader}>
-                  <span style={styles.cardName}>{wf.name}</span>
-                  <span
-                    style={{
-                      ...styles.statusBadge,
-                      color: wf.status === "active" ? "#22c55e" : "#666666",
-                      borderColor: wf.status === "active" ? "#22c55e" : "#333333",
-                    }}
-                  >
-                    {wf.status}
-                  </span>
-                </div>
-                <p style={styles.cardDesc}>{wf.description || "No description"}</p>
-                <div style={styles.cardMeta}>
-                  <span>v{wf.version}</span>
-                  <span>{new Date(wf.updatedAt).toLocaleDateString()}</span>
-                </div>
-                {wf.sourceTemplateId ? (
-                  <div style={styles.templateMeta}>
-                    Template: {wf.sourceTemplateId}
-                    {wf.sourceTemplateVersion ? ` (v${wf.sourceTemplateVersion})` : ""}
+              <div key={wf.id} style={styles.card}>
+                <Link
+                  href={`/dashboard/workflows/${wf.id}`}
+                  style={styles.cardLinkArea}
+                >
+                  <div style={styles.cardHeader}>
+                    <span style={styles.cardName}>{wf.name}</span>
+                    <span
+                      style={{
+                        ...styles.statusBadge,
+                        color: wf.status === "active" ? "#22c55e" : "#666666",
+                        borderColor: wf.status === "active" ? "#22c55e" : "#333333",
+                      }}
+                    >
+                      {wf.status}
+                    </span>
                   </div>
-                ) : null}
-              </Link>
+                  <p style={styles.cardDesc}>{wf.description || "No description"}</p>
+                  <div style={styles.cardMeta}>
+                    <span>v{wf.version}</span>
+                    <span>{new Date(wf.updatedAt).toLocaleDateString()}</span>
+                  </div>
+                  {wf.sourceTemplateId ? (
+                    <div style={styles.templateMeta}>
+                      Template: {wf.sourceTemplateId}
+                      {wf.sourceTemplateVersion ? ` (v${wf.sourceTemplateVersion})` : ""}
+                    </div>
+                  ) : null}
+                </Link>
+                <div style={styles.cardActions}>
+                  <button
+                    type="button"
+                    style={styles.deleteBtn}
+                    onClick={() => void handleDeleteWorkflow(wf.id, wf.name)}
+                    disabled={deletingWorkflowId === wf.id}
+                  >
+                    {deletingWorkflowId === wf.id ? "Deleting..." : "Delete"}
+                  </button>
+                </div>
+              </div>
             ))}
           </div>
         )}
@@ -209,6 +249,11 @@ const styles: Record<string, React.CSSProperties> = {
     color: "#666666",
     fontSize: "14px",
   },
+  error: {
+    color: "#ef4444",
+    fontSize: "13px",
+    marginBottom: "12px",
+  },
   emptyState: {
     textAlign: "center",
     padding: "80px 0",
@@ -228,8 +273,11 @@ const styles: Record<string, React.CSSProperties> = {
     border: "1px solid #2a2a2a",
     borderRadius: "8px",
     padding: "20px",
-    textDecoration: "none",
     transition: "border-color 0.15s",
+  },
+  cardLinkArea: {
+    textDecoration: "none",
+    display: "block",
     cursor: "pointer",
   },
   cardHeader: {
@@ -268,5 +316,21 @@ const styles: Record<string, React.CSSProperties> = {
     marginTop: "8px",
     fontSize: "11px",
     color: "#6b7280",
+  },
+  cardActions: {
+    display: "flex",
+    justifyContent: "flex-end",
+    marginTop: "12px",
+    paddingTop: "10px",
+    borderTop: "1px solid #1f1f1f",
+  },
+  deleteBtn: {
+    border: "1px solid #3a1e1e",
+    backgroundColor: "transparent",
+    color: "#ef4444",
+    borderRadius: "6px",
+    padding: "6px 10px",
+    fontSize: "12px",
+    cursor: "pointer",
   },
 };

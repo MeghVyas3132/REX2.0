@@ -68,7 +68,7 @@ async function seed() {
         { id: "trigger", type: "manual_trigger", label: "Start", position: { x: 100, y: 80 }, config: {} },
         { id: "clean", type: "data_cleaner", label: "Clean Input", position: { x: 100, y: 200 }, config: { operations: ["trim"] } },
         { id: "llm", type: "llm", label: "Enhance Bullets", position: { x: 100, y: 320 }, config: { provider: "gemini", prompt: "Rewrite the following resume bullet points to be more impactful and quantified:\n\n{{clean.data}}", systemPrompt: "You are a professional resume writer." } },
-        { id: "log", type: "log", label: "Output", position: { x: 100, y: 440 }, config: { level: "info", message: "Enhanced bullets generated" } },
+        { id: "log", type: "log", label: "Audit Log", position: { x: 100, y: 440 }, config: { level: "info", message: "Enhanced bullets generated" } },
       ],
       edges: [
         { id: "e1", source: "trigger", target: "clean" },
@@ -155,7 +155,7 @@ async function seed() {
         { id: "clean", type: "data_cleaner", label: "Clean Body", position: { x: 100, y: 200 }, config: { operations: ["trim", "removeSpecialChars"] } },
         { id: "validate", type: "json_validator", label: "Validate Fields", position: { x: 100, y: 320 }, config: { requiredFields: ["subject", "body", "from"], strict: true } },
         { id: "store", type: "storage", label: "Archive", position: { x: 100, y: 440 }, config: { operation: "write", key: "email_{{trigger.id}}" } },
-        { id: "log", type: "log", label: "Log", position: { x: 100, y: 560 }, config: { level: "info", message: "Email standardized" } },
+        { id: "log", type: "log", label: "Audit Log", position: { x: 100, y: 560 }, config: { level: "info", message: "Email standardized" } },
       ],
       edges: [
         { id: "e1", source: "trigger", target: "clean" },

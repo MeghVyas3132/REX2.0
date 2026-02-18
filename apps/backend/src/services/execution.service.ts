@@ -24,6 +24,7 @@ export interface ExecutionService {
     workflowId: string,
     payload: Record<string, unknown>
   ): Promise<{ executionId: string }>;
+  stop(userId: string, executionId: string): Promise<{ executionId: string; status: string }>;
   getById(userId: string, executionId: string): Promise<ExecutionRecord | null>;
   listByWorkflow(
     userId: string,
@@ -197,6 +198,42 @@ export function createExecutionService(db: Database): ExecutionService {
       }, "Execution enqueued");
 
       return { executionId: execution.id };
+    },
+
+    async stop(userId, executionId) {
+      const [ownedExecution] = await db
+        .select({
+          id: executions.id,
+          status: executions.status,
+        })
+        .from(executions)
+        .innerJoin(workflows, eq(workflows.id, executions.workflowId))
+        .where(and(eq(executions.id, executionId), eq(workflows.userId, userId)))
+        .limit(1);
+
+      if (!ownedExecution) {
+        throw new Error("Execution not found or access denied");
+      }
+
+      if (
+        ownedExecution.status === "completed" ||
+        ownedExecution.status === "failed" ||
+        ownedExecution.status === "canceled"
+      ) {
+        return { executionId, status: ownedExecution.status };
+      }
+
+      await db
+        .update(executions)
+        .set({
+          status: "canceled",
+          finishedAt: new Date(),
+          errorMessage: "Stopped by user",
+        })
+        .where(eq(executions.id, executionId));
+
+      logger.info({ executionId, userId }, "Execution stop requested");
+      return { executionId, status: "canceled" };
     },
 
     async getById(userId, executionId) {
@@ -426,7 +463,7 @@ export function createExecutionService(db: Database): ExecutionService {
       if (status === "running") {
         updateData["startedAt"] = new Date();
       }
-      if (status === "completed" || status === "failed") {
+      if (status === "completed" || status === "failed" || status === "canceled") {
         updateData["finishedAt"] = new Date();
       }
       if (errorMessage) {

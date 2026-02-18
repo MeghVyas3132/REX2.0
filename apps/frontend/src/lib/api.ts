@@ -200,6 +200,11 @@ export const api = {
         `/api/executions/${id}`,
         { token }
       ),
+    stop: (token: string, id: string) =>
+      apiCall<{ success: boolean; data: { executionId: string; status: string } }>(
+        `/api/executions/${id}/stop`,
+        { method: "POST", token }
+      ),
   },
 
   keys: {

@@ -165,7 +165,7 @@ export default function SettingsPage() {
           {loading ? (
             <p style={styles.muted}>Loading...</p>
           ) : keys.length === 0 ? (
-            <p style={styles.muted}>No API keys configured. Add one to use LLM nodes.</p>
+            <p style={styles.muted}>No API keys configured. Add one to use AI Model nodes.</p>
           ) : (
             <table style={styles.table}>
               <thead>

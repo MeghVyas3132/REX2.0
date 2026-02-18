@@ -177,6 +177,29 @@
   cursor: not-allowed;
 }
 
+.wf-btn-stop {
+  padding: 6px 16px;
+  border: 1px solid #ef4444;
+  border-radius: 6px;
+  background: transparent;
+  color: #ef4444;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.wf-btn-stop:hover {
+  background: #ef4444;
+  color: #0a0a0a;
+}
+
+.wf-btn-stop:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
 /* ── Body (palette + canvas + panel) ────────── */
 
 .wf-body {

@@ -77,7 +77,7 @@ const TEMPLATE_DEFINITIONS: Record<WorkflowTemplateId, TemplateDefinition> = {
       tags: ["rag", "baseline", "retrieval"],
     },
     build: (params) => {
-      const trigger = node("manual-trigger", "Manual Trigger", 40, 180, {});
+      const trigger = node("manual-trigger", "Manual Run", 40, 180, {});
       const ingest = createKnowledgeIngestNode(params, 270, 120, "Load Knowledge");
       const retrieve = createKnowledgeRetrieveNode(params, 270, 250, "Retrieve Context", {
         strategy: "single",
@@ -88,7 +88,7 @@ const TEMPLATE_DEFINITIONS: Record<WorkflowTemplateId, TemplateDefinition> = {
           "Answer the user query using retrieved knowledge. Query: {{query}}"
         ),
       });
-      const out = node("output", "Output", 860, 180, {});
+      const out = node("output", "Final Output", 860, 180, {});
 
       return {
         nodes: [trigger, ingest, retrieve, answer, out],
@@ -115,7 +115,7 @@ const TEMPLATE_DEFINITIONS: Record<WorkflowTemplateId, TemplateDefinition> = {
       tags: ["memory", "rag", "context"],
     },
     build: (params) => {
-      const trigger = node("manual-trigger", "Manual Trigger", 40, 160, {});
+      const trigger = node("manual-trigger", "Manual Run", 40, 160, {});
       const ingest = createKnowledgeIngestNode(params, 240, 70, "Load Knowledge");
       const readMemory = node("memory-read", "Read Memory", 250, 220, {
         memoryKey: "session.summary",
@@ -144,7 +144,7 @@ const TEMPLATE_DEFINITIONS: Record<WorkflowTemplateId, TemplateDefinition> = {
         valuePath: "content",
         outputKey: "sessionSummary",
       });
-      const out = node("output", "Output", 1160, 160, {});
+      const out = node("output", "Final Output", 1160, 160, {});
 
       return {
         nodes: [trigger, ingest, readMemory, retrieve, answer, writeMemory, out],
@@ -173,7 +173,7 @@ const TEMPLATE_DEFINITIONS: Record<WorkflowTemplateId, TemplateDefinition> = {
       tags: ["agentic", "planner", "retry"],
     },
     build: (params) => {
-      const trigger = node("manual-trigger", "Manual Trigger", 40, 170, {});
+      const trigger = node("manual-trigger", "Manual Run", 40, 170, {});
       const ingest = createKnowledgeIngestNode(params, 250, 70, "Load Knowledge");
       const planner = node("llm", "Plan", 280, 250, {
         ...defaultLLMConfig(
@@ -206,7 +206,7 @@ const TEMPLATE_DEFINITIONS: Record<WorkflowTemplateId, TemplateDefinition> = {
         requestRetryOnFail: true,
         retryDelayMs: 250,
       });
-      const out = node("output", "Output", 1180, 250, {});
+      const out = node("output", "Final Output", 1180, 250, {});
 
       return {
         nodes: [trigger, ingest, planner, retrieve, reasoner, evaluate, out],
@@ -235,7 +235,7 @@ const TEMPLATE_DEFINITIONS: Record<WorkflowTemplateId, TemplateDefinition> = {
       tags: ["graph", "merge", "retrievers"],
     },
     build: (params) => {
-      const trigger = node("manual-trigger", "Manual Trigger", 40, 180, {});
+      const trigger = node("manual-trigger", "Manual Run", 40, 180, {});
       const ingest = createKnowledgeIngestNode(params, 240, 110, "Load Knowledge");
       const retrieve = createKnowledgeRetrieveNode(
         params,
@@ -255,7 +255,7 @@ const TEMPLATE_DEFINITIONS: Record<WorkflowTemplateId, TemplateDefinition> = {
           "Synthesize an answer using entity and relation retrieval context. Query: {{query}}"
         ),
       });
-      const out = node("output", "Output", 980, 180, {});
+      const out = node("output", "Final Output", 980, 180, {});
 
       return {
         nodes: [trigger, ingest, retrieve, graphReasoner, out],
@@ -282,7 +282,7 @@ const TEMPLATE_DEFINITIONS: Record<WorkflowTemplateId, TemplateDefinition> = {
       tags: ["branch", "best-score", "retrieval"],
     },
     build: (params) => {
-      const trigger = node("manual-trigger", "Manual Trigger", 40, 180, {});
+      const trigger = node("manual-trigger", "Manual Run", 40, 180, {});
       const ingest = createKnowledgeIngestNode(params, 240, 110, "Load Knowledge");
       const retrieve = createKnowledgeRetrieveNode(
         params,
@@ -301,7 +301,7 @@ const TEMPLATE_DEFINITIONS: Record<WorkflowTemplateId, TemplateDefinition> = {
       const branched = node("llm", "Branch Selector", 720, 180, {
         ...defaultLLMConfig("Answer using the strongest retrieved branch for: {{query}}"),
       });
-      const out = node("output", "Output", 980, 180, {});
+      const out = node("output", "Final Output", 980, 180, {});
 
       return {
         nodes: [trigger, ingest, retrieve, branched, out],
@@ -328,7 +328,7 @@ const TEMPLATE_DEFINITIONS: Record<WorkflowTemplateId, TemplateDefinition> = {
       tags: ["self-eval", "retry", "quality"],
     },
     build: (params) => {
-      const trigger = node("manual-trigger", "Manual Trigger", 40, 180, {});
+      const trigger = node("manual-trigger", "Manual Run", 40, 180, {});
       const ingest = createKnowledgeIngestNode(params, 240, 110, "Load Knowledge");
       const retrieve = createKnowledgeRetrieveNode(params, 460, 180, "Retrieve Context", {
         strategy: "single",
@@ -343,7 +343,7 @@ const TEMPLATE_DEFINITIONS: Record<WorkflowTemplateId, TemplateDefinition> = {
         minLength: 140,
         requestRetryOnFail: true,
       });
-      const out = node("output", "Output", 1140, 180, {});
+      const out = node("output", "Final Output", 1140, 180, {});
 
       return {
         nodes: [trigger, ingest, retrieve, answer, evaluate, out],
@@ -371,7 +371,7 @@ const TEMPLATE_DEFINITIONS: Record<WorkflowTemplateId, TemplateDefinition> = {
       tags: ["adaptive", "routing", "memory"],
     },
     build: (params) => {
-      const trigger = node("manual-trigger", "Manual Trigger", 40, 180, {});
+      const trigger = node("manual-trigger", "Manual Run", 40, 180, {});
       const ingest = createKnowledgeIngestNode(params, 240, 80, "Load Knowledge");
       const readRouting = node("memory-read", "Read Retriever Preference", 280, 250, {
         memoryKey: "routing.preferredRetriever",
@@ -395,7 +395,7 @@ const TEMPLATE_DEFINITIONS: Record<WorkflowTemplateId, TemplateDefinition> = {
       const answer = node("llm", "Adaptive Answer", 820, 180, {
         ...defaultLLMConfig("Use adaptive retrieval routing to answer: {{query}}"),
       });
-      const out = node("output", "Output", 1060, 180, {});
+      const out = node("output", "Final Output", 1060, 180, {});
 
       return {
         nodes: [trigger, ingest, readRouting, retrieve, answer, out],
@@ -423,7 +423,7 @@ const TEMPLATE_DEFINITIONS: Record<WorkflowTemplateId, TemplateDefinition> = {
       tags: ["speculative", "parallel", "merge"],
     },
     build: (params) => {
-      const trigger = node("manual-trigger", "Manual Trigger", 40, 180, {});
+      const trigger = node("manual-trigger", "Manual Run", 40, 180, {});
       const ingest = createKnowledgeIngestNode(params, 240, 110, "Load Knowledge");
       const retrieve = createKnowledgeRetrieveNode(
         params,
@@ -443,7 +443,7 @@ const TEMPLATE_DEFINITIONS: Record<WorkflowTemplateId, TemplateDefinition> = {
       const answer = node("llm", "Speculative Answer", 740, 180, {
         ...defaultLLMConfig("Combine speculative retrieval branches for: {{query}}"),
       });
-      const out = node("output", "Output", 980, 180, {});
+      const out = node("output", "Final Output", 980, 180, {});
 
       return {
         nodes: [trigger, ingest, retrieve, answer, out],
@@ -470,7 +470,7 @@ const TEMPLATE_DEFINITIONS: Record<WorkflowTemplateId, TemplateDefinition> = {
       tags: ["corrective", "evaluation", "branching"],
     },
     build: (params) => {
-      const trigger = node("manual-trigger", "Manual Trigger", 40, 220, {});
+      const trigger = node("manual-trigger", "Manual Run", 40, 220, {});
       const ingest = createKnowledgeIngestNode(params, 240, 120, "Load Knowledge");
       const retrieveInitial = createKnowledgeRetrieveNode(
         params,
@@ -506,7 +506,7 @@ const TEMPLATE_DEFINITIONS: Record<WorkflowTemplateId, TemplateDefinition> = {
           "Previous answer was insufficient. Improve it with additional context.\nPrevious: {{content}}\nQuery: {{query}}"
         ),
       });
-      const out = node("output", "Output", 1600, 220, {});
+      const out = node("output", "Final Output", 1600, 220, {});
 
       return {
         nodes: [trigger, ingest, retrieveInitial, answer, evaluate, retrieveCorrective, correct, out],
@@ -537,7 +537,7 @@ const TEMPLATE_DEFINITIONS: Record<WorkflowTemplateId, TemplateDefinition> = {
       tags: ["modular", "synthesis", "pipeline"],
     },
     build: (params) => {
-      const trigger = node("manual-trigger", "Manual Trigger", 40, 170, {});
+      const trigger = node("manual-trigger", "Manual Run", 40, 170, {});
       const ingest = createKnowledgeIngestNode(params, 250, 70, "Load Knowledge");
       const retrieve = createKnowledgeRetrieveNode(params, 300, 240, "Retrieve Module", {
         strategy: "single",
@@ -548,7 +548,7 @@ const TEMPLATE_DEFINITIONS: Record<WorkflowTemplateId, TemplateDefinition> = {
       const synthesize = node("llm", "Synthesis Module", 820, 240, {
         ...defaultLLMConfig("Synthesize final response from facts:\n{{content}}"),
       });
-      const out = node("output", "Output", 1080, 240, {});
+      const out = node("output", "Final Output", 1080, 240, {});
 
       return {
         nodes: [trigger, ingest, retrieve, summarizeFacts, synthesize, out],
@@ -576,7 +576,7 @@ const TEMPLATE_DEFINITIONS: Record<WorkflowTemplateId, TemplateDefinition> = {
       tags: ["multimodal", "context", "retrieval"],
     },
     build: (params) => {
-      const trigger = node("manual-trigger", "Manual Trigger", 40, 180, {});
+      const trigger = node("manual-trigger", "Manual Run", 40, 180, {});
       const ingest = createKnowledgeIngestNode(params, 240, 110, "Load Knowledge");
       const retrieve = createKnowledgeRetrieveNode(
         params,
@@ -597,7 +597,7 @@ const TEMPLATE_DEFINITIONS: Record<WorkflowTemplateId, TemplateDefinition> = {
           "Use available textual and metadata context to answer multimodal-style query: {{query}}"
         ),
       });
-      const out = node("output", "Output", 980, 180, {});
+      const out = node("output", "Final Output", 980, 180, {});
 
       return {
         nodes: [trigger, ingest, retrieve, reason, out],
@@ -624,7 +624,7 @@ const TEMPLATE_DEFINITIONS: Record<WorkflowTemplateId, TemplateDefinition> = {
       tags: ["hyde", "query-expansion", "retrieval"],
     },
     build: (params) => {
-      const trigger = node("manual-trigger", "Manual Trigger", 40, 190, {});
+      const trigger = node("manual-trigger", "Manual Run", 40, 190, {});
       const ingest = createKnowledgeIngestNode(params, 220, 90, "Load Knowledge");
       const hypothetical = node("llm", "Generate Hypothesis", 300, 190, {
         ...defaultLLMConfig(
@@ -647,7 +647,7 @@ const TEMPLATE_DEFINITIONS: Record<WorkflowTemplateId, TemplateDefinition> = {
           "Use hypothesis and retrieved context to answer.\nHypothesis: {{content}}\nQuery: {{query}}"
         ),
       });
-      const out = node("output", "Output", 1120, 190, {});
+      const out = node("output", "Final Output", 1120, 190, {});
 
       return {
         nodes: [trigger, ingest, hypothetical, retrieve, finalAnswer, out],

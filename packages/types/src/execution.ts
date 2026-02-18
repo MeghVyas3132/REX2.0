@@ -2,7 +2,7 @@
 // REX - Execution Types
 // ──────────────────────────────────────────────
 
-export type ExecutionStatus = "pending" | "running" | "completed" | "failed";
+export type ExecutionStatus = "pending" | "running" | "completed" | "failed" | "canceled";
 export type StepStatus = "pending" | "running" | "completed" | "failed" | "skipped";
 export type ExecutionContextUpdateReason = "init" | "step" | "final" | "error";
 

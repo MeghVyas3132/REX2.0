@@ -307,7 +307,7 @@ test("edge conditions route branches and skip unmatched nodes", async () => {
       {
         id: "n1",
         type: conditionNode.type,
-        label: "Condition",
+        label: "Decision Gate",
         position: { x: 0, y: 0 },
         config: {},
       },

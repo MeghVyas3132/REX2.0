@@ -256,6 +256,22 @@ export function registerWorkflowRoutes(
       });
     });
 
+    // Stop execution
+    scoped.post("/api/executions/:executionId/stop", async (request: FastifyRequest, reply: FastifyReply) => {
+      const userId = (request.user as { sub: string }).sub;
+      const { executionId } = request.params as { executionId: string };
+
+      try {
+        const result = await executionService.stop(userId, executionId);
+        return reply.status(202).send({ success: true, data: result });
+      } catch {
+        return reply.status(404).send({
+          success: false,
+          error: { code: "NOT_FOUND", message: "Execution not found" },
+        });
+      }
+    });
+
     scoped.get("/api/executions/:executionId/step-attempts", async (request: FastifyRequest, reply: FastifyReply) => {
       const parsed = listExecutionStepAttemptsQuerySchema.safeParse(request.query);
       if (!parsed.success) {

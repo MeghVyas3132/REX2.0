@@ -12,7 +12,7 @@ export const executions = pgTable(
     workflowId: uuid("workflow_id")
       .notNull()
       .references(() => workflows.id, { onDelete: "cascade" }),
-    status: varchar("status", { length: 20 }).default("pending").notNull(), // pending | running | completed | failed
+    status: varchar("status", { length: 20 }).default("pending").notNull(), // pending | running | completed | failed | canceled
     triggerPayload: jsonb("trigger_payload").default({}).notNull(),
     startedAt: timestamp("started_at", { withTimezone: true }),
     finishedAt: timestamp("finished_at", { withTimezone: true }),

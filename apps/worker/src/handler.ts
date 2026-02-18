@@ -45,6 +45,11 @@ import {
 import { eq, and, inArray, desc } from "drizzle-orm";
 
 const logger = createLogger("job-handler");
+const EXECUTION_STOPPED_CODE = "EXECUTION_STOPPED";
+
+class ExecutionStoppedError extends Error {
+  readonly code = EXECUTION_STOPPED_CODE;
+}
 
 // Register all nodes once at module load
 registerAllNodes();
@@ -63,6 +68,18 @@ export async function handleExecutionJob(
     attempt: job.attemptsMade + 1,
   }, "Processing execution job");
 
+  const [currentExecution] = await db
+    .select({ status: executions.status })
+    .from(executions)
+    .where(eq(executions.id, executionId))
+    .limit(1);
+
+  // Execution may have been deleted/canceled before worker picked up the job.
+  if (!currentExecution || currentExecution.status === "canceled") {
+    logger.info({ executionId, workflowId }, "Skipping execution job; execution is missing or canceled");
+    return;
+  }
+
   // Update status to running
   await db
     .update(executions)
@@ -78,7 +95,7 @@ export async function handleExecutionJob(
       .limit(1);
 
     if (!workflow) {
-      throw new Error(`Workflow ${workflowId} not found`);
+      throw new ExecutionStoppedError(`Workflow ${workflowId} not found`);
     }
 
     const nodes = workflow.nodes as WorkflowNode[];
@@ -129,6 +146,7 @@ export async function handleExecutionJob(
         },
       },
       onStepStart: async (nodeId: string, nodeType: string) => {
+        await assertExecutionStillRunnable(db, executionId);
         logger.debug({ executionId, nodeId, nodeType }, "Step starting");
       },
       onStepComplete: async (step: ExecutionStepResult) => {
@@ -172,6 +190,20 @@ export async function handleExecutionJob(
       stepsCompleted: result.steps.filter((s: ExecutionStepResult) => s.status === "completed").length,
     }, "Execution completed");
   } catch (err) {
+    if (isExecutionStoppedError(err)) {
+      await db
+        .update(executions)
+        .set({
+          status: "canceled",
+          finishedAt: new Date(),
+          errorMessage: "Stopped by user",
+        })
+        .where(eq(executions.id, executionId));
+
+      logger.info({ executionId, workflowId }, "Execution stopped by user request");
+      return;
+    }
+
     const errorMessage = err instanceof Error ? err.message : "Unknown error";
 
     logger.error({
@@ -380,6 +412,27 @@ function isMissingRelationError(err: unknown): boolean {
   if (!err || typeof err !== "object") return false;
   const maybeCode = (err as { code?: unknown }).code;
   return typeof maybeCode === "string" && maybeCode === "42P01";
+}
+
+async function assertExecutionStillRunnable(
+  db: Database,
+  executionId: string
+): Promise<void> {
+  const [execution] = await db
+    .select({ status: executions.status })
+    .from(executions)
+    .where(eq(executions.id, executionId))
+    .limit(1);
+
+  if (!execution || execution.status === "canceled") {
+    throw new ExecutionStoppedError("Execution was stopped");
+  }
+}
+
+function isExecutionStoppedError(err: unknown): boolean {
+  if (!err || typeof err !== "object") return false;
+  const maybeCode = (err as { code?: unknown }).code;
+  return maybeCode === EXECUTION_STOPPED_CODE;
 }
 
 async function queryKnowledgeForExecution(

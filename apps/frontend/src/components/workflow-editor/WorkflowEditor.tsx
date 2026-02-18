@@ -107,6 +107,7 @@ export interface WorkflowEditorProps {
   }) => void;
   onExecute?: () => Promise<string | undefined>;
   onPollExecution?: (executionId: string) => Promise<ExecutionPollResult | null>;
+  onStopExecution?: (executionId: string) => Promise<boolean>;
   onBack: () => void;
   showExecute?: boolean;
 }
@@ -139,6 +140,7 @@ export function WorkflowEditor({
   onStateChange,
   onExecute,
   onPollExecution,
+  onStopExecution,
   onBack,
   showExecute = false,
 }: WorkflowEditorProps) {
@@ -158,6 +160,7 @@ export function WorkflowEditor({
   const [nodeOutputs, setNodeOutputs] = useState<Record<string, Record<string, unknown> | null>>({});
   const [executionError, setExecutionError] = useState<string | null>(null);
   const [isRunning, setIsRunning] = useState(false);
+  const [isStopping, setIsStopping] = useState(false);
   const [edgeFlowDelays, setEdgeFlowDelays] = useState<Record<string, number>>({});
 
   // Drag state
@@ -173,6 +176,16 @@ export function WorkflowEditor({
   const canvasRef = useRef<HTMLDivElement>(null);
   const dragStartRef = useRef<{ mx: number; my: number; nx: number; ny: number } | null>(null);
   const panStartRef = useRef<{ mx: number; my: number; tx: number; ty: number } | null>(null);
+  const executionPollRef = useRef<{ executionId: string | null; active: boolean }>({
+    executionId: null,
+    active: false,
+  });
+
+  useEffect(() => {
+    return () => {
+      executionPollRef.current = { executionId: null, active: false };
+    };
+  }, []);
 
   // ── Canvas coordinate conversion ──────────────
 
@@ -453,7 +466,9 @@ export function WorkflowEditor({
 
   const handleExecute = useCallback(async () => {
     if (!onExecute || !onPollExecution) return;
+    executionPollRef.current = { executionId: null, active: false };
     setIsRunning(true);
+    setIsStopping(false);
     setExecutionError(null);
     setNodeStatuses({});
     setNodeOutputs({});
@@ -469,13 +484,22 @@ export function WorkflowEditor({
         return;
       }
 
+      executionPollRef.current = { executionId: execId, active: true };
       setExecutionId(execId);
 
       // Poll for status
       let attempts = 0;
       const maxAttempts = 120; // 2 minutes at 1s intervals
       const poll = async () => {
+        if (
+          !executionPollRef.current.active ||
+          executionPollRef.current.executionId !== execId
+        ) {
+          return;
+        }
+
         if (attempts >= maxAttempts) {
+          executionPollRef.current = { executionId: execId, active: false };
           setExecutionStatus("timeout");
           setExecutionError("Execution timed out waiting for results");
           setIsRunning(false);
@@ -507,12 +531,21 @@ export function WorkflowEditor({
           setNodeOutputs(outputs);
 
           if (result.status === "completed") {
+            executionPollRef.current = { executionId: execId, active: false };
             setEdgeFlowDelays(buildEdgeFlowDelays(edges, result.steps));
             setIsRunning(false);
             return;
           }
 
           if (result.status === "failed") {
+            executionPollRef.current = { executionId: execId, active: false };
+            setEdgeFlowDelays({});
+            setIsRunning(false);
+            return;
+          }
+
+          if (result.status === "canceled") {
+            executionPollRef.current = { executionId: execId, active: false };
             setEdgeFlowDelays({});
             setIsRunning(false);
             return;
@@ -521,6 +554,12 @@ export function WorkflowEditor({
           // Continue polling
           setTimeout(poll, 1000);
         } catch {
+          if (
+            !executionPollRef.current.active ||
+            executionPollRef.current.executionId !== execId
+          ) {
+            return;
+          }
           setTimeout(poll, 2000);
         }
       };
@@ -528,11 +567,30 @@ export function WorkflowEditor({
       // Start polling after a short delay
       setTimeout(poll, 500);
     } catch {
+      executionPollRef.current = { executionId: null, active: false };
       setExecutionStatus("failed");
       setExecutionError("Failed to start execution");
       setIsRunning(false);
     }
   }, [onExecute, onPollExecution, edges]);
+
+  const handleStopExecution = useCallback(async () => {
+    if (!onStopExecution || !executionId || isStopping) return;
+
+    setIsStopping(true);
+    try {
+      const stopped = await onStopExecution(executionId);
+      if (!stopped) return;
+
+      executionPollRef.current = { executionId, active: false };
+      setExecutionStatus("canceled");
+      setExecutionError(null);
+      setIsRunning(false);
+      setEdgeFlowDelays({});
+    } finally {
+      setIsStopping(false);
+    }
+  }, [executionId, isStopping, onStopExecution]);
 
   // ── Compute edge paths ────────────────────────
 
@@ -756,6 +814,10 @@ export function WorkflowEditor({
         : saveStatus === "error"
           ? "Save failed"
           : "";
+  const canStopExecution =
+    Boolean(onStopExecution) &&
+    Boolean(executionId) &&
+    (executionStatus === "pending" || executionStatus === "running" || isRunning);
 
   return (
     <div className="wf-editor">
@@ -804,23 +866,42 @@ export function WorkflowEditor({
           <button
             className="wf-btn-run"
             onClick={handleExecute}
-            disabled={isRunning}
+            disabled={isRunning || isStopping}
           >
             {isRunning ? "Running..." : "Run Workflow"}
           </button>
         )}
 
+        {showExecute && onStopExecution && (
+          <button
+            className="wf-btn-stop"
+            onClick={handleStopExecution}
+            disabled={!canStopExecution || isStopping}
+          >
+            {isStopping ? "Stopping..." : "Stop"}
+          </button>
+        )}
+
         {executionStatus && (
-          <span className={`wf-save-indicator ${executionStatus === "completed" ? "saved" : executionStatus === "failed" ? "error" : "saving"}`}>
+          <span
+            className={`wf-save-indicator ${
+              executionStatus === "completed"
+                ? "saved"
+                : executionStatus === "failed" || executionStatus === "canceled"
+                  ? "error"
+                  : "saving"
+            }`}
+          >
             {executionStatus === "pending" ? "Pending..." :
              executionStatus === "running" ? "Executing..." :
              executionStatus === "completed" ? "Completed" :
+             executionStatus === "canceled" ? "Stopped" :
              executionStatus === "failed" ? "Failed" :
              executionStatus}
           </span>
         )}
 
-        {executionId && wfId && (executionStatus === "completed" || executionStatus === "failed") && (
+        {executionId && wfId && (executionStatus === "completed" || executionStatus === "failed" || executionStatus === "canceled") && (
           <a
             href={`/dashboard/workflows/${wfId}/executions/${executionId}`}
             className="wf-btn-secondary"

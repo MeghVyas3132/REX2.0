@@ -59,7 +59,7 @@ export interface ConfigField {
 export const NODE_TYPE_DEFS: NodeTypeDefinition[] = [
   {
     type: "manual-trigger",
-    label: "Manual Trigger",
+    label: "Manual Run",
     category: "trigger",
     description: "Manually start the workflow",
     defaultConfig: {},
@@ -67,7 +67,7 @@ export const NODE_TYPE_DEFS: NodeTypeDefinition[] = [
   },
   {
     type: "webhook-trigger",
-    label: "Webhook Trigger",
+    label: "Event Trigger",
     category: "trigger",
     description: "Start workflow via HTTP webhook",
     defaultConfig: { method: "POST" },
@@ -86,7 +86,7 @@ export const NODE_TYPE_DEFS: NodeTypeDefinition[] = [
   },
   {
     type: "schedule-trigger",
-    label: "Schedule Trigger",
+    label: "Scheduled Run",
     category: "trigger",
     description: "Run on a cron schedule",
     defaultConfig: { cron: "0 * * * *" },
@@ -107,7 +107,7 @@ export const NODE_TYPE_DEFS: NodeTypeDefinition[] = [
   },
   {
     type: "llm",
-    label: "LLM",
+    label: "AI Model",
     category: "action",
     description: "Call a language model",
     defaultConfig: {
@@ -150,7 +150,7 @@ export const NODE_TYPE_DEFS: NodeTypeDefinition[] = [
   },
   {
     type: "http-request",
-    label: "HTTP Request",
+    label: "Service Call",
     category: "action",
     description: "Make an HTTP request to any API",
     defaultConfig: { method: "GET", url: "" },
@@ -174,7 +174,7 @@ export const NODE_TYPE_DEFS: NodeTypeDefinition[] = [
   },
   {
     type: "code",
-    label: "Code",
+    label: "Custom Logic",
     category: "action",
     description: "Run custom JavaScript logic",
     defaultConfig: { code: "// Access data via `input` variable\nreturn input;" },
@@ -185,7 +185,7 @@ export const NODE_TYPE_DEFS: NodeTypeDefinition[] = [
   },
   {
     type: "transformer",
-    label: "Transformer",
+    label: "Data Mapping",
     category: "action",
     description: "Transform data with an expression",
     defaultConfig: { expression: "" },
@@ -195,7 +195,7 @@ export const NODE_TYPE_DEFS: NodeTypeDefinition[] = [
   },
   {
     type: "storage",
-    label: "Storage",
+    label: "Data Store",
     category: "action",
     description: "Persist data in execution memory",
     defaultConfig: { storageKey: "default", persistToExecutionContext: "true" },
@@ -214,7 +214,7 @@ export const NODE_TYPE_DEFS: NodeTypeDefinition[] = [
   },
   {
     type: "memory-write",
-    label: "Memory Write",
+    label: "Set Context",
     category: "logic",
     description: "Write values into execution memory",
     defaultConfig: { memoryKey: "", operation: "set", valuePath: "", outputKey: "_memoryValue" },
@@ -247,7 +247,7 @@ export const NODE_TYPE_DEFS: NodeTypeDefinition[] = [
   },
   {
     type: "memory-read",
-    label: "Memory Read",
+    label: "Get Context",
     category: "logic",
     description: "Read values from execution memory",
     defaultConfig: { memoryKey: "", outputKey: "_memoryValue", required: "false" },
@@ -268,7 +268,7 @@ export const NODE_TYPE_DEFS: NodeTypeDefinition[] = [
   },
   {
     type: "execution-control",
-    label: "Execution Control",
+    label: "Flow Control",
     category: "logic",
     description: "Adjust retry/loop counters or terminate run",
     defaultConfig: { action: "increment-retry", value: 1 },
@@ -294,7 +294,7 @@ export const NODE_TYPE_DEFS: NodeTypeDefinition[] = [
   },
   {
     type: "evaluation",
-    label: "Evaluation",
+    label: "Quality Review",
     category: "logic",
     description: "Evaluate output quality and request retry",
     defaultConfig: {
@@ -331,7 +331,7 @@ export const NODE_TYPE_DEFS: NodeTypeDefinition[] = [
   },
   {
     type: "json-validator",
-    label: "JSON Validator",
+    label: "Data Validation",
     category: "logic",
     description: "Validate data fields and types",
     defaultConfig: { requiredFields: [] },
@@ -342,7 +342,7 @@ export const NODE_TYPE_DEFS: NodeTypeDefinition[] = [
   },
   {
     type: "condition",
-    label: "Condition",
+    label: "Decision Gate",
     category: "logic",
     description: "Branch based on a condition",
     defaultConfig: { field: "", operator: "equals", value: "" },
@@ -369,7 +369,7 @@ export const NODE_TYPE_DEFS: NodeTypeDefinition[] = [
   },
   {
     type: "data-cleaner",
-    label: "Data Cleaner",
+    label: "Data Hygiene",
     category: "logic",
     description: "Clean and sanitize data",
     defaultConfig: { operations: ["trim"] },
@@ -384,7 +384,7 @@ export const NODE_TYPE_DEFS: NodeTypeDefinition[] = [
   },
   {
     type: "knowledge-ingest",
-    label: "Knowledge Ingest",
+    label: "Knowledge Intake",
     category: "action",
     description: "Ingest runtime documents into a knowledge corpus",
     defaultConfig: {
@@ -440,7 +440,7 @@ export const NODE_TYPE_DEFS: NodeTypeDefinition[] = [
   },
   {
     type: "knowledge-retrieve",
-    label: "Knowledge Retrieve",
+    label: "Knowledge Lookup",
     category: "logic",
     description: "Retrieve top-K context from scoped corpus",
     defaultConfig: {
@@ -517,7 +517,7 @@ export const NODE_TYPE_DEFS: NodeTypeDefinition[] = [
   },
   {
     type: "log",
-    label: "Log",
+    label: "Audit Log",
     category: "output",
     description: "Log data for debugging",
     defaultConfig: { level: "info", message: "Workflow log" },
@@ -538,7 +538,7 @@ export const NODE_TYPE_DEFS: NodeTypeDefinition[] = [
   },
   {
     type: "output",
-    label: "Output",
+    label: "Final Output",
     category: "output",
     description: "Final workflow output",
     defaultConfig: {},
@@ -546,7 +546,7 @@ export const NODE_TYPE_DEFS: NodeTypeDefinition[] = [
   },
   {
     type: "file-upload",
-    label: "File Upload",
+    label: "Document Intake",
     category: "action",
     description: "Upload CSV, JSON, TXT, or PDF files",
     defaultConfig: { fileFormat: "csv", fileName: "", parsedData: null },
