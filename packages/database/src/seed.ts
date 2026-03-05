@@ -16,10 +16,10 @@ async function seed() {
 
   console.log("[seed] seeding database...");
 
-  // Pre-computed bcrypt hash for "demo1234" (12 rounds)
+  // Pre-computed bcrypt hash for "demo1234" (10 rounds)
   // In production the auth service uses bcrypt.hash() at registration time.
   const bcryptHash =
-    "$2b$10$LQ7K/5J3z0Q6Z0Z0Z0Z0ZOZ0Z0Z0Z0Z0Z0Z0Z0Z0Z0Z0Z0Z0Z0Z";
+    "$2b$10$4pqHG6k2KK22UYQUwNUSKObvQnoMJ0vAz4Sn4Et7DoCSNaMsVKv/S";
 
   const [demoUser] = await db
     .insert(users)
