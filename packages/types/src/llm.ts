@@ -21,6 +21,7 @@ export interface LLMResponse {
     totalTokens: number;
   };
   durationMs: number;
+  ttftMs?: number;
 }
 
 export interface LLMProviderConfig {
@@ -32,6 +33,34 @@ export interface LLMProviderConfig {
 export interface LLMProvider {
   readonly provider: LLMProviderType;
   generate(prompt: string, options: LLMRequestOptions): Promise<LLMResponse>;
+}
+
+export type EmbeddingProviderType = "deterministic" | "openai" | "cohere";
+export type RerankerProviderType = "heuristic" | "cohere";
+
+export interface EmbeddingResponse {
+  vectors: number[][];
+  provider: EmbeddingProviderType;
+  model: string;
+  dimensions: number;
+  durationMs: number;
+}
+
+export interface EmbeddingProvider {
+  readonly provider: EmbeddingProviderType;
+  embed(texts: string[]): Promise<EmbeddingResponse>;
+}
+
+export interface RerankResponse {
+  scores: number[];
+  provider: RerankerProviderType;
+  model: string;
+  durationMs: number;
+}
+
+export interface RerankerProvider {
+  readonly provider: RerankerProviderType;
+  rerank(query: string, documents: string[]): Promise<RerankResponse>;
 }
 
 export const DEFAULT_LLM_OPTIONS: Required<LLMRequestOptions> = {

@@ -78,7 +78,10 @@ export type NodeType =
   | "execution-control"
   | "evaluation"
   | "knowledge-ingest"
-  | "knowledge-retrieve";
+  | "knowledge-retrieve"
+  | "input-guard"
+  | "output-guard"
+  | "json-simplify";
 
 export const NODE_TYPES: NodeType[] = [
   "webhook-trigger",
@@ -101,6 +104,9 @@ export const NODE_TYPES: NodeType[] = [
   "evaluation",
   "knowledge-ingest",
   "knowledge-retrieve",
+  "input-guard",
+  "output-guard",
+  "json-simplify",
 ];
 
 export type LLMProviderType = "gemini" | "groq";
