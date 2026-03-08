@@ -78,6 +78,7 @@ export default function DashboardPage() {
           <Link href="/dashboard/active-workflows" style={styles.navLink}>Active Workflows</Link>
           <Link href="/dashboard/current-workflow" style={styles.navLink}>Current Workflow</Link>
           <Link href="/dashboard/corpora" style={styles.navLink}>Corpora</Link>
+          <Link href="/dashboard/kpi" style={styles.navLink}>KPI</Link>
           <Link href="/dashboard/templates" style={styles.navLink}>Templates</Link>
           <Link href="/dashboard/settings" style={styles.navLink}>Settings</Link>
         </div>
