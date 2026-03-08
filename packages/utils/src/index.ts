@@ -26,3 +26,12 @@ export {
   parseEmbedding,
 } from "./knowledge.js";
 export type { TextChunk, ChunkingOptions } from "./knowledge.js";
+export {
+  detectPromptInjection,
+  detectToxicity,
+  detectPII,
+  redactPII,
+  flattenJson,
+  lexicalRelevanceScore,
+} from "./security.js";
+export type { PatternMatch } from "./security.js";
