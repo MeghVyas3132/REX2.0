@@ -59,7 +59,23 @@ Define architecture contracts and implementation requirements for REX runtime, d
 - Encrypt provider keys at rest using configured master key.
 - Do not expose decrypted keys through API.
 - Enforce ownership checks on workflow and execution resources.
+- Enforce role checks (`admin`, `editor`, `viewer`) on mutating endpoints.
+- Enforce ABAC-style resource policy checks through centralized IAM service.
 - Apply global and webhook-specific rate limits.
+
+## Governance Requirements
+
+- Maintain a queryable model registry with provider/model capability metadata.
+- Support runtime domain config overlays with global, user, and workflow scopes.
+- Apply resolved domain config at execution enqueue/runtime.
+- Persist guardrail trigger events for input and output guard nodes.
+- Provide GDPR export and right-to-erasure APIs.
+
+## Observability Requirements
+
+- Provide KPI summary endpoint with latency, retrieval, guardrail, corpus health, and execution status metrics.
+- Provide KPI daily time-series endpoint for trend analysis.
+- Persist telemetry in relational tables to support dashboard and future alerting.
 
 ## Performance and Reliability Requirements
 

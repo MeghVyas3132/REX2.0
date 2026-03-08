@@ -4,6 +4,10 @@ REX stands for Responsible, Ethical and Explainable AI.
 
 This documentation set is written for engineering handover, onboarding, and production operations.
 
+Repository-level knowledge transfer document:
+
+- `KT.md` (root)
+
 ## Document Index
 
 - [Product Requirements Document (PRD)](./prd.md)
@@ -35,3 +39,8 @@ This documentation set is written for engineering handover, onboarding, and prod
 - Knowledge corpus ingestion and scoped retrieval
 - RAG workflow templates instantiated into editable DAGs
 - Multi-provider LLM abstraction (Gemini, Groq)
+- RBAC and ABAC-style governance checks in backend routes and services
+- Runtime domain configuration overlays applied before worker execution
+- Model registry API for provider/model capability discovery
+- KPI summary and time-series APIs with frontend KPI dashboard tab
+- Guardrail event telemetry and GDPR export/delete endpoints
