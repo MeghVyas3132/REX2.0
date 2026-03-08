@@ -7,12 +7,15 @@ import {
   instantiateWorkflowTemplateSchema,
 } from "../validation/schemas.js";
 import type { createTemplateService } from "../services/template.service.js";
+import type { IAMService } from "../services/iam.service.js";
+import { IAMError } from "../services/iam.service.js";
 
 type TemplateService = ReturnType<typeof createTemplateService>;
 
 export function registerTemplateRoutes(
   app: FastifyInstance,
-  templateService: TemplateService
+  templateService: TemplateService,
+  iamService: IAMService
 ): void {
   app.register(async function scopedRoutes(scoped: FastifyInstance) {
     scoped.addHook("onRequest", app.authenticate);
@@ -54,6 +57,17 @@ export function registerTemplateRoutes(
       }
 
       const userId = (request.user as { sub: string }).sub;
+      try {
+        await iamService.assertRole(userId, ["admin", "editor"]);
+      } catch (err) {
+        if (err instanceof IAMError) {
+          return reply.status(err.statusCode).send({
+            success: false,
+            error: { code: err.code, message: err.message },
+          });
+        }
+        throw err;
+      }
       const { templateId } = request.params as { templateId: string };
 
       try {
