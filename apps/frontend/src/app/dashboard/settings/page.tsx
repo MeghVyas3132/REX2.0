@@ -3,13 +3,14 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth-context";
 import { api } from "@/lib/api";
-import type { ApiKeyItem } from "@/lib/api";
+import type { ApiKeyItem, ModelRegistryClient } from "@/lib/api";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 
 export default function SettingsPage() {
   const { user, token, loading: authLoading, logout } = useAuth();
   const [keys, setKeys] = useState<ApiKeyItem[]>([]);
+  const [models, setModels] = useState<ModelRegistryClient[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [provider, setProvider] = useState("gemini");
@@ -31,8 +32,12 @@ export default function SettingsPage() {
   async function loadKeys() {
     if (!token) return;
     try {
-      const res = await api.keys.list(token);
-      setKeys(res.data);
+      const [keysRes, modelsRes] = await Promise.all([
+        api.keys.list(token),
+        api.models.list(token),
+      ]);
+      setKeys(keysRes.data);
+      setModels(modelsRes.data);
     } catch {
       // Handle silently
     } finally {
@@ -81,6 +86,7 @@ export default function SettingsPage() {
           <Link href="/dashboard/active-workflows" style={styles.navLink}>Active Workflows</Link>
           <Link href="/dashboard/current-workflow" style={styles.navLink}>Current Workflow</Link>
           <Link href="/dashboard/corpora" style={styles.navLink}>Corpora</Link>
+          <Link href="/dashboard/kpi" style={styles.navLink}>KPI</Link>
           <Link href="/dashboard/templates" style={styles.navLink}>Templates</Link>
           <Link href="/dashboard/settings" style={styles.navLinkActive}>Settings</Link>
         </div>
@@ -103,6 +109,10 @@ export default function SettingsPage() {
           <div style={styles.fieldRow}>
             <span style={styles.fieldLabel}>Name</span>
             <span style={styles.fieldValue}>{user?.name}</span>
+          </div>
+          <div style={styles.fieldRow}>
+            <span style={styles.fieldLabel}>Role</span>
+            <span style={styles.fieldValue}>{user?.role ?? "editor"}</span>
           </div>
         </div>
 
@@ -132,6 +142,8 @@ export default function SettingsPage() {
                 >
                   <option value="gemini">Gemini</option>
                   <option value="groq">Groq</option>
+                  <option value="openai">OpenAI</option>
+                  <option value="cohere">Cohere</option>
                 </select>
               </div>
               <div style={styles.formRow}>
@@ -193,6 +205,34 @@ export default function SettingsPage() {
                         Remove
                       </button>
                     </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+
+        <div style={styles.card}>
+          <h2 style={styles.cardTitle}>Model Registry</h2>
+          {models.length === 0 ? (
+            <p style={styles.muted}>No models available.</p>
+          ) : (
+            <table style={styles.table}>
+              <thead>
+                <tr>
+                  <th style={styles.th}>Provider</th>
+                  <th style={styles.th}>Model</th>
+                  <th style={styles.th}>Tier</th>
+                  <th style={styles.th}>Context</th>
+                </tr>
+              </thead>
+              <tbody>
+                {models.map((model) => (
+                  <tr key={model.id}>
+                    <td style={styles.td}>{model.provider}</td>
+                    <td style={styles.td}>{model.displayName}</td>
+                    <td style={styles.td}>{model.qualityTier}</td>
+                    <td style={styles.td}>{model.contextWindow ?? "-"}</td>
                   </tr>
                 ))}
               </tbody>
