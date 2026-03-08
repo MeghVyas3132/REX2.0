@@ -23,7 +23,7 @@ export function registerAuthRoutes(
 
     try {
       const user = await authService.register(parsed.data.email, parsed.data.name, parsed.data.password);
-      const token = app.jwt.sign({ sub: user.id, email: user.email });
+      const token = app.jwt.sign({ sub: user.id, email: user.email, role: user.role });
 
       return reply.status(201).send({
         success: true,
@@ -51,7 +51,7 @@ export function registerAuthRoutes(
 
     try {
       const user = await authService.login(parsed.data.email, parsed.data.password);
-      const token = app.jwt.sign({ sub: user.id, email: user.email });
+      const token = app.jwt.sign({ sub: user.id, email: user.email, role: user.role });
 
       return reply.send({
         success: true,
