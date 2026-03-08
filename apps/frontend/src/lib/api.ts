@@ -41,17 +41,17 @@ async function apiCall<T>(path: string, options: ApiCallOptions = {}): Promise<T
 export const api = {
   auth: {
     register: (email: string, name: string, password: string) =>
-      apiCall<{ success: boolean; data: { user: { id: string; email: string; name: string }; token: string } }>(
+      apiCall<{ success: boolean; data: { user: AuthUserClient; token: string } }>(
         "/api/auth/register",
         { method: "POST", body: { email, name, password } }
       ),
     login: (email: string, password: string) =>
-      apiCall<{ success: boolean; data: { user: { id: string; email: string; name: string }; token: string } }>(
+      apiCall<{ success: boolean; data: { user: AuthUserClient; token: string } }>(
         "/api/auth/login",
         { method: "POST", body: { email, password } }
       ),
     me: (token: string) =>
-      apiCall<{ success: boolean; data: { user: { id: string; email: string; name: string } } }>(
+      apiCall<{ success: boolean; data: { user: AuthUserClient } }>(
         "/api/auth/me",
         { token }
       ),
@@ -219,6 +219,214 @@ export const api = {
       apiCall<{ success: boolean }>(`/api/keys/${keyId}`, { method: "DELETE", token }),
   },
 
+  models: {
+    list: (token: string, provider?: string) =>
+      apiCall<{ success: boolean; data: ModelRegistryClient[] }>(
+        `/api/models${provider ? `?provider=${encodeURIComponent(provider)}` : ""}`,
+        { token }
+      ),
+  },
+
+  kpi: {
+    summary: (token: string, days = 7, latencyThresholdMs = 5000) =>
+      apiCall<{ success: boolean; data: KpiSummaryClient }>(
+        `/api/kpi/summary?days=${days}&latencyThresholdMs=${latencyThresholdMs}`,
+        { token }
+      ),
+    timeseries: (token: string, days = 7) =>
+      apiCall<{ success: boolean; data: KpiTimeseriesPointClient[] }>(
+        `/api/kpi/timeseries?days=${days}`,
+        { token }
+      ),
+  },
+
+  governance: {
+    exportMe: (token: string) =>
+      apiCall<{ success: boolean; data: Record<string, unknown> }>("/api/me/export", { token }),
+    deleteMe: (token: string, confirmEmail: string) =>
+      apiCall<{ success: boolean; data: { deleted: true } }>("/api/me", {
+        method: "DELETE",
+        body: { confirmEmail },
+        token,
+      }),
+    listWorkspaces: (token: string) =>
+      apiCall<{ success: boolean; data: WorkspaceClient[] }>("/api/workspaces", { token }),
+    createWorkspace: (token: string, name: string) =>
+      apiCall<{ success: boolean; data: WorkspaceClient }>("/api/workspaces", {
+        method: "POST",
+        body: { name },
+        token,
+      }),
+    addWorkspaceMember: (
+      token: string,
+      workspaceId: string,
+      memberUserId: string,
+      role: "admin" | "editor" | "viewer"
+    ) =>
+      apiCall<{ success: boolean; data: { updated: true } }>(
+        `/api/workspaces/${workspaceId}/members`,
+        {
+          method: "POST",
+          body: { memberUserId, role },
+          token,
+        }
+      ),
+    assignWorkflowToWorkspace: (token: string, workspaceId: string, workflowId: string) =>
+      apiCall<{ success: boolean; data: { assigned: true } }>(
+        `/api/workspaces/${workspaceId}/assign-workflow`,
+        {
+          method: "POST",
+          body: { workflowId, workspaceId },
+          token,
+        }
+      ),
+    listWorkflowPermissions: (token: string, workflowId: string) =>
+      apiCall<{ success: boolean; data: WorkflowPermissionClient[] }>(
+        `/api/workflows/${workflowId}/permissions`,
+        { token }
+      ),
+    upsertWorkflowPermission: (
+      token: string,
+      workflowId: string,
+      payload: {
+        userId: string;
+        role: "viewer" | "editor";
+        attributes?: Record<string, unknown>;
+        expiresAt?: string | null;
+      }
+    ) =>
+      apiCall<{ success: boolean; data: { updated: true } }>(
+        `/api/workflows/${workflowId}/permissions`,
+        { method: "PUT", body: payload, token }
+      ),
+    listPolicies: (token: string) =>
+      apiCall<{ success: boolean; data: IamPolicyClient[] }>("/api/policies", { token }),
+    upsertPolicy: (
+      token: string,
+      payload: {
+        id?: string;
+        userId?: string | null;
+        workflowId?: string | null;
+        action: string;
+        effect: "allow" | "deny";
+        conditions?: Record<string, unknown>;
+        isActive?: boolean;
+      }
+    ) =>
+      apiCall<{ success: boolean; data: { id: string } }>("/api/policies", {
+        method: "PUT",
+        body: payload,
+        token,
+      }),
+    listHyperparameterProfiles: (token: string, workflowId?: string) =>
+      apiCall<{ success: boolean; data: HyperparameterProfileClient[] }>(
+        `/api/hyperparameters/profiles${workflowId ? `?workflowId=${encodeURIComponent(workflowId)}` : ""}`,
+        { token }
+      ),
+    upsertHyperparameterProfile: (
+      token: string,
+      payload: {
+        id?: string;
+        workflowId?: string;
+        name: string;
+        description?: string;
+        config: Record<string, unknown>;
+        isDefault?: boolean;
+        isActive?: boolean;
+      }
+    ) =>
+      apiCall<{ success: boolean; data: { id: string } }>("/api/hyperparameters/profiles", {
+        method: "PUT",
+        body: payload,
+        token,
+      }),
+    compareHyperparameterProfiles: (
+      token: string,
+      payload: { workflowId: string; profileAId: string; profileBId: string }
+    ) =>
+      apiCall<{
+        success: boolean;
+        data: {
+          experimentId: string;
+          recommendation: "profile-a" | "profile-b" | "tie";
+          summary: Record<string, unknown>;
+        };
+      }>("/api/hyperparameters/compare", {
+        method: "POST",
+        body: payload,
+        token,
+      }),
+    listAlertRules: (token: string) =>
+      apiCall<{ success: boolean; data: AlertRuleClient[] }>("/api/alerts/rules", { token }),
+    upsertAlertRule: (
+      token: string,
+      payload: {
+        id?: string;
+        workflowId?: string | null;
+        ruleType: "latency-breach" | "guardrail-triggered" | "corpus-health-alert";
+        severity?: "warn" | "critical";
+        threshold?: number;
+        windowMinutes?: number;
+        config?: Record<string, unknown>;
+        isActive?: boolean;
+      }
+    ) =>
+      apiCall<{ success: boolean; data: { id: string } }>("/api/alerts/rules", {
+        method: "PUT",
+        body: payload,
+        token,
+      }),
+    listAlertEvents: (token: string, limit = 100) =>
+      apiCall<{ success: boolean; data: AlertEventClient[] }>(
+        `/api/alerts/events?limit=${limit}`,
+        { token }
+      ),
+    listConsents: (token: string) =>
+      apiCall<{ success: boolean; data: ConsentClient[] }>("/api/compliance/consents", { token }),
+    setConsent: (
+      token: string,
+      payload: {
+        consentType: string;
+        policyVersion: string;
+        granted: boolean;
+        metadata?: Record<string, unknown>;
+      }
+    ) =>
+      apiCall<{ success: boolean; data: { id: string } }>("/api/compliance/consents", {
+        method: "POST",
+        body: payload,
+        token,
+      }),
+    upsertRetentionPolicy: (
+      token: string,
+      payload: {
+        id?: string;
+        resourceType:
+          | "executions"
+          | "knowledge_documents"
+          | "guardrail_events"
+          | "audit_logs"
+          | "alert_events";
+        retentionDays: number;
+        config?: Record<string, unknown>;
+        isActive?: boolean;
+      }
+    ) =>
+      apiCall<{ success: boolean; data: { id: string } }>(
+        "/api/compliance/retention-policies",
+        {
+          method: "PUT",
+          body: payload,
+          token,
+        }
+      ),
+    runRetentionSweep: (token: string) =>
+      apiCall<{ success: boolean; data: Record<string, number> }>(
+        "/api/compliance/retention-sweep",
+        { method: "POST", token }
+      ),
+  },
+
   chat: {
     send: (
       token: string,
@@ -268,6 +476,13 @@ export const api = {
 };
 
 // Client-side types
+export interface AuthUserClient {
+  id: string;
+  email: string;
+  name: string;
+  role: "admin" | "editor" | "viewer";
+}
+
 export interface WorkflowListItem {
   id: string;
   name: string;
@@ -448,6 +663,132 @@ export interface ApiKeyItem {
   provider: string;
   label: string;
   createdAt: string;
+}
+
+export interface ModelRegistryClient {
+  id: string;
+  provider: string;
+  model: string;
+  displayName: string;
+  contextWindow: number | null;
+  maxOutputTokens: number | null;
+  supportsStreaming: boolean;
+  supportsTools: boolean;
+  qualityTier: string;
+  costInputPer1k: string | null;
+  costOutputPer1k: string | null;
+  capabilities: Record<string, unknown>;
+  metadata: Record<string, unknown>;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface KpiSummaryClient {
+  windowDays: number;
+  ttftMs: number | null;
+  latency: {
+    avgStepMs: number;
+    p95StepMs: number;
+    breaches: number;
+    thresholdMs: number;
+  };
+  retrieval: {
+    totalEvents: number;
+    hitRate: number;
+    emptyRate: number;
+    failureRate: number;
+  };
+  guardrails: {
+    triggered: number;
+  };
+  corpus: {
+    totalCorpora: number;
+    failedCorpora: number;
+    totalDocuments: number;
+    failedDocuments: number;
+    staleCorpora: number;
+  };
+  executions: {
+    total: number;
+    completed: number;
+    failed: number;
+    running: number;
+  };
+}
+
+export interface KpiTimeseriesPointClient {
+  date: string;
+  executions: number;
+  failures: number;
+  avgStepMs: number;
+  retrievalHitRate: number;
+  guardrailTriggers: number;
+}
+
+export interface WorkspaceClient {
+  id: string;
+  name: string;
+  role: string;
+}
+
+export interface WorkflowPermissionClient {
+  id: string;
+  userId: string;
+  role: string;
+  attributes: Record<string, unknown>;
+  expiresAt: string | null;
+}
+
+export interface IamPolicyClient {
+  id: string;
+  userId: string | null;
+  workflowId: string | null;
+  action: string;
+  effect: string;
+  conditions: Record<string, unknown>;
+  isActive: boolean;
+}
+
+export interface HyperparameterProfileClient {
+  id: string;
+  workflowId: string | null;
+  name: string;
+  description: string;
+  config: Record<string, unknown>;
+  isDefault: boolean;
+  isActive: boolean;
+}
+
+export interface AlertRuleClient {
+  id: string;
+  workflowId: string | null;
+  ruleType: string;
+  severity: string;
+  threshold: number;
+  windowMinutes: number;
+  config: Record<string, unknown>;
+  isActive: boolean;
+}
+
+export interface AlertEventClient {
+  id: string;
+  workflowId: string | null;
+  ruleType: string;
+  severity: string;
+  message: string;
+  payload: Record<string, unknown>;
+  triggeredAt: string;
+  resolvedAt: string | null;
+}
+
+export interface ConsentClient {
+  id: string;
+  consentType: string;
+  policyVersion: string;
+  granted: boolean;
+  metadata: Record<string, unknown>;
+  updatedAt: string;
 }
 
 export interface PaginationMeta {
