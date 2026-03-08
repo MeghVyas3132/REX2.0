@@ -12,9 +12,9 @@ const logger = createLogger("auth-service");
 const SALT_ROUNDS = 12;
 
 export interface AuthService {
-  register(email: string, name: string, password: string): Promise<{ id: string; email: string; name: string }>;
-  login(email: string, password: string): Promise<{ id: string; email: string; name: string }>;
-  getUserById(userId: string): Promise<{ id: string; email: string; name: string } | null>;
+  register(email: string, name: string, password: string): Promise<{ id: string; email: string; name: string; role: string }>;
+  login(email: string, password: string): Promise<{ id: string; email: string; name: string; role: string }>;
+  getUserById(userId: string): Promise<{ id: string; email: string; name: string; role: string } | null>;
 }
 
 export function createAuthService(db: Database): AuthService {
@@ -32,8 +32,8 @@ export function createAuthService(db: Database): AuthService {
 
       const [user] = await db
         .insert(users)
-        .values({ email, name, passwordHash })
-        .returning({ id: users.id, email: users.email, name: users.name });
+        .values({ email, name, passwordHash, role: "editor", consentGivenAt: new Date() })
+        .returning({ id: users.id, email: users.email, name: users.name, role: users.role });
 
       if (!user) {
         throw new ServiceError("Failed to create user", "CREATE_FAILED", 500);
@@ -62,12 +62,12 @@ export function createAuthService(db: Database): AuthService {
       }
 
       logger.info({ userId: user.id }, "User logged in");
-      return { id: user.id, email: user.email, name: user.name };
+      return { id: user.id, email: user.email, name: user.name, role: user.role };
     },
 
     async getUserById(userId) {
       const [user] = await db
-        .select({ id: users.id, email: users.email, name: users.name })
+        .select({ id: users.id, email: users.email, name: users.name, role: users.role })
         .from(users)
         .where(eq(users.id, userId))
         .limit(1);
