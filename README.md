@@ -1,129 +1,113 @@
 # REX
 
-REX stands for Responsible, Ethical and Explainable AI.
+REX (Responsible, Ethical and Explainable AI) is a workflow automation platform for building, running, and governing AI pipelines as directed acyclic graphs (DAGs).
 
-REX is a workflow automation platform for building and operating AI pipelines as directed acyclic graphs (DAGs). It includes a visual editor, a queue-backed distributed execution runtime, and a versioned RAG template system.
+This repository implements the expanded PROP3 architecture with production-oriented controls across identity, runtime safety, retrieval quality, observability, and compliance.
 
-## What REX Provides
+## Platform Capabilities
 
-- Visual DAG workflow editor
-- Deterministic graph validation and topological execution
-- BullMQ-based distributed worker execution
-- Step-level execution persistence in PostgreSQL
-- Execution context snapshots and retry telemetry
-- Knowledge ingestion and scoped retrieval APIs
-- RAG templates that instantiate into editable workflows
-- Encrypted API key management for LLM providers
+- Visual DAG authoring and execution monitoring (Next.js frontend)
+- Fastify API control plane with JWT authentication and policy enforcement
+- BullMQ-based worker runtime for asynchronous execution and ingestion
+- RBAC + ABAC-style authorization with workflow sharing and IAM policies
+- Runtime domain configuration resolver (global, user, workflow overlays)
+- Guardrail nodes and telemetry:
+  - `input-guard`
+  - `output-guard`
+  - `json-simplify`
+- Knowledge retrieval orchestration with reranking support
+- KPI and observability endpoints plus KPI dashboard tab
+- Model registry and hyperparameter profile/experiment support
+- GDPR/compliance operations (export, delete, consent, retention, audit)
 
-## Architecture Summary
-
-REX is a monorepo with shared packages and deployable apps.
+## Architecture
 
 ### Applications
 
-- Frontend (`apps/frontend`)
-  - Next.js application for workflow editing, template usage, execution visibility, and settings.
-- Backend (`apps/backend`)
-  - Fastify API control plane for auth, workflows, executions, templates, and knowledge endpoints.
-- Worker (`apps/worker`)
-  - BullMQ consumer that executes workflows and processes knowledge ingestion jobs.
+- `apps/frontend`: Next.js UI (editor, templates, corpora, KPI, settings)
+- `apps/backend`: Fastify APIs (auth, workflow, governance, KPI, GDPR)
+- `apps/worker`: BullMQ consumers (execution runtime and ingestion)
 
 ### Shared Packages
 
-- `@rex/types`
-  - Shared type contracts for workflows, executions, nodes, templates, and knowledge runtime.
-- `@rex/utils`
-  - Configuration, logging, encryption, and knowledge helper utilities.
-- `@rex/database`
-  - Drizzle schema, migrations, and DB connection utilities.
-- `@rex/engine`
-  - DAG validator, node registry, and execution engine runtime.
-- `@rex/llm`
-  - Provider abstraction for Gemini and Groq.
+- `packages/types`: shared type contracts
+- `packages/utils`: config, encryption, logging, security, helpers
+- `packages/database`: Drizzle schema, migrations, DB connection
+- `packages/engine`: DAG validation and node execution engine
+- `packages/llm`: LLM/embedding/reranker provider abstractions
 
-## Execution Model
+## Database and Migrations
 
-1. Backend receives an execution trigger request.
-2. Backend creates an `executions` row in `pending` state.
-3. Backend enqueues `execute-workflow` job to BullMQ.
-4. Worker loads workflow graph and executes via `@rex/engine`.
-5. Worker persists steps, context snapshots, step attempts, and retrieval events.
-6. Execution record is finalized as `completed` or `failed`.
+Major schema upgrades for PROP3 are included in:
 
-## Runtime Node Catalog
+- `packages/database/drizzle/0006_prop3_foundations.sql`
+- `packages/database/drizzle/0007_prop3_enterprise_upgrade.sql`
 
-Current runtime supports 20 built-in node types across trigger, action, logic, memory/control, and knowledge categories.
+These migrations add identity/governance, guardrail telemetry, workspace sharing, execution authorization, hyperparameter/alert/compliance tables, and pgvector support.
 
-Knowledge-aware nodes:
+## Local Setup
 
-- `knowledge-ingest`
-- `knowledge-retrieve`
+### Prerequisites
 
-Cognitive/runtime support nodes:
+- Node.js 20+
+- pnpm 9+
+- PostgreSQL 15+
+- Redis 7+
 
-- `memory-read`
-- `memory-write`
-- `evaluation`
-- `execution-control`
+### Steps
 
-## RAG Templates
+1. Copy environment template and configure secrets.
+2. Install dependencies.
+3. Apply migrations.
+4. Start frontend, backend, and worker.
 
-Current template catalog includes:
+Example commands:
 
-- simple-rag
-- memory-augmented-rag
-- agentic-rag
-- graph-rag
-- branched-rag
-- self-rag
-- adaptive-rag
-- speculative-rag
-- corrective-rag
-- modular-rag
-- multimodal-rag
-- hyde-retrieval
+```bash
+pnpm install
+pnpm db:migrate
+pnpm --filter @rex/backend dev
+pnpm --filter @rex/worker dev
+pnpm --filter @rex/frontend dev
+```
 
-Templates compile into standard workflow nodes and edges and remain fully editable after instantiation.
+Default URLs:
 
-## Persistence Overview
+- Frontend: `http://localhost:3000`
+- Backend: `http://localhost:4000`
 
-Core entities:
+## Core Governance APIs
 
-- workflows
-- executions
-- execution_steps
-- execution_step_attempts
-- execution_context_snapshots
-- execution_retrieval_events
-- knowledge_corpora
-- knowledge_documents
-- knowledge_chunks
-
-## Local Deployment
-
-Use Docker Compose for full-stack runtime:
-
-1. Copy `.env.example` to `.env` and set secure secrets.
-2. Build and start services with `docker compose up -d --build`.
-3. Run migrations with `pnpm db:migrate` from repository root.
-4. Access frontend at `http://localhost:3000` and backend at `http://localhost:4000`.
+- Model registry: `/api/models`
+- Domain config: `/api/domain-configs`, `/api/domain-configs/resolve`
+- Workspaces and sharing:
+  - `/api/workspaces`
+  - `/api/workspaces/:workspaceId/members`
+  - `/api/workspaces/:workspaceId/assign-workflow`
+  - `/api/workflows/:workflowId/permissions`
+  - `/api/policies`
+- Hyperparameters:
+  - `/api/hyperparameters/profiles`
+  - `/api/hyperparameters/compare`
+- Alerts and metrics:
+  - `/api/alerts/rules`
+  - `/api/alerts/events`
+  - `/api/alerts/metrics`
+  - `/api/kpi/summary`
+  - `/api/kpi/timeseries`
+- Compliance and GDPR:
+  - `/api/compliance/consents`
+  - `/api/compliance/retention-policies`
+  - `/api/compliance/retention-sweep`
+  - `/api/me/export`
+  - `/api/me`
 
 ## Documentation
 
-Detailed documentation is available under `docs/`.
-
-- `docs/README.md`
-- `docs/prd.md`
-- `docs/trd.md`
-- `docs/backend.md`
-- `docs/worker.md`
-- `docs/engine.md`
-- `docs/dag.md`
-- `docs/rag.md`
-- `docs/frontend.md`
-- `docs/database.md`
-- `docs/migrations.md`
-- `docs/endpoints.md`
+- High-level docs index: `docs/README.md`
+- Endpoint catalog: `docs/endpoints.md`
+- Technical requirements: `docs/trd.md`
+- Knowledge transfer handover: `KT.md`
 
 ## License
 
