@@ -24,6 +24,9 @@ import { ExecutionControlNode } from "./execution-control.js";
 import { EvaluationNode } from "./evaluation.js";
 import { KnowledgeIngestNode } from "./knowledge-ingest.js";
 import { KnowledgeRetrieveNode } from "./knowledge-retrieve.js";
+import { InputGuardNode } from "./input-guard.js";
+import { OutputGuardNode } from "./output-guard.js";
+import { JSONSimplifyNode } from "./json-simplify.js";
 
 export function registerAllNodes(): void {
   registerNode(WebhookTriggerNode);
@@ -46,6 +49,9 @@ export function registerAllNodes(): void {
   registerNode(EvaluationNode);
   registerNode(KnowledgeIngestNode);
   registerNode(KnowledgeRetrieveNode);
+  registerNode(InputGuardNode);
+  registerNode(OutputGuardNode);
+  registerNode(JSONSimplifyNode);
 }
 
 export {
@@ -69,4 +75,7 @@ export {
   EvaluationNode,
   KnowledgeIngestNode,
   KnowledgeRetrieveNode,
+  InputGuardNode,
+  OutputGuardNode,
+  JSONSimplifyNode,
 };
