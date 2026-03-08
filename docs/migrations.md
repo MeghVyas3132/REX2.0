@@ -1,14 +1,10 @@
 # Migration History
 
-## Overview
+## Sequence
 
-Database migrations are managed under `packages/database/drizzle` and applied in order.
+### `0000_melted_swarm`
 
-## Applied Migration Sequence
-
-### 0000_melted_swarm
-
-Introduced initial core schema:
+Initial core schema:
 
 - users
 - api_keys
@@ -17,63 +13,88 @@ Introduced initial core schema:
 - execution_steps
 - execution_context_snapshots
 
-Also introduced core indexes and foreign keys for workflow and execution tracking.
+### `0001_tranquil_mantis`
 
-### 0001_tranquil_mantis
-
-Introduced knowledge storage model:
+Knowledge storage:
 
 - knowledge_corpora
 - knowledge_documents
 - knowledge_chunks
 
-Added scope and status indexes for corpus/document/chunk lookup paths.
+### `0002_kind_slayback`
 
-### 0002_kind_slayback
-
-Introduced retrieval telemetry table:
+Retrieval telemetry:
 
 - execution_retrieval_events
 
-Added execution/node/status indexes.
+### `0003_curious_demogoblin`
 
-### 0003_curious_demogoblin
-
-Introduced step attempt telemetry table:
+Step attempts:
 
 - execution_step_attempts
 
-Added execution/node/status/attempt indexes.
+### `0004_tan_titaniumer`
 
-### 0004_tan_titaniumer
-
-Extended retrieval telemetry schema with orchestration fields:
+Retrieval orchestration columns:
 
 - strategy
 - retriever_key
 - branch_index
 - selected
 
-Added indexes for retriever key and strategy.
+### `0005_happy_one_above_all`
 
-### 0005_happy_one_above_all
-
-Extended workflow schema with template provenance:
+Workflow template provenance columns:
 
 - source_template_id
 - source_template_version
 - source_template_params
 
-Added index on `source_template_id`.
+### `0006_prop3_foundations`
 
-## Migration Execution Model
+PROP3 foundations:
 
-- Migration runner reads `DATABASE_URL`.
-- Drizzle migrator applies SQL files from `packages/database/drizzle`.
-- Database package script: `db:migrate`.
+- `users.role`
+- `users.consent_given_at`
+- `model_registry`
+- `domain_configs`
+- `guardrail_events`
 
-## Operational Guidance
+### `0007_prop3_enterprise_upgrade`
 
-- Treat migrations as forward-only in shared environments.
-- Apply migrations before deploying backend/worker versions that depend on new tables.
-- Telemetry tables are optional for degraded mode runtime, but required for full observability features.
+PROP3 governance, observability, and compliance expansion:
+
+- pgvector extension and `knowledge_chunks.embedding_vector`
+- `knowledge_chunks.page_number`, `knowledge_chunks.section_path`
+- workspaces and membership:
+  - `workspaces`
+  - `workspace_members`
+  - `workflows.workspace_id`
+- authorization and sharing:
+  - `workflow_permissions`
+  - `iam_policies`
+  - `execution_authorizations`
+- optimization:
+  - `hyperparameter_profiles`
+  - `hyperparameter_experiments`
+- alerting:
+  - `alert_rules`
+  - `alert_events`
+- compliance:
+  - `user_consents`
+  - `data_access_audit_logs`
+  - `retention_policies`
+
+## Execution
+
+Run migrations from repository root:
+
+```bash
+pnpm db:migrate
+```
+
+## Deployment Guidance
+
+- Apply migrations before backend/worker rollout.
+- Do not skip `0006` or `0007` if deploying governance-enabled code.
+- Validate pgvector extension availability in target environments.

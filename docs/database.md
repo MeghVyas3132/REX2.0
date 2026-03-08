@@ -1,81 +1,81 @@
 # Database Model
 
-## Scope
+## Overview
 
-REX uses PostgreSQL with Drizzle ORM. Data is structured around users, workflows, executions, runtime telemetry, and knowledge corpora.
+REX uses PostgreSQL with Drizzle ORM. The schema now includes PROP3 governance, observability, and compliance capabilities in addition to core workflow execution and knowledge retrieval.
 
-## Core Tables
+## Core Domains
 
-### Identity and Secrets
+### Identity and Access
 
 - `users`
-  - Account identity and password hash.
 - `api_keys`
-  - Encrypted provider API keys per user.
+- `workspaces`
+- `workspace_members`
+- `workflow_permissions`
+- `iam_policies`
+- `execution_authorizations`
 
-### Workflow Authoring
+### Workflow and Execution
 
 - `workflows`
-  - Graph JSON (`nodes`, `edges`), lifecycle status, version.
-  - Template provenance fields:
-    - `source_template_id`
-    - `source_template_version`
-    - `source_template_params`
-
-### Execution Tracking
-
 - `executions`
-  - Trigger payload, run state, timestamps, error summary.
 - `execution_steps`
-  - One row per node result in execution order.
 - `execution_step_attempts`
-  - Retry and attempt-level detail per node.
 - `execution_context_snapshots`
-  - Sequenced snapshots of mutable execution context.
 - `execution_retrieval_events`
-  - Retrieval telemetry and branch strategy metadata.
 
 ### Knowledge and Retrieval
 
 - `knowledge_corpora`
-  - Scoped corpus container by user/workflow/execution.
 - `knowledge_documents`
-  - Source content and ingestion lifecycle state.
 - `knowledge_chunks`
-  - Chunked content, embedding payload, and metadata.
 
-## Relationship Overview
+`knowledge_chunks` includes:
 
-- User owns workflows, API keys, corpora, and documents.
-- Workflow has many executions.
-- Execution has many steps, step attempts, retrieval events, and context snapshots.
-- Corpus has many documents and chunks.
-- Chunk references both corpus and document.
+- `embedding` (JSON)
+- `embedding_vector` (pgvector)
+- `page_number`
+- `section_path`
 
-## Multi-Scope Knowledge Model
+### Runtime Safety and Observability
 
-Knowledge scope is controlled by corpus columns:
+- `guardrail_events`
+- `alert_rules`
+- `alert_events`
 
-- `scope_type`: user, workflow, execution
-- `workflow_id`: optional for workflow scope
-- `execution_id`: optional for execution scope
+### Configuration and Optimization
 
-## Indexing Strategy
+- `domain_configs`
+- `model_registry`
+- `hyperparameter_profiles`
+- `hyperparameter_experiments`
 
-Indexes exist for high-frequency query paths:
+### Compliance
 
-- workflow status and ownership
-- execution status and creation time
-- execution telemetry by execution/node/status
-- corpus/document/chunk ownership and status
-- template provenance lookup on workflows
+- `user_consents`
+- `data_access_audit_logs`
+- `retention_policies`
 
-## JSON and Telemetry Fields
+## Key Relationships
 
-- Workflow graphs are stored as JSONB.
-- Execution context snapshots store full JSONB state.
-- Retrieval and knowledge metadata use JSONB for extensibility.
+- A user owns workflows and API keys.
+- Workflows may belong to a workspace.
+- Workspace membership controls team access.
+- Workflow-specific sharing is managed via `workflow_permissions`.
+- Executions belong to workflows and are authorized by `execution_authorizations`.
+- Execution telemetry tables reference execution IDs.
+- Knowledge chunks reference both document and corpus IDs.
 
-## Integrity and Cascade
+## Indexing Highlights
 
-Foreign keys use cascade delete for dependent entities in core lifecycle chains, including executions under workflow and steps under execution.
+- Ownership and status indexes for workflow/execution lookups
+- Telemetry indexes for execution detail pages and KPI aggregations
+- Scope indexes for domain config resolution
+- Alert indexes for recent event/rule queries
+- pgvector HNSW index for `knowledge_chunks.embedding_vector`
+
+## Notes
+
+- JSON and vector embeddings are both stored to support compatibility and migration.
+- Governance and compliance tables are required for full PROP3 behavior.
