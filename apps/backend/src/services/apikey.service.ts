@@ -6,13 +6,13 @@ import { eq, and } from "drizzle-orm";
 import type { Database } from "@rex/database";
 import { apiKeys } from "@rex/database";
 import { encrypt, decrypt, createLogger, loadConfig } from "@rex/utils";
-import type { LLMProviderType } from "@rex/types";
+import type { ApiProviderType } from "@rex/types";
 
 const logger = createLogger("apikey-service");
 
 export interface ApiKeyService {
-  storeKey(userId: string, provider: LLMProviderType, key: string, label: string): Promise<{ id: string }>;
-  getDecryptedKey(userId: string, provider: LLMProviderType): Promise<string>;
+  storeKey(userId: string, provider: ApiProviderType, key: string, label: string): Promise<{ id: string }>;
+  getDecryptedKey(userId: string, provider: ApiProviderType): Promise<string>;
   listKeys(userId: string): Promise<Array<{ id: string; provider: string; label: string; createdAt: Date }>>;
   deleteKey(userId: string, keyId: string): Promise<void>;
 }
