@@ -5,10 +5,13 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from "fastify";
 import { createApiKeySchema } from "../validation/schemas.js";
 import type { ApiKeyService } from "../services/apikey.service.js";
+import type { IAMService } from "../services/iam.service.js";
+import { IAMError } from "../services/iam.service.js";
 
 export function registerApiKeyRoutes(
   app: FastifyInstance,
-  apiKeyService: ApiKeyService
+  apiKeyService: ApiKeyService,
+  iamService: IAMService
 ): void {
   app.register(async function scopedRoutes(scoped: FastifyInstance) {
     // All routes in this scope require authentication
@@ -24,6 +27,17 @@ export function registerApiKeyRoutes(
       }
 
       const userId = (request.user as { sub: string }).sub;
+      try {
+        await iamService.assertRole(userId, ["admin", "editor"]);
+      } catch (err) {
+        if (err instanceof IAMError) {
+          return reply.status(err.statusCode).send({
+            success: false,
+            error: { code: err.code, message: err.message },
+          });
+        }
+        throw err;
+      }
       const result = await apiKeyService.storeKey(
         userId,
         parsed.data.provider,
@@ -43,6 +57,17 @@ export function registerApiKeyRoutes(
 
     scoped.delete("/api/keys/:keyId", async (request: FastifyRequest, reply: FastifyReply) => {
       const userId = (request.user as { sub: string }).sub;
+      try {
+        await iamService.assertRole(userId, ["admin", "editor"]);
+      } catch (err) {
+        if (err instanceof IAMError) {
+          return reply.status(err.statusCode).send({
+            success: false,
+            error: { code: err.code, message: err.message },
+          });
+        }
+        throw err;
+      }
       const { keyId } = request.params as { keyId: string };
 
       await apiKeyService.deleteKey(userId, keyId);
