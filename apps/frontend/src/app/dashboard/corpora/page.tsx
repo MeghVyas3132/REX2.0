@@ -26,6 +26,7 @@ const SUPPORTED_FORMATS = [
   { ext: ".yaml", label: "YAML", mime: "text/yaml" },
   { ext: ".yml", label: "YAML", mime: "text/yaml" },
   { ext: ".tsv", label: "TSV", mime: "text/tab-separated-values" },
+  { ext: ".pdf", label: "PDF", mime: "application/pdf" },
 ] as const;
 const ACCEPT_STRING = SUPPORTED_FORMATS.map((f) => f.ext).join(",");
 
@@ -247,6 +248,7 @@ export default function CorporaPage() {
           <Link href="/dashboard/active-workflows" style={s.navLink}>Active Workflows</Link>
           <Link href="/dashboard/current-workflow" style={s.navLink}>Current Workflow</Link>
           <Link href="/dashboard/corpora" style={s.navLinkActive}>Corpora</Link>
+          <Link href="/dashboard/kpi" style={s.navLink}>KPI</Link>
           <Link href="/dashboard/templates" style={s.navLink}>Templates</Link>
           <Link href="/dashboard/settings" style={s.navLink}>Settings</Link>
         </div>
