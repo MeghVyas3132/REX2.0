@@ -516,6 +516,130 @@ export const NODE_TYPE_DEFS: NodeTypeDefinition[] = [
     ],
   },
   {
+    type: "input-guard",
+    label: "Input Guard",
+    category: "logic",
+    description: "Detect prompt injection and redact sensitive input",
+    defaultConfig: {
+      valuePath: "content",
+      outputKey: "_guardedInput",
+      blockOnPromptInjection: "true",
+      blockOnPII: "false",
+      redactPII: "true",
+    },
+    configFields: [
+      { key: "valuePath", label: "Value Path", type: "text", placeholder: "content" },
+      { key: "outputKey", label: "Output Key", type: "text", placeholder: "_guardedInput" },
+      {
+        key: "blockOnPromptInjection",
+        label: "Block Prompt Injection",
+        type: "select",
+        options: [
+          { value: "true", label: "Yes" },
+          { value: "false", label: "No" },
+        ],
+      },
+      {
+        key: "blockOnPII",
+        label: "Block PII",
+        type: "select",
+        options: [
+          { value: "false", label: "No" },
+          { value: "true", label: "Yes" },
+        ],
+      },
+      {
+        key: "redactPII",
+        label: "Redact PII",
+        type: "select",
+        options: [
+          { value: "true", label: "Yes" },
+          { value: "false", label: "No" },
+        ],
+      },
+    ],
+  },
+  {
+    type: "output-guard",
+    label: "Output Guard",
+    category: "logic",
+    description: "Filter toxic/unsafe output and enforce structure",
+    defaultConfig: {
+      valuePath: "content",
+      outputKey: "_guardedOutput",
+      blockOnToxicity: "true",
+      blockOnPII: "false",
+      requireJson: "false",
+      redactPII: "false",
+    },
+    configFields: [
+      { key: "valuePath", label: "Value Path", type: "text", placeholder: "content" },
+      { key: "outputKey", label: "Output Key", type: "text", placeholder: "_guardedOutput" },
+      {
+        key: "blockOnToxicity",
+        label: "Block Toxicity",
+        type: "select",
+        options: [
+          { value: "true", label: "Yes" },
+          { value: "false", label: "No" },
+        ],
+      },
+      {
+        key: "blockOnPII",
+        label: "Block PII",
+        type: "select",
+        options: [
+          { value: "false", label: "No" },
+          { value: "true", label: "Yes" },
+        ],
+      },
+      {
+        key: "requireJson",
+        label: "Require JSON",
+        type: "select",
+        options: [
+          { value: "false", label: "No" },
+          { value: "true", label: "Yes" },
+        ],
+      },
+      {
+        key: "redactPII",
+        label: "Redact PII",
+        type: "select",
+        options: [
+          { value: "false", label: "No" },
+          { value: "true", label: "Yes" },
+        ],
+      },
+    ],
+  },
+  {
+    type: "json-simplify",
+    label: "JSON Simplifier",
+    category: "logic",
+    description: "Flatten nested payloads for retrieval and prompting",
+    defaultConfig: {
+      inputPath: "",
+      outputKey: "_jsonSimplified",
+      maxDepth: 6,
+      includeArrays: "true",
+    },
+    configFields: [
+      { key: "inputPath", label: "Input Path", type: "text", placeholder: "payload.record" },
+      { key: "outputKey", label: "Output Key", type: "text", placeholder: "_jsonSimplified" },
+      { key: "maxDepth", label: "Max Depth", type: "number", placeholder: "6" },
+      {
+        key: "includeArrays",
+        label: "Include Arrays",
+        type: "select",
+        options: [
+          { value: "true", label: "Yes" },
+          { value: "false", label: "No" },
+        ],
+      },
+    ],
+  },
+  {
     type: "log",
     label: "Audit Log",
     category: "output",
