@@ -14,11 +14,14 @@ import {
 } from "../validation/schemas.js";
 import type { WorkflowService } from "../services/workflow.service.js";
 import type { ExecutionService } from "../services/execution.service.js";
+import type { IAMService } from "../services/iam.service.js";
+import { IAMError } from "../services/iam.service.js";
 
 export function registerWorkflowRoutes(
   app: FastifyInstance,
   workflowService: WorkflowService,
-  executionService: ExecutionService
+  executionService: ExecutionService,
+  iamService: IAMService
 ): void {
   app.register(async function scopedRoutes(scoped: FastifyInstance) {
     // Auth hook is scoped — only applies to routes inside this register block
@@ -35,6 +38,17 @@ export function registerWorkflowRoutes(
       }
 
       const userId = (request.user as { sub: string }).sub;
+      try {
+        await iamService.assertRole(userId, ["admin", "editor"]);
+      } catch (err) {
+        if (err instanceof IAMError) {
+          return reply.status(err.statusCode).send({
+            success: false,
+            error: { code: err.code, message: err.message },
+          });
+        }
+        throw err;
+      }
       const workflow = await workflowService.create(
         userId,
         parsed.data.name,
@@ -116,6 +130,17 @@ export function registerWorkflowRoutes(
 
       const userId = (request.user as { sub: string }).sub;
       const { workflowId } = request.params as { workflowId: string };
+      try {
+        await iamService.assertWorkflowAction(userId, workflowId, "edit");
+      } catch (err) {
+        if (err instanceof IAMError) {
+          return reply.status(err.statusCode).send({
+            success: false,
+            error: { code: err.code, message: err.message },
+          });
+        }
+        throw err;
+      }
 
       try {
         const workflow = await workflowService.update(userId, workflowId, parsed.data);
@@ -132,6 +157,17 @@ export function registerWorkflowRoutes(
     scoped.delete("/api/workflows/:workflowId", async (request: FastifyRequest, reply: FastifyReply) => {
       const userId = (request.user as { sub: string }).sub;
       const { workflowId } = request.params as { workflowId: string };
+      try {
+        await iamService.assertWorkflowAction(userId, workflowId, "delete");
+      } catch (err) {
+        if (err instanceof IAMError) {
+          return reply.status(err.statusCode).send({
+            success: false,
+            error: { code: err.code, message: err.message },
+          });
+        }
+        throw err;
+      }
 
       try {
         await workflowService.delete(userId, workflowId);
@@ -156,14 +192,16 @@ export function registerWorkflowRoutes(
 
       const userId = (request.user as { sub: string }).sub;
       const { workflowId } = request.params as { workflowId: string };
-
-      // Verify workflow exists and belongs to user
-      const workflow = await workflowService.getById(userId, workflowId);
-      if (!workflow) {
-        return reply.status(404).send({
-          success: false,
-          error: { code: "NOT_FOUND", message: "Workflow not found" },
-        });
+      try {
+        await iamService.assertWorkflowAction(userId, workflowId, "execute");
+      } catch (err) {
+        if (err instanceof IAMError) {
+          return reply.status(err.statusCode).send({
+            success: false,
+            error: { code: err.code, message: err.message },
+          });
+        }
+        throw err;
       }
 
       const result = await executionService.trigger(userId, workflowId, parsed.data.payload);
@@ -260,6 +298,17 @@ export function registerWorkflowRoutes(
     scoped.post("/api/executions/:executionId/stop", async (request: FastifyRequest, reply: FastifyReply) => {
       const userId = (request.user as { sub: string }).sub;
       const { executionId } = request.params as { executionId: string };
+      try {
+        await iamService.assertRole(userId, ["admin", "editor"]);
+      } catch (err) {
+        if (err instanceof IAMError) {
+          return reply.status(err.statusCode).send({
+            success: false,
+            error: { code: err.code, message: err.message },
+          });
+        }
+        throw err;
+      }
 
       try {
         const result = await executionService.stop(userId, executionId);
