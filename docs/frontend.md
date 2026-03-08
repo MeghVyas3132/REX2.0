@@ -2,7 +2,7 @@
 
 ## Application Role
 
-The frontend provides authenticated workflow authoring, template instantiation, settings/key management, and execution visualization.
+The frontend provides authenticated workflow authoring, template instantiation, settings/key and model visibility, execution visualization, and KPI dashboards.
 
 ## Runtime Stack
 
@@ -24,7 +24,9 @@ The frontend provides authenticated workflow authoring, template instantiation, 
   - Preview generated graph.
   - Instantiate into editable workflow.
 - Settings
-  - API key management.
+  - API key management, user role visibility, and model registry visibility.
+- KPI
+  - KPI and observability dashboard (`/dashboard/kpi`) with summary cards and daily trend table.
 - Execution Detail
   - Step-by-step runtime outputs and errors.
 
@@ -41,6 +43,7 @@ Editor node definitions are aligned with runtime node registry, including:
 - core trigger/action/logic/output nodes
 - memory/evaluation/control nodes
 - knowledge ingestion and retrieval nodes
+- input/output guard and JSON simplification nodes
 
 ## API Integration Pattern
 
@@ -52,6 +55,10 @@ Editor node definitions are aligned with runtime node registry, including:
 
 - Sidebar includes:
   - Workflows
+  - Active Workflows
+  - Current Workflow
+  - Corpora
+  - KPI
   - Templates
   - Settings
 

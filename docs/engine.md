@@ -11,6 +11,7 @@
 - Execution metadata: execution ID, workflow ID, user ID
 - Workflow graph: nodes and edges
 - Trigger payload
+- Optional domain-config-influenced runtime defaults applied before execution by worker
 - Runtime providers:
   - API key resolver
   - optional retrieval function
@@ -74,6 +75,19 @@ Edge conditions are evaluated against parent outputs and route metadata. Unsuppo
 
 Engine enforces retrieval budgets and records retrieval telemetry for every attempt.
 
+## Guardrail and Simplification Nodes
+
+The runtime node registry now includes:
+
+- `input-guard`
+  - Detects prompt-injection patterns and PII in pre-LLM payloads.
+  - Supports block and redact policies.
+- `output-guard`
+  - Detects toxicity/PII in post-LLM outputs.
+  - Supports JSON format enforcement and block policies.
+- `json-simplify`
+  - Flattens nested JSON payloads for cleaner retrieval and prompt injection.
+
 ## Ingestion Orchestration
 
 `knowledge-ingest` node calls runtime ingestion callback and can persist active corpus state into execution memory for downstream nodes.
@@ -95,3 +109,4 @@ Registered built-in node families include:
 - Memory and execution-control nodes
 - Evaluation node
 - Knowledge ingestion/retrieval nodes
+- Guardrail and JSON simplification nodes
