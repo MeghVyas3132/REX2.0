@@ -12,10 +12,13 @@ import {
   queryKnowledgeSchema,
 } from "../validation/schemas.js";
 import type { KnowledgeService } from "../services/knowledge.service.js";
+import type { IAMService } from "../services/iam.service.js";
+import { IAMError } from "../services/iam.service.js";
 
 export function registerKnowledgeRoutes(
   app: FastifyInstance,
-  knowledgeService: KnowledgeService
+  knowledgeService: KnowledgeService,
+  iamService: IAMService
 ): void {
   app.register(async function scopedRoutes(scoped: FastifyInstance) {
     scoped.addHook("onRequest", app.authenticate);
@@ -30,6 +33,17 @@ export function registerKnowledgeRoutes(
       }
 
       const userId = (request.user as { sub: string }).sub;
+      try {
+        await iamService.assertRole(userId, ["admin", "editor"]);
+      } catch (err) {
+        if (err instanceof IAMError) {
+          return reply.status(err.statusCode).send({
+            success: false,
+            error: { code: err.code, message: err.message },
+          });
+        }
+        throw err;
+      }
       const result = await knowledgeService.createCorpus(userId, parsed.data);
       return reply.status(201).send({ success: true, data: result });
     });
@@ -44,6 +58,17 @@ export function registerKnowledgeRoutes(
       }
 
       const userId = (request.user as { sub: string }).sub;
+      try {
+        await iamService.assertRole(userId, ["admin", "editor"]);
+      } catch (err) {
+        if (err instanceof IAMError) {
+          return reply.status(err.statusCode).send({
+            success: false,
+            error: { code: err.code, message: err.message },
+          });
+        }
+        throw err;
+      }
       const result = await knowledgeService.ingestDocument(userId, parsed.data);
       return reply.status(202).send({ success: true, data: result });
     });
