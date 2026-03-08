@@ -9,6 +9,7 @@ import type { Database } from "@rex/database";
 import { workflows } from "@rex/database";
 import type { ExecutionService } from "../services/execution.service.js";
 import { createLogger, loadConfig } from "@rex/utils";
+import { IAMError } from "../services/iam.service.js";
 
 const logger = createLogger("webhook-routes");
 
@@ -47,7 +48,18 @@ export function registerWebhookRoutes(
 
     logger.info({ workflowId, payloadKeys: Object.keys(payload) }, "Webhook received");
 
-    const result = await executionService.trigger(workflow.userId, workflowId, payload);
+    let result: { executionId: string };
+    try {
+      result = await executionService.trigger(workflow.userId, workflowId, payload);
+    } catch (err) {
+      if (err instanceof IAMError) {
+        return reply.status(err.statusCode).send({
+          success: false,
+          error: { code: err.code, message: err.message },
+        });
+      }
+      throw err;
+    }
 
     return reply.status(202).send({ success: true, data: result });
   });
