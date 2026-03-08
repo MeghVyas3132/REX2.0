@@ -7,14 +7,19 @@ export interface User {
   email: string;
   name: string;
   passwordHash: string;
+  role: UserRole;
+  consentGivenAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
 }
 
+export type UserRole = "admin" | "editor" | "viewer";
+export type ApiProviderType = "gemini" | "groq" | "openai" | "cohere";
+
 export interface ApiKey {
   id: string;
   userId: string;
-  provider: "gemini" | "groq";
+  provider: ApiProviderType;
   encryptedKey: string;
   label: string;
   createdAt: Date;
@@ -23,6 +28,7 @@ export interface ApiKey {
 export interface JWTPayload {
   sub: string;
   email: string;
+  role?: UserRole;
   iat: number;
   exp: number;
 }
@@ -44,7 +50,7 @@ export interface LoginInput {
 }
 
 export interface CreateApiKeyInput {
-  provider: "gemini" | "groq";
+  provider: ApiProviderType;
   key: string;
   label: string;
 }

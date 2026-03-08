@@ -35,6 +35,9 @@ export interface ExecutionJobPayload {
   workflowId: string;
   triggerPayload: Record<string, unknown>;
   userId: string;
+  domainConfig?: Record<string, unknown>;
+  executionAuthorizationId?: string;
+  hyperparameterProfileId?: string;
 }
 
 export interface ExecutionResult {
