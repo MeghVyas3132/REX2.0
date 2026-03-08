@@ -20,9 +20,21 @@ import { registerChatRoutes } from "./routes/chat.routes.js";
 import { registerFileUploadRoutes } from "./routes/file-upload.routes.js";
 import { registerKnowledgeRoutes } from "./routes/knowledge.routes.js";
 import { registerTemplateRoutes } from "./routes/template.routes.js";
+import { registerGovernanceRoutes } from "./routes/governance.routes.js";
 import { startScheduler } from "./services/scheduler.service.js";
 import { createKnowledgeService } from "./services/knowledge.service.js";
 import { createTemplateService } from "./services/template.service.js";
+import { createIAMService } from "./services/iam.service.js";
+import { createModelRegistryService } from "./services/model-registry.service.js";
+import { createDomainConfigService } from "./services/domain-config.service.js";
+import { createKpiService } from "./services/kpi.service.js";
+import { createGDPRService } from "./services/gdpr.service.js";
+import { createWorkspaceService } from "./services/workspace.service.js";
+import { createPolicyService } from "./services/policy.service.js";
+import { createHyperparameterService } from "./services/hyperparameter.service.js";
+import { createAlertingService } from "./services/alerting.service.js";
+import { createComplianceService } from "./services/compliance.service.js";
+import { createExecutionAuthorizationService } from "./services/execution-authorization.service.js";
 
 const logger = createLogger("server");
 
@@ -70,21 +82,51 @@ async function bootstrap(): Promise<void> {
 
   // Services (dependency injection)
   const authService = createAuthService(db);
+  const iamService = createIAMService(db);
+  const domainConfigService = createDomainConfigService(db);
+  const executionAuthorizationService = createExecutionAuthorizationService(db);
+  const hyperparameterService = createHyperparameterService(db);
   const apiKeyService = createApiKeyService(db);
   const workflowService = createWorkflowService(db);
-  const executionService = createExecutionService(db);
+  const executionService = createExecutionService(
+    db,
+    iamService,
+    domainConfigService,
+    executionAuthorizationService,
+    hyperparameterService
+  );
   const knowledgeService = createKnowledgeService(db);
   const templateService = createTemplateService(workflowService);
+  const modelRegistryService = createModelRegistryService(db);
+  const kpiService = createKpiService(db);
+  const gdprService = createGDPRService(db);
+  const workspaceService = createWorkspaceService(db);
+  const policyService = createPolicyService(db);
+  const alertingService = createAlertingService(db);
+  const complianceService = createComplianceService(db);
 
   // Routes
   registerAuthRoutes(app, authService);
-  registerApiKeyRoutes(app, apiKeyService);
-  registerWorkflowRoutes(app, workflowService, executionService);
+  registerApiKeyRoutes(app, apiKeyService, iamService);
+  registerWorkflowRoutes(app, workflowService, executionService, iamService);
   registerWebhookRoutes(app, db, executionService);
   registerChatRoutes(app, apiKeyService);
   registerFileUploadRoutes(app);
-  registerKnowledgeRoutes(app, knowledgeService);
-  registerTemplateRoutes(app, templateService);
+  registerKnowledgeRoutes(app, knowledgeService, iamService);
+  registerTemplateRoutes(app, templateService, iamService);
+  registerGovernanceRoutes(
+    app,
+    modelRegistryService,
+    domainConfigService,
+    kpiService,
+    gdprService,
+    iamService,
+    workspaceService,
+    policyService,
+    hyperparameterService,
+    alertingService,
+    complianceService
+  );
 
   // Start scheduler for cron/interval workflows
   startScheduler(db, executionService);
