@@ -9,6 +9,9 @@ import type {
   WorkflowNode,
   WorkflowEdge,
   LLMProviderType,
+  ApiProviderType,
+  EmbeddingProviderType,
+  RerankerProviderType,
   ExecutionStepResult,
   ExecutionContextUpdate,
   RuntimeKnowledgeQuery,
@@ -25,7 +28,12 @@ import {
   executionStepAttempts,
   executionContextSnapshots,
   executionRetrievalEvents,
+  executionAuthorizations,
+  guardrailEvents,
+  alertRules,
+  alertEvents,
   apiKeys,
+  domainConfigs,
   knowledgeCorpora,
   knowledgeChunks,
   knowledgeDocuments,
@@ -41,8 +49,9 @@ import {
   chunkText,
   estimateTokens,
   sanitizeErrorMessage,
+  lexicalRelevanceScore,
 } from "@rex/utils";
-import { eq, and, inArray, desc } from "drizzle-orm";
+import { eq, and, inArray, desc, or, isNull, gt, gte } from "drizzle-orm";
 
 const logger = createLogger("job-handler");
 const EXECUTION_STOPPED_CODE = "EXECUTION_STOPPED";
@@ -87,6 +96,13 @@ export async function handleExecutionJob(
     .where(eq(executions.id, executionId));
 
   try {
+    await assertExecutionAuthorized(db, {
+      executionAuthorizationId: job.data.executionAuthorizationId,
+      executionId,
+      workflowId,
+      userId,
+    });
+
     // Load workflow
     const [workflow] = await db
       .select()
@@ -98,12 +114,24 @@ export async function handleExecutionJob(
       throw new ExecutionStoppedError(`Workflow ${workflowId} not found`);
     }
 
-    const nodes = workflow.nodes as WorkflowNode[];
+    const resolvedDomainConfig = await resolveRuntimeDomainConfig(
+      db,
+      userId,
+      workflowId,
+      toRecord(job.data.domainConfig)
+    );
+    const nodes = applyDomainConfigToNodes(
+      workflow.nodes as WorkflowNode[],
+      resolvedDomainConfig
+    );
     const edges = workflow.edges as WorkflowEdge[];
     let contextSequence = 0;
+    const decryptedApiKeyCache = new Map<ApiProviderType, string>();
 
-    // API key resolver
-    const getApiKey = async (provider: LLMProviderType): Promise<string> => {
+    const getProviderApiKey = async (provider: ApiProviderType): Promise<string | null> => {
+      const cached = decryptedApiKeyCache.get(provider);
+      if (cached) return cached;
+
       const [key] = await db
         .select()
         .from(apiKeys)
@@ -111,12 +139,23 @@ export async function handleExecutionJob(
         .limit(1);
 
       if (!key) {
+        return null;
+      }
+
+      const decrypted = decrypt(key.encryptedKey, config.encryption.masterKey);
+      decryptedApiKeyCache.set(provider, decrypted);
+      return decrypted;
+    };
+
+    // LLM API key resolver
+    const getApiKey = async (provider: LLMProviderType): Promise<string> => {
+      const key = await getProviderApiKey(provider);
+      if (!key) {
         throw new Error(
           `No ${provider} API key found for user. Please add your API key in settings.`
         );
       }
-
-      return decrypt(key.encryptedKey, config.encryption.masterKey);
+      return key;
     };
 
     // Execute workflow via engine
@@ -128,11 +167,14 @@ export async function handleExecutionJob(
       edges,
       triggerPayload,
       getApiKey,
-      retrieveKnowledge: async (query) => queryKnowledgeForExecution(db, query),
-      ingestKnowledge: async (input) => ingestKnowledgeForExecution(db, input),
+      retrieveKnowledge: async (query) =>
+        queryKnowledgeForExecution(db, query, resolvedDomainConfig, getProviderApiKey),
+      ingestKnowledge: async (input) =>
+        ingestKnowledgeForExecution(db, input, resolvedDomainConfig, getProviderApiKey),
       initialContext: {
         memory: {
           triggerPayload,
+          domainConfig: resolvedDomainConfig,
         },
         retrieval: {
           totalRequests: 0,
@@ -163,6 +205,12 @@ export async function handleExecutionJob(
         });
 
         await persistStepAttempts(db, executionId, step);
+        await persistGuardrailEvent(db, {
+          executionId,
+          workflowId,
+          userId,
+          step,
+        });
       },
       onContextUpdate: async (update: ExecutionContextUpdate) => {
         contextSequence += 1;
@@ -182,6 +230,8 @@ export async function handleExecutionJob(
         errorMessage: result.errorMessage,
       })
       .where(eq(executions.id, executionId));
+
+    await evaluateAlertRulesForExecution(db, userId, workflowId, executionId);
 
     logger.info({
       executionId,
@@ -222,6 +272,8 @@ export async function handleExecutionJob(
         errorMessage,
       })
       .where(eq(executions.id, executionId));
+
+    await evaluateAlertRulesForExecution(db, userId, workflowId, executionId);
 
     throw err; // Re-throw for BullMQ retry logic
   }
@@ -272,6 +324,65 @@ async function persistStepAttempts(
         error: err instanceof Error ? err.message : "Unknown error",
       },
       "Failed to persist execution step attempts"
+    );
+  }
+}
+
+async function persistGuardrailEvent(
+  db: Database,
+  input: {
+    executionId: string;
+    workflowId: string;
+    userId: string;
+    step: ExecutionStepResult;
+  }
+): Promise<void> {
+  if (input.step.nodeType !== "input-guard" && input.step.nodeType !== "output-guard") {
+    return;
+  }
+
+  const guard = input.step.output && typeof input.step.output === "object"
+    ? toRecord(input.step.output["_guard"])
+    : {};
+  const triggered = guard["triggered"] === true || input.step.status === "failed";
+  if (!triggered) {
+    return;
+  }
+
+  const reason =
+    typeof guard["reason"] === "string"
+      ? guard["reason"]
+      : input.step.error ?? "Guardrail triggered";
+  const severity = input.step.status === "failed" ? "block" : "warn";
+  const guardType = input.step.nodeType === "input-guard" ? "input" : "output";
+
+  try {
+    await db.insert(guardrailEvents).values({
+      userId: input.userId,
+      workflowId: input.workflowId,
+      executionId: input.executionId,
+      nodeId: input.step.nodeId,
+      nodeType: input.step.nodeType,
+      guardType,
+      severity,
+      reason: reason.slice(0, 1024),
+      payload: guard,
+    });
+  } catch (err) {
+    if (isMissingRelationError(err)) {
+      logger.warn(
+        { executionId: input.executionId, nodeId: input.step.nodeId },
+        "Guardrail events table not found; skipping persistence"
+      );
+      return;
+    }
+    logger.warn(
+      {
+        executionId: input.executionId,
+        nodeId: input.step.nodeId,
+        error: err instanceof Error ? err.message : "Unknown error",
+      },
+      "Failed to persist guardrail event"
     );
   }
 }
@@ -435,11 +546,333 @@ function isExecutionStoppedError(err: unknown): boolean {
   return maybeCode === EXECUTION_STOPPED_CODE;
 }
 
+async function assertExecutionAuthorized(
+  db: Database,
+  input: {
+    executionAuthorizationId?: string;
+    executionId: string;
+    workflowId: string;
+    userId: string;
+  }
+): Promise<void> {
+  if (!input.executionAuthorizationId) {
+    throw new Error("Execution authorization token missing from job payload");
+  }
+
+  const [authorization] = await db
+    .select({
+      id: executionAuthorizations.id,
+      validatedAt: executionAuthorizations.validatedAt,
+    })
+    .from(executionAuthorizations)
+    .where(
+      and(
+        eq(executionAuthorizations.id, input.executionAuthorizationId),
+        eq(executionAuthorizations.executionId, input.executionId),
+        eq(executionAuthorizations.workflowId, input.workflowId),
+        eq(executionAuthorizations.userId, input.userId),
+        eq(executionAuthorizations.revoked, false),
+        gt(executionAuthorizations.expiresAt, new Date())
+      )
+    )
+    .limit(1);
+
+  if (!authorization) {
+    throw new Error("Execution authorization is invalid, revoked, or expired");
+  }
+
+  if (!authorization.validatedAt) {
+    await db
+      .update(executionAuthorizations)
+      .set({ validatedAt: new Date() })
+      .where(eq(executionAuthorizations.id, authorization.id));
+  }
+}
+
+async function evaluateAlertRulesForExecution(
+  db: Database,
+  userId: string,
+  workflowId: string,
+  executionId: string
+): Promise<void> {
+  try {
+    const rules = await db
+      .select()
+      .from(alertRules)
+      .where(
+        and(
+          eq(alertRules.userId, userId),
+          eq(alertRules.isActive, true),
+          or(eq(alertRules.workflowId, workflowId), isNull(alertRules.workflowId))
+        )
+      );
+
+    if (rules.length === 0) return;
+
+    for (const rule of rules) {
+      if (rule.ruleType === "latency-breach") {
+        const [step] = await db
+          .select({ id: executionSteps.id })
+          .from(executionSteps)
+          .where(
+            and(
+              eq(executionSteps.executionId, executionId),
+              gte(executionSteps.durationMs, rule.threshold)
+            )
+          )
+          .limit(1);
+        if (!step) continue;
+
+        await db.insert(alertEvents).values({
+          userId,
+          workflowId,
+          alertRuleId: rule.id,
+          ruleType: rule.ruleType,
+          severity: rule.severity,
+          message: `Latency threshold breached on execution ${executionId}`,
+          payload: {
+            executionId,
+            thresholdMs: rule.threshold,
+          },
+        });
+        continue;
+      }
+
+      if (rule.ruleType === "guardrail-triggered") {
+        const windowStart = new Date(Date.now() - rule.windowMinutes * 60 * 1000);
+        const events = await db
+          .select({ id: guardrailEvents.id })
+          .from(guardrailEvents)
+          .where(
+            and(
+              eq(guardrailEvents.userId, userId),
+              eq(guardrailEvents.workflowId, workflowId),
+              gte(guardrailEvents.createdAt, windowStart)
+            )
+          );
+
+        if (events.length < rule.threshold) continue;
+        await db.insert(alertEvents).values({
+          userId,
+          workflowId,
+          alertRuleId: rule.id,
+          ruleType: rule.ruleType,
+          severity: rule.severity,
+          message: `Guardrail threshold reached (${events.length})`,
+          payload: {
+            workflowId,
+            executionId,
+            count: events.length,
+            threshold: rule.threshold,
+            windowMinutes: rule.windowMinutes,
+          },
+        });
+        continue;
+      }
+
+      if (rule.ruleType === "corpus-health-alert") {
+        const failed = await db
+          .select({ id: knowledgeDocuments.id })
+          .from(knowledgeDocuments)
+          .where(and(eq(knowledgeDocuments.userId, userId), eq(knowledgeDocuments.status, "failed")));
+        const total = await db
+          .select({ id: knowledgeDocuments.id })
+          .from(knowledgeDocuments)
+          .where(eq(knowledgeDocuments.userId, userId));
+
+        const failurePct = total.length === 0 ? 0 : (failed.length / total.length) * 100;
+        if (failurePct < rule.threshold) continue;
+
+        await db.insert(alertEvents).values({
+          userId,
+          workflowId: null,
+          alertRuleId: rule.id,
+          ruleType: rule.ruleType,
+          severity: rule.severity,
+          message: `Corpus health threshold breached (${failurePct.toFixed(2)}% failed)`,
+          payload: {
+            failedDocuments: failed.length,
+            totalDocuments: total.length,
+            failurePct,
+            thresholdPct: rule.threshold,
+          },
+        });
+      }
+    }
+  } catch (err) {
+    if (isMissingRelationError(err)) {
+      logger.warn({ userId, workflowId, executionId }, "Alert tables missing; skipping alert evaluation");
+      return;
+    }
+    logger.warn(
+      {
+        userId,
+        workflowId,
+        executionId,
+        error: err instanceof Error ? err.message : "Unknown error",
+      },
+      "Failed to evaluate alert rules for execution"
+    );
+  }
+}
+
+async function resolveRuntimeDomainConfig(
+  db: Database,
+  userId: string,
+  workflowId: string,
+  queuedConfig: Record<string, unknown>
+): Promise<Record<string, unknown>> {
+  let rows: Array<{ config: unknown; userId: string | null; workflowId: string | null }> = [];
+  try {
+    rows = await db
+      .select({ config: domainConfigs.config, userId: domainConfigs.userId, workflowId: domainConfigs.workflowId })
+      .from(domainConfigs)
+      .where(
+        and(
+          eq(domainConfigs.isActive, true),
+          or(
+            and(isNull(domainConfigs.userId), isNull(domainConfigs.workflowId)),
+            and(eq(domainConfigs.userId, userId), isNull(domainConfigs.workflowId)),
+            and(isNull(domainConfigs.userId), eq(domainConfigs.workflowId, workflowId)),
+            and(eq(domainConfigs.userId, userId), eq(domainConfigs.workflowId, workflowId))
+          )
+        )
+      );
+  } catch (err) {
+    if (isMissingRelationError(err)) {
+      return queuedConfig;
+    }
+    throw err;
+  }
+
+  const sorted = rows.sort((a, b) => {
+    const left = (a.userId ? 1 : 0) + (a.workflowId ? 2 : 0);
+    const right = (b.userId ? 1 : 0) + (b.workflowId ? 2 : 0);
+    return left - right;
+  });
+
+  const mergedFromDb = sorted.reduce<Record<string, unknown>>(
+    (acc, row) => deepMerge(acc, toRecord(row.config)),
+    {}
+  );
+  return deepMerge(mergedFromDb, queuedConfig);
+}
+
+function applyDomainConfigToNodes(
+  nodes: WorkflowNode[],
+  config: Record<string, unknown>
+): WorkflowNode[] {
+  const llmConfig = toRecord(config["llm"]);
+  const retrievalConfig = toRecord(config["retrieval"]);
+  const defaultProvider = asString(llmConfig["defaultProvider"]);
+  const defaultModel = asString(llmConfig["defaultModel"]);
+  const defaultTemperature = asNumber(llmConfig["temperature"]);
+  const defaultMaxTokens = asNumber(llmConfig["maxTokens"]);
+  const defaultTopK = asNumber(retrievalConfig["topK"]);
+  const defaultStrategy = asString(retrievalConfig["strategy"]);
+
+  return nodes.map((node) => {
+    const nodeConfig = { ...node.config };
+    if (node.type === "llm") {
+      if (!nodeConfig["provider"] && defaultProvider) nodeConfig["provider"] = defaultProvider;
+      if (!nodeConfig["model"] && defaultModel) nodeConfig["model"] = defaultModel;
+      if (nodeConfig["temperature"] === undefined && defaultTemperature !== null) {
+        nodeConfig["temperature"] = defaultTemperature;
+      }
+      if (nodeConfig["maxTokens"] === undefined && defaultMaxTokens !== null) {
+        nodeConfig["maxTokens"] = defaultMaxTokens;
+      }
+    } else if (node.type === "knowledge-retrieve") {
+      if (nodeConfig["topK"] === undefined && defaultTopK !== null) {
+        nodeConfig["topK"] = defaultTopK;
+      }
+      if (!nodeConfig["strategy"] && defaultStrategy) {
+        nodeConfig["strategy"] = defaultStrategy;
+      }
+    } else if (node.type === "input-guard") {
+      const guardrails = toRecord(config["guardrails"]);
+      const blockPromptInjection = guardrails["blockPromptInjection"];
+      if (nodeConfig["blockOnPromptInjection"] === undefined && typeof blockPromptInjection === "boolean") {
+        nodeConfig["blockOnPromptInjection"] = blockPromptInjection;
+      }
+    } else if (node.type === "output-guard") {
+      const guardrails = toRecord(config["guardrails"]);
+      const blockToxicity = guardrails["blockToxicity"];
+      if (nodeConfig["blockOnToxicity"] === undefined && typeof blockToxicity === "boolean") {
+        nodeConfig["blockOnToxicity"] = blockToxicity;
+      }
+    }
+
+    return {
+      ...node,
+      config: nodeConfig,
+    };
+  });
+}
+
+function deepMerge(
+  base: Record<string, unknown>,
+  overlay: Record<string, unknown>
+): Record<string, unknown> {
+  const out: Record<string, unknown> = { ...base };
+  for (const [key, overlayValue] of Object.entries(overlay)) {
+    const baseValue = out[key];
+    if (
+      baseValue &&
+      typeof baseValue === "object" &&
+      !Array.isArray(baseValue) &&
+      overlayValue &&
+      typeof overlayValue === "object" &&
+      !Array.isArray(overlayValue)
+    ) {
+      out[key] = deepMerge(
+        baseValue as Record<string, unknown>,
+        overlayValue as Record<string, unknown>
+      );
+      continue;
+    }
+    out[key] = overlayValue;
+  }
+  return out;
+}
+
+function toRecord(value: unknown): Record<string, unknown> {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return {};
+  }
+  return value as Record<string, unknown>;
+}
+
+function asString(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : null;
+}
+
+function asNumber(value: unknown): number | null {
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value === "string" && value.trim().length > 0) {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+  return null;
+}
+
 async function queryKnowledgeForExecution(
   db: Database,
-  query: RuntimeKnowledgeQuery
+  query: RuntimeKnowledgeQuery,
+  domainConfig: Record<string, unknown>,
+  getProviderApiKey: (provider: ApiProviderType) => Promise<string | null>
 ): Promise<RuntimeKnowledgeQueryResult> {
   const topK = Math.max(1, Math.min(Math.floor(query.topK), 50));
+  const retrievalConfig = toRecord(domainConfig["retrieval"]);
+  const embeddingProviderType = parseEmbeddingProvider(retrievalConfig["embeddingProvider"]) ?? "deterministic";
+  const embeddingModel = asString(retrievalConfig["embeddingModel"]) ?? undefined;
+  const rerankEnabled = asBoolean(retrievalConfig["rerankEnabled"], false);
+  const rerankerProviderType = parseRerankerProvider(retrievalConfig["rerankerProvider"]) ?? "heuristic";
+  const rerankerModel = asString(retrievalConfig["rerankerModel"]) ?? undefined;
+  const candidateMultiplier = clampNumber(asNumber(retrievalConfig["candidateMultiplier"]), 8, 80, 40);
+
   const scope = normalizeRuntimeQueryScope(query);
   const corpusConditions = [
     eq(knowledgeCorpora.userId, query.userId),
@@ -472,7 +905,7 @@ async function queryKnowledgeForExecution(
     return { query: query.query, topK, matches: [] };
   }
 
-  const candidateLimit = Math.max(Math.min(topK * 40, 1000), topK * 8);
+  const candidateLimit = Math.max(Math.min(topK * candidateMultiplier, 1000), topK * 8);
   const candidates = await db
     .select({
       chunkId: knowledgeChunks.id,
@@ -481,7 +914,10 @@ async function queryKnowledgeForExecution(
       chunkIndex: knowledgeChunks.chunkIndex,
       content: knowledgeChunks.content,
       embedding: knowledgeChunks.embedding,
+      embeddingVector: knowledgeChunks.embeddingVector,
       metadata: knowledgeChunks.metadata,
+      pageNumber: knowledgeChunks.pageNumber,
+      sectionPath: knowledgeChunks.sectionPath,
       title: knowledgeDocuments.title,
       sourceType: knowledgeDocuments.sourceType,
     })
@@ -495,39 +931,69 @@ async function queryKnowledgeForExecution(
     )
     .limit(candidateLimit);
 
-  const queryEmbedding = buildDeterministicEmbedding(query.query, 64);
-  const matches = candidates
+  const queryEmbedding = await embedQueryVector(
+    query.query,
+    embeddingProviderType,
+    embeddingModel,
+    getProviderApiKey
+  );
+
+  const preliminaryMatches = candidates
     .map((candidate) => {
-      const embedding = parseEmbedding(candidate.embedding);
-      const score = cosineSimilarity(queryEmbedding, embedding);
+      const embedding = parseStoredEmbedding(candidate.embeddingVector, candidate.embedding);
+      const semanticScore = cosineSimilarity(queryEmbedding, embedding);
+      const lexicalScore = lexicalRelevanceScore(query.query, candidate.content);
+      const score = semanticScore * 0.7 + lexicalScore * 0.3;
       return {
         corpusId: candidate.corpusId,
         documentId: candidate.documentId,
         chunkId: candidate.chunkId,
         chunkIndex: candidate.chunkIndex,
         score,
+        semanticScore,
+        lexicalScore,
         content: candidate.content,
         title: candidate.title,
         sourceType: candidate.sourceType,
-        metadata: candidate.metadata,
+        metadata: {
+          ...toRecord(candidate.metadata),
+          pageNumber: candidate.pageNumber,
+          sectionPath: candidate.sectionPath,
+          semanticScore,
+          lexicalScore,
+        },
       };
     })
     .filter((match) => Number.isFinite(match.score))
-    .sort((a, b) => b.score - a.score)
-    .slice(0, topK);
+    .sort((a, b) => b.score - a.score);
+
+  const matches = rerankEnabled
+    ? await rerankMatches(
+        query.query,
+        preliminaryMatches,
+        rerankerProviderType,
+        rerankerModel,
+        getProviderApiKey
+      )
+    : preliminaryMatches;
 
   return {
     query: query.query,
     topK,
-    matches,
+    matches: matches.slice(0, topK),
   };
 }
 
 async function ingestKnowledgeForExecution(
   db: Database,
-  input: RuntimeKnowledgeIngestionRequest
+  input: RuntimeKnowledgeIngestionRequest,
+  domainConfig: Record<string, unknown>,
+  getProviderApiKey: (provider: ApiProviderType) => Promise<string | null>
 ): Promise<RuntimeKnowledgeIngestionResult> {
   const scope = normalizeRuntimeIngestionScope(input);
+  const retrievalConfig = toRecord(domainConfig["retrieval"]);
+  const embeddingProviderType = parseEmbeddingProvider(retrievalConfig["embeddingProvider"]) ?? "deterministic";
+  const embeddingModel = asString(retrievalConfig["embeddingModel"]) ?? undefined;
   const corpusId = await resolveRuntimeCorpusForIngestion(db, input, scope);
   const sourceType = input.sourceType ?? "inline";
   const title = input.title.trim().slice(0, 255) || "Runtime Document";
@@ -561,28 +1027,37 @@ async function ingestKnowledgeForExecution(
   }
 
   try {
-    const chunks = chunkText(contentText, {
-      chunkSizeChars: 1200,
-      chunkOverlapChars: 200,
-    });
+    const chunks = chunkDocumentByPage(contentText);
     if (chunks.length === 0) {
       throw new Error("Document content is empty after normalization");
     }
 
+    const vectorResponse = await embedTexts(
+      chunks.map((chunk) => chunk.content),
+      embeddingProviderType,
+      embeddingModel,
+      getProviderApiKey
+    );
+
     await db.delete(knowledgeChunks).where(eq(knowledgeChunks.documentId, document.id));
     await db.insert(knowledgeChunks).values(
-      chunks.map((chunk) => ({
+      chunks.map((chunk, index) => ({
         corpusId,
         documentId: document.id,
         chunkIndex: chunk.index,
         content: chunk.content,
         tokenCount: estimateTokens(chunk.content),
-        embedding: buildDeterministicEmbedding(chunk.content, 64),
-        embeddingModel: "rex-hash-v1",
+        embedding: vectorResponse.vectors[index] ?? [],
+        embeddingVector: toVectorLiteral(vectorResponse.vectors[index] ?? []),
+        embeddingModel: vectorResponse.model,
+        pageNumber: chunk.pageNumber,
+        sectionPath: chunk.sectionPath,
         metadata: {
-          start: chunk.start,
-          end: chunk.end,
+          start: chunk.startOffset,
+          end: chunk.endOffset,
           runtimeIngestion: true,
+          pageNumber: chunk.pageNumber,
+          sectionPath: chunk.sectionPath,
         },
       }))
     );
@@ -752,4 +1227,327 @@ function normalizeRuntimeIngestionScope(input: RuntimeKnowledgeIngestionRequest)
   return {
     scopeType: "user",
   };
+}
+
+async function embedQueryVector(
+  query: string,
+  provider: EmbeddingProviderType,
+  model: string | undefined,
+  getProviderApiKey: (provider: ApiProviderType) => Promise<string | null>
+): Promise<number[]> {
+  const response = await embedTexts([query], provider, model, getProviderApiKey);
+  return response.vectors[0] ?? buildDeterministicEmbedding(query, 1536);
+}
+
+async function embedTexts(
+  texts: string[],
+  provider: EmbeddingProviderType,
+  model: string | undefined,
+  getProviderApiKey: (provider: ApiProviderType) => Promise<string | null>
+): Promise<{ vectors: number[][]; model: string }> {
+  try {
+    if (provider === "openai") {
+      const key = await getProviderApiKey("openai");
+      if (key) {
+        const response = await embedWithOpenAI(texts, key, model);
+        return { vectors: response.vectors, model: response.model };
+      }
+      logger.warn("Missing OpenAI API key for embeddings; using deterministic embeddings");
+    }
+
+    if (provider === "cohere") {
+      const key = await getProviderApiKey("cohere");
+      if (key) {
+        const response = await embedWithCohere(texts, key, model);
+        return { vectors: response.vectors, model: response.model };
+      }
+      logger.warn("Missing Cohere API key for embeddings; using deterministic embeddings");
+    }
+
+    return {
+      vectors: texts.map((text) => buildDeterministicEmbedding(text, 1536)),
+      model: "rex-hash-v1-1536",
+    };
+  } catch (err) {
+    logger.warn(
+      { provider, error: err instanceof Error ? err.message : "Unknown error" },
+      "Embedding provider failed; falling back to deterministic embeddings"
+    );
+    return {
+      vectors: texts.map((text) => buildDeterministicEmbedding(text, 1536)),
+      model: "rex-hash-v1-1536",
+    };
+  }
+}
+
+async function rerankMatches(
+  query: string,
+  matches: RuntimeKnowledgeQueryResult["matches"],
+  provider: RerankerProviderType,
+  model: string | undefined,
+  getProviderApiKey: (provider: ApiProviderType) => Promise<string | null>
+): Promise<RuntimeKnowledgeQueryResult["matches"]> {
+  if (matches.length <= 1) return matches;
+
+  let scores: number[] = [];
+  let rerankerUsed: RerankerProviderType = "heuristic";
+  try {
+    if (provider === "cohere") {
+      const key = await getProviderApiKey("cohere");
+      if (key) {
+        scores = await rerankWithCohere(
+          query,
+          matches.map((match) => match.content),
+          key,
+          model
+        );
+        rerankerUsed = "cohere";
+      } else {
+        logger.warn("Missing Cohere API key for reranker; using heuristic reranker");
+        scores = matches.map((match) => lexicalRelevanceScore(query, match.content));
+      }
+    } else {
+      scores = matches.map((match) => lexicalRelevanceScore(query, match.content));
+    }
+  } catch (err) {
+    logger.warn(
+      { provider, error: err instanceof Error ? err.message : "Unknown error" },
+      "Reranker provider failed; falling back to heuristic reranker"
+    );
+    scores = matches.map((match) => lexicalRelevanceScore(query, match.content));
+    rerankerUsed = "heuristic";
+  }
+
+  return matches
+    .map((match, index) => {
+      const rerankScore = typeof scores[index] === "number" && Number.isFinite(scores[index])
+        ? scores[index]
+        : 0;
+      const score = match.score * 0.65 + rerankScore * 0.35;
+      const metadata = toRecord(match.metadata);
+      return {
+        ...match,
+        score,
+        metadata: {
+          ...metadata,
+          rerankScore,
+          reranker: rerankerUsed,
+        },
+      };
+    })
+    .sort((a, b) => b.score - a.score);
+}
+
+async function embedWithOpenAI(
+  texts: string[],
+  apiKey: string,
+  model?: string
+): Promise<{ vectors: number[][]; model: string }> {
+  const response = await fetch("https://api.openai.com/v1/embeddings", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify({
+      model: model ?? "text-embedding-3-small",
+      input: texts,
+    }),
+  });
+  if (!response.ok) {
+    const body = await response.text().catch(() => "Unknown error");
+    throw new Error(`OpenAI embeddings failed (${response.status}): ${body}`);
+  }
+
+  const json = (await response.json()) as {
+    data?: Array<{ embedding?: number[] }>;
+    model?: string;
+  };
+  return {
+    vectors: (json.data ?? []).map((item) => item.embedding ?? []),
+    model: json.model ?? model ?? "text-embedding-3-small",
+  };
+}
+
+async function embedWithCohere(
+  texts: string[],
+  apiKey: string,
+  model?: string
+): Promise<{ vectors: number[][]; model: string }> {
+  const resolvedModel = model ?? "embed-english-v3.0";
+  const response = await fetch("https://api.cohere.com/v1/embed", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify({
+      model: resolvedModel,
+      texts,
+      input_type: "search_document",
+    }),
+  });
+  if (!response.ok) {
+    const body = await response.text().catch(() => "Unknown error");
+    throw new Error(`Cohere embeddings failed (${response.status}): ${body}`);
+  }
+
+  const json = (await response.json()) as { embeddings?: number[][] };
+  return {
+    vectors: json.embeddings ?? [],
+    model: resolvedModel,
+  };
+}
+
+async function rerankWithCohere(
+  query: string,
+  documents: string[],
+  apiKey: string,
+  model?: string
+): Promise<number[]> {
+  const resolvedModel = model ?? "rerank-v3.5";
+  const response = await fetch("https://api.cohere.com/v2/rerank", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify({
+      model: resolvedModel,
+      query,
+      documents,
+      top_n: documents.length,
+    }),
+  });
+  if (!response.ok) {
+    const body = await response.text().catch(() => "Unknown error");
+    throw new Error(`Cohere rerank failed (${response.status}): ${body}`);
+  }
+
+  const json = (await response.json()) as {
+    results?: Array<{ index: number; relevance_score: number }>;
+  };
+  const scores = new Array(documents.length).fill(0);
+  for (const result of json.results ?? []) {
+    if (typeof result.index !== "number") continue;
+    scores[result.index] =
+      typeof result.relevance_score === "number" ? result.relevance_score : 0;
+  }
+  return scores;
+}
+
+function parseStoredEmbedding(embeddingVector: unknown, embeddingJson: unknown): number[] {
+  const parsedVector = parseVectorLiteral(embeddingVector);
+  if (parsedVector.length > 0) return parsedVector;
+  return parseEmbedding(embeddingJson);
+}
+
+function parseVectorLiteral(value: unknown): number[] {
+  if (Array.isArray(value)) return parseEmbedding(value);
+  if (typeof value !== "string" || value.trim().length === 0) return [];
+  const raw = value.trim();
+  if (!raw.startsWith("[") || !raw.endsWith("]")) return [];
+  try {
+    const parsed = JSON.parse(raw) as unknown;
+    return parseEmbedding(parsed);
+  } catch {
+    return [];
+  }
+}
+
+function toVectorLiteral(vector: number[]): string {
+  const normalized = vector
+    .filter((value) => Number.isFinite(value))
+    .map((value) => Number(value.toFixed(8)));
+  return `[${normalized.join(",")}]`;
+}
+
+function parseEmbeddingProvider(value: unknown): EmbeddingProviderType | null {
+  if (value === "deterministic" || value === "openai" || value === "cohere") {
+    return value;
+  }
+  return null;
+}
+
+function parseRerankerProvider(value: unknown): RerankerProviderType | null {
+  if (value === "heuristic" || value === "cohere") {
+    return value;
+  }
+  return null;
+}
+
+function asBoolean(value: unknown, fallback: boolean): boolean {
+  if (typeof value === "boolean") return value;
+  if (typeof value === "string") {
+    if (value.toLowerCase() === "true") return true;
+    if (value.toLowerCase() === "false") return false;
+  }
+  return fallback;
+}
+
+function clampNumber(
+  value: number | null,
+  min: number,
+  max: number,
+  fallback: number
+): number {
+  if (value === null || !Number.isFinite(value)) return fallback;
+  return Math.max(min, Math.min(max, Math.floor(value)));
+}
+
+interface ChunkWithPage {
+  index: number;
+  content: string;
+  startOffset: number;
+  endOffset: number;
+  pageNumber: number;
+  sectionPath: string | null;
+}
+
+function chunkDocumentByPage(contentText: string): ChunkWithPage[] {
+  const pageTexts = contentText.split("\f");
+  const chunksWithPage: ChunkWithPage[] = [];
+  let chunkIndex = 0;
+  let cumulativeOffset = 0;
+
+  for (let pageIndex = 0; pageIndex < pageTexts.length; pageIndex++) {
+    const pageText = pageTexts[pageIndex] ?? "";
+    const pageNumber = pageIndex + 1;
+    const sectionPath = extractSectionPath(pageText, pageNumber);
+    const pageChunks = chunkText(pageText, {
+      chunkSizeChars: 1200,
+      chunkOverlapChars: 200,
+    });
+
+    for (const chunk of pageChunks) {
+      chunksWithPage.push({
+        index: chunkIndex,
+        content: chunk.content,
+        startOffset: cumulativeOffset + chunk.start,
+        endOffset: cumulativeOffset + chunk.end,
+        pageNumber,
+        sectionPath,
+      });
+      chunkIndex += 1;
+    }
+
+    cumulativeOffset += pageText.length + 1;
+  }
+
+  return chunksWithPage;
+}
+
+function extractSectionPath(pageText: string, pageNumber: number): string | null {
+  const lines = pageText.split("\n");
+  for (const rawLine of lines) {
+    const line = rawLine.trim();
+    if (!line) continue;
+    if (line.startsWith("#")) {
+      return line.replace(/^#+\s*/, "").slice(0, 255) || `page-${pageNumber}`;
+    }
+    if (line.toUpperCase() === line && line.length > 4 && line.length <= 80) {
+      return line.slice(0, 255);
+    }
+  }
+  return `page-${pageNumber}`;
 }
