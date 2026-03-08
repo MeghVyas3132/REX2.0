@@ -18,7 +18,7 @@ export const loginSchema = z.object({
 
 // API Key schemas
 export const createApiKeySchema = z.object({
-  provider: z.enum(["gemini", "groq"]),
+  provider: z.enum(["gemini", "groq", "openai", "cohere"]),
   key: z.string().min(10, "API key must be at least 10 characters"),
   label: z.string().min(1, "Label is required").max(255),
 });
@@ -200,4 +200,132 @@ export const listExecutionContextSnapshotsQuerySchema = z.object({
 export const paginationSchema = z.object({
   page: z.coerce.number().int().min(1).default(1),
   limit: z.coerce.number().int().min(1).max(100).default(20),
+});
+
+export const upsertDomainConfigSchema = z.object({
+  workflowId: z.string().uuid().optional(),
+  domain: z.string().min(1).max(80).optional(),
+  isActive: z.boolean().optional(),
+  config: z.record(z.unknown()),
+});
+
+export const listModelsQuerySchema = z.object({
+  provider: z.string().min(1).max(40).optional(),
+  includeInactive: z
+    .enum(["true", "false"])
+    .transform((value) => value === "true")
+    .optional(),
+});
+
+export const upsertModelSchema = z.object({
+  provider: z.string().min(1).max(40),
+  model: z.string().min(1).max(120),
+  displayName: z.string().min(1).max(160),
+  contextWindow: z.coerce.number().int().min(1).optional(),
+  maxOutputTokens: z.coerce.number().int().min(1).optional(),
+  supportsStreaming: z.boolean().optional(),
+  supportsTools: z.boolean().optional(),
+  qualityTier: z.enum(["fast", "standard", "premium"]).optional(),
+  costInputPer1k: z.string().optional().nullable(),
+  costOutputPer1k: z.string().optional().nullable(),
+  capabilities: z.record(z.unknown()).optional(),
+  metadata: z.record(z.unknown()).optional(),
+  isActive: z.boolean().optional(),
+});
+
+export const kpiQuerySchema = z.object({
+  days: z.coerce.number().int().min(1).max(90).default(7),
+  latencyThresholdMs: z.coerce.number().int().min(100).max(120000).default(5000),
+});
+
+export const deleteMeSchema = z.object({
+  confirmEmail: z.string().email(),
+});
+
+// Governance schemas
+export const createWorkspaceSchema = z.object({
+  name: z.string().min(1).max(255),
+});
+
+export const addWorkspaceMemberSchema = z.object({
+  memberUserId: z.string().uuid(),
+  role: z.enum(["admin", "editor", "viewer"]),
+});
+
+export const assignWorkflowWorkspaceSchema = z.object({
+  workflowId: z.string().uuid(),
+  workspaceId: z.string().uuid(),
+});
+
+export const workflowPermissionSchema = z.object({
+  userId: z.string().uuid(),
+  role: z.enum(["viewer", "editor"]),
+  attributes: z.record(z.unknown()).optional(),
+  expiresAt: z.string().datetime().nullable().optional(),
+});
+
+export const iamPolicySchema = z.object({
+  id: z.string().uuid().optional(),
+  userId: z.string().uuid().nullable().optional(),
+  workflowId: z.string().uuid().nullable().optional(),
+  action: z.string().min(1).max(40),
+  effect: z.enum(["allow", "deny"]),
+  conditions: z.record(z.unknown()).optional(),
+  isActive: z.boolean().optional(),
+});
+
+export const listHyperparameterProfilesQuerySchema = z.object({
+  workflowId: z.string().uuid().optional(),
+});
+
+export const upsertHyperparameterProfileSchema = z.object({
+  id: z.string().uuid().optional(),
+  workflowId: z.string().uuid().optional(),
+  name: z.string().min(1).max(255),
+  description: z.string().max(2048).optional(),
+  config: z.record(z.unknown()),
+  isDefault: z.boolean().optional(),
+  isActive: z.boolean().optional(),
+});
+
+export const compareHyperparameterProfilesSchema = z.object({
+  workflowId: z.string().uuid(),
+  profileAId: z.string().uuid(),
+  profileBId: z.string().uuid(),
+});
+
+export const upsertAlertRuleSchema = z.object({
+  id: z.string().uuid().optional(),
+  workflowId: z.string().uuid().nullable().optional(),
+  ruleType: z.enum(["latency-breach", "guardrail-triggered", "corpus-health-alert"]),
+  severity: z.enum(["warn", "critical"]).optional(),
+  threshold: z.coerce.number().int().min(1).optional(),
+  windowMinutes: z.coerce.number().int().min(1).max(7 * 24 * 60).optional(),
+  config: z.record(z.unknown()).optional(),
+  isActive: z.boolean().optional(),
+});
+
+export const listAlertEventsQuerySchema = z.object({
+  limit: z.coerce.number().int().min(1).max(500).default(100),
+});
+
+export const setConsentSchema = z.object({
+  consentType: z.string().min(1).max(80),
+  policyVersion: z.string().min(1).max(40),
+  granted: z.boolean(),
+  metadata: z.record(z.unknown()).optional(),
+});
+
+export const upsertRetentionPolicySchema = z.object({
+  id: z.string().uuid().optional(),
+  resourceType: z.enum([
+    "executions",
+    "knowledge_documents",
+    "guardrail_events",
+    "audit_logs",
+    "alert_events",
+  ]),
+  retentionDays: z.coerce.number().int().min(1).max(3650),
+  config: z.record(z.unknown()).optional(),
+  isActive: z.boolean().optional(),
 });
