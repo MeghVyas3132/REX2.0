@@ -1,67 +1,60 @@
 # Worker Runtime
 
-## Service Role
+## Role
 
-The worker is the execution plane for REX. It consumes BullMQ jobs, runs workflow execution through the engine, and persists runtime telemetry.
-
-## Runtime Stack
-
-- Queue consumer: BullMQ Worker
-- Domain runtime: `@rex/engine`
-- Persistence: Drizzle ORM with PostgreSQL
+`apps/worker` is the execution plane. It consumes BullMQ jobs and runs workflow/knowledge runtime logic.
 
 ## Job Types
 
 - `execute-workflow`
-  - Executes a workflow DAG for a specific execution record.
 - `ingest-knowledge-document`
-  - Processes queued document ingestion into chunks and embeddings.
 
-## Execution Job Lifecycle
+## Execution Runtime Flow
 
-1. Mark execution `running` and set `startedAt`.
-2. Load workflow graph from DB.
-3. Resolve provider API keys for node runtime use.
-4. Execute graph via engine with runtime callbacks:
-   - `onStepComplete`: persist execution step row.
-   - `onContextUpdate`: persist execution context snapshots.
-   - `onRetrievalEvent`: persist retrieval attempt events.
-   - `retrieveKnowledge`: runtime retrieval function.
-   - `ingestKnowledge`: runtime ingestion function.
-5. Mark execution `completed` or `failed` with finish timestamp and error message.
+1. Load execution and validate it is runnable.
+2. Validate execution authorization token (`execution_authorizations`).
+3. Load workflow graph and resolve domain config overlays.
+4. Apply runtime defaults to node configs.
+5. Execute graph through `@rex/engine`.
+6. Persist execution telemetry:
+   - `execution_steps`
+   - `execution_step_attempts`
+   - `execution_context_snapshots`
+   - `execution_retrieval_events`
+   - `guardrail_events`
+7. Finalize execution status.
+8. Evaluate alert rules and persist `alert_events` when thresholds are breached.
 
-## Persistence During Execution
+## Retrieval Runtime
 
-- `execution_steps`
-  - One row per node execution/skipped/failure result.
-- `execution_step_attempts`
-  - Per-attempt retry metadata derived from step output metadata.
-- `execution_context_snapshots`
-  - Ordered snapshots (`sequence`) of mutable execution context.
-- `execution_retrieval_events`
-  - Per retrieval branch/attempt telemetry.
+Retrieval pipeline supports:
 
-## Knowledge Query Runtime
+- scoped corpus filtering
+- embedding-based candidate scoring
+- lexical scoring
+- optional reranking
 
-- Scopes corpora by user and optional scope dimensions.
-- Loads candidate chunks and computes ranking via deterministic embedding similarity.
-- Returns top-K matches to engine/runtime node.
+Embedding/reranking behavior is configured from resolved domain config and can use deterministic fallback when provider keys are unavailable.
 
-## Runtime Ingestion Path
+## Ingestion Runtime
 
-- Resolves existing scoped corpus or creates a runtime corpus.
-- Writes document as `processing`.
-- Chunks content and computes deterministic embeddings.
-- Persists chunk rows and marks document/corpus status.
+Document ingestion pipeline:
 
-## Error Handling and Retries
+1. Move document to `processing`
+2. Chunk by page boundary (`\f`) and text windows
+3. Generate embeddings (provider or deterministic fallback)
+4. Persist both JSON embedding and pgvector literal
+5. Persist `page_number` and `section_path` metadata
+6. Set document/corpus status to `ready` or `failed`
 
-- Execution job failures are rethrown for BullMQ retry policy.
-- Missing optional telemetry tables are handled with warnings and graceful continuation.
-- Knowledge ingestion marks document/corpus failed on processing errors.
+## Failure Behavior
 
-## Operational Notes
+- Failed execution jobs are rethrown for BullMQ retry policy.
+- Optional table availability issues are logged and handled in degraded mode where safe.
+- Authorization failures fail execution and prevent node runtime.
 
-- Node registry is initialized once at worker module load.
-- Worker concurrency is configurable via environment variable.
-- Removal policies keep successful and failed jobs bounded in Redis.
+## Operational Controls
+
+- Concurrency from environment (`WORKER_CONCURRENCY`)
+- Retrieval budgets from environment (`RETRIEVAL_MAX_*`)
+- Job retention limits configured in worker queue setup
