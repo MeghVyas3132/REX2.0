@@ -15,6 +15,10 @@ import {
 import { createLogger } from "@rex/utils";
 import type { ExecutionStepResult } from "@rex/types";
 import { enqueueExecution } from "../queue/client.js";
+import type { IAMService } from "./iam.service.js";
+import type { DomainConfigService } from "./domain-config.service.js";
+import type { ExecutionAuthorizationService } from "./execution-authorization.service.js";
+import type { HyperparameterService } from "./hyperparameter.service.js";
 
 const logger = createLogger("execution-service");
 
@@ -166,10 +170,28 @@ export interface ContextSnapshotListOptions {
   limit: number;
 }
 
-export function createExecutionService(db: Database): ExecutionService {
+export function createExecutionService(
+  db: Database,
+  iamService: IAMService,
+  domainConfigService: DomainConfigService,
+  executionAuthorizationService: ExecutionAuthorizationService,
+  hyperparameterService: HyperparameterService
+): ExecutionService {
   return {
     async trigger(userId, workflowId, payload) {
       logger.info({ userId, workflowId }, "Triggering workflow execution");
+      await iamService.assertWorkflowAction(userId, workflowId, "execute");
+      let domainConfig = await domainConfigService.resolve(userId, workflowId);
+      const profileId =
+        typeof payload["_hyperparameterProfileId"] === "string"
+          ? payload["_hyperparameterProfileId"]
+          : undefined;
+      if (profileId) {
+        const profile = await hyperparameterService.getProfileById(userId, profileId);
+        if (profile) {
+          domainConfig = deepMerge(domainConfig, profile.config);
+        }
+      }
 
       const [execution] = await db
         .insert(executions)
@@ -184,12 +206,26 @@ export function createExecutionService(db: Database): ExecutionService {
         throw new Error("Failed to create execution record");
       }
 
+      const authorization = await executionAuthorizationService.issue({
+        executionId: execution.id,
+        workflowId,
+        userId,
+        action: "execute",
+        attributes: {
+          trigger: "api",
+          hasHyperparameterProfile: Boolean(profileId),
+        },
+      });
+
       // Enqueue to BullMQ — API never executes directly
       await enqueueExecution({
         executionId: execution.id,
         workflowId,
         triggerPayload: payload,
         userId,
+        domainConfig,
+        executionAuthorizationId: authorization.authorizationId,
+        hyperparameterProfileId: profileId,
       });
 
       logger.info({
@@ -504,4 +540,30 @@ async function isExecutionOwnedByUser(
     .limit(1);
 
   return Boolean(owned);
+}
+
+function deepMerge(
+  base: Record<string, unknown>,
+  overlay: Record<string, unknown>
+): Record<string, unknown> {
+  const out: Record<string, unknown> = { ...base };
+  for (const [key, overlayValue] of Object.entries(overlay)) {
+    const baseValue = out[key];
+    if (
+      baseValue &&
+      typeof baseValue === "object" &&
+      !Array.isArray(baseValue) &&
+      overlayValue &&
+      typeof overlayValue === "object" &&
+      !Array.isArray(overlayValue)
+    ) {
+      out[key] = deepMerge(
+        baseValue as Record<string, unknown>,
+        overlayValue as Record<string, unknown>
+      );
+    } else {
+      out[key] = overlayValue;
+    }
+  }
+  return out;
 }
