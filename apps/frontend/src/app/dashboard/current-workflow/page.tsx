@@ -4,8 +4,11 @@ import { useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth-context";
 import { api } from "@/lib/api";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { WorkflowEditor } from "@/components/workflow-editor";
 import type { CanvasNode, CanvasEdge } from "@/components/workflow-editor";
+import { AppShell, getDashboardNavItems } from "@/components/layout";
+import { Button, Card } from "@/components/ui";
 import {
   loadWorkflowDraft,
   saveWorkflowDraft,
@@ -14,7 +17,7 @@ import {
 } from "@/lib/workflow-draft";
 
 export default function CurrentWorkflowPage() {
-  const { token, loading: authLoading } = useAuth();
+  const { user, token, loading: authLoading, logout } = useAuth();
   const [draft, setDraft] = useState<WorkflowDraft | null>(null);
   const [saving, setSaving] = useState(false);
   const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
@@ -79,17 +82,25 @@ export default function CurrentWorkflowPage() {
 
   if (!draft) {
     return (
-      <div style={styles.emptyWrap}>
-        <h1 style={styles.emptyTitle}>Current Workflow</h1>
-        <p style={styles.emptyText}>No unsaved workflow draft found.</p>
-        <button style={styles.emptyBtn} onClick={() => router.push("/dashboard/workflows/new")}>Create New Workflow</button>
-      </div>
+      <AppShell
+        title="Current Workflow"
+        subtitle="Recover unsaved draft state and continue editing without creating duplicate workflows."
+        navItems={getDashboardNavItems("current-workflow")}
+        userName={user?.name}
+        onSignOut={logout}
+      >
+        <Card title="No unsaved draft" subtitle="Start a new workflow or edit an existing one to create a recoverable draft state.">
+          <Link href="/dashboard/workflows/new" className="rex-link-reset">
+            <Button variant="primary">Create New Workflow</Button>
+          </Link>
+        </Card>
+      </AppShell>
     );
   }
 
   return (
     <>
-      {error ? <div style={styles.errorBanner}>{error}</div> : null}
+      {error ? <div className="rex-workflow-error-banner">{error}</div> : null}
       <WorkflowEditor
         key={`current-${draft.updatedAt}`}
         initialNodes={draft.nodes}
@@ -114,46 +125,3 @@ export default function CurrentWorkflowPage() {
     </>
   );
 }
-
-const styles: Record<string, React.CSSProperties> = {
-  emptyWrap: {
-    minHeight: "100vh",
-    background: "#0a0a0a",
-    color: "#e5e5e5",
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: "10px",
-  },
-  emptyTitle: {
-    margin: 0,
-    fontSize: "28px",
-  },
-  emptyText: {
-    margin: 0,
-    color: "#999",
-  },
-  emptyBtn: {
-    marginTop: "8px",
-    padding: "10px 14px",
-    border: "1px solid #333",
-    background: "#111",
-    color: "#e5e5e5",
-    borderRadius: "6px",
-    cursor: "pointer",
-  },
-  errorBanner: {
-    position: "fixed",
-    top: 8,
-    left: 8,
-    right: 8,
-    zIndex: 1000,
-    background: "#2a1010",
-    border: "1px solid #6a2222",
-    color: "#ef4444",
-    padding: "10px 12px",
-    borderRadius: "8px",
-    fontSize: "13px",
-  },
-};

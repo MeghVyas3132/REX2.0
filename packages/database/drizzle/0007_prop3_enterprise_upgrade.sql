@@ -1,6 +1,5 @@
-CREATE EXTENSION IF NOT EXISTS vector;
---> statement-breakpoint
-ALTER TABLE "knowledge_chunks" ADD COLUMN "embedding_vector" vector(1536);
+-- pgvector: requires system installation - run manually after: CREATE EXTENSION IF NOT EXISTS vector;
+-- pgvector: ALTER TABLE "knowledge_chunks" ADD COLUMN "embedding_vector" vector(1536);
 --> statement-breakpoint
 ALTER TABLE "knowledge_chunks" ADD COLUMN "page_number" integer;
 --> statement-breakpoint
@@ -200,7 +199,7 @@ ALTER TABLE "retention_policies" ADD CONSTRAINT "retention_policies_user_id_user
 --> statement-breakpoint
 CREATE INDEX "workflows_workspace_id_idx" ON "workflows" USING btree ("workspace_id");
 --> statement-breakpoint
-CREATE INDEX "knowledge_chunks_embedding_vector_hnsw_idx" ON "knowledge_chunks" USING hnsw ("embedding_vector" vector_cosine_ops);
+-- pgvector: CREATE INDEX "knowledge_chunks_embedding_vector_hnsw_idx" ON "knowledge_chunks" USING hnsw ("embedding_vector" vector_cosine_ops);
 --> statement-breakpoint
 CREATE INDEX "workflow_permissions_workflow_id_idx" ON "workflow_permissions" USING btree ("workflow_id");
 --> statement-breakpoint

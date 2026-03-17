@@ -30,7 +30,7 @@ function bezierPath(
 }
 
 // Node dimensions for port calculations
-const NODE_WIDTH = 180;
+const NODE_WIDTH = 320;
 const NODE_HEIGHT = 58;
 
 function areNodeSizeMapsEqual(
@@ -150,6 +150,7 @@ export function WorkflowEditor({
   const [name, setName] = useState(workflowName);
   const [description, setDescription] = useState(_workflowDescription);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
+  const [advancedNodeId, setAdvancedNodeId] = useState<string | null>(null);
   const [transform, setTransform] = useState<ViewTransform>({ x: 0, y: 0, scale: 1 });
   const [nodeSizes, setNodeSizes] = useState<Record<string, { width: number; height: number }>>({});
 
@@ -256,7 +257,13 @@ export function WorkflowEditor({
   );
 
   const handleNodeClick = useCallback((_e: React.MouseEvent, nodeId: string) => {
+    setSelectedNodeId((prev) => (prev === nodeId ? null : nodeId));
+    setAdvancedNodeId(null);
+  }, []);
+
+  const handleOpenAdvancedPanel = useCallback((nodeId: string) => {
     setSelectedNodeId(nodeId);
+    setAdvancedNodeId(nodeId);
   }, []);
 
   // ── Canvas pan ────────────────────────────────
@@ -267,6 +274,7 @@ export function WorkflowEditor({
       if (e.target !== canvasRef.current) return;
       setIsPanning(true);
       setSelectedNodeId(null);
+      setAdvancedNodeId(null);
       panStartRef.current = {
         mx: e.clientX,
         my: e.clientY,
@@ -441,8 +449,9 @@ export function WorkflowEditor({
       setNodes((prev) => prev.filter((n) => n.id !== nodeId));
       setEdges((prev) => prev.filter((e) => e.source !== nodeId && e.target !== nodeId));
       if (selectedNodeId === nodeId) setSelectedNodeId(null);
+      if (advancedNodeId === nodeId) setAdvancedNodeId(null);
     },
-    [selectedNodeId]
+    [advancedNodeId, selectedNodeId]
   );
 
   // ── Edge delete (click on edge) ───────────────
@@ -648,7 +657,7 @@ export function WorkflowEditor({
   /** Render parsed LLM blocks into JSX */
   function renderLLMBlocks(blocks: ReturnType<typeof parseLLMContent>) {
     return blocks.map((block, i) => {
-      if (block.type === "blank") return <div key={i} style={{ height: 6 }} />;
+      if (block.type === "blank") return <div key={i} className="wf-out-blank" />;
       if (block.type === "heading") return <div key={i} className="wf-out-heading">{block.text}</div>;
       if (block.type === "list-item") {
         const match = block.text.match(/^(\d+[\.\)]|-|\*|•)\s+(.*)$/);
@@ -804,7 +813,7 @@ export function WorkflowEditor({
 
   // ── Render ────────────────────────────────────
 
-  const selectedNode = nodes.find((n) => n.id === selectedNodeId);
+  const advancedNode = nodes.find((n) => n.id === advancedNodeId);
 
   const saveStatusLabel =
     saveStatus === "saving"
@@ -832,13 +841,14 @@ export function WorkflowEditor({
           value={name}
           onChange={(e) => setName(e.target.value)}
           placeholder="Untitled Workflow"
+          aria-label="Workflow name"
         />
         <input
-          className="wf-toolbar-name"
+          className="wf-toolbar-name wf-toolbar-name-muted"
           value={description}
           onChange={(e) => setDescription(e.target.value)}
           placeholder="Description (optional)"
-          style={{ fontWeight: 400, color: "#999" }}
+          aria-label="Workflow description"
         />
         <div className="wf-toolbar-spacer" />
 
@@ -849,15 +859,15 @@ export function WorkflowEditor({
         )}
 
         <div className="wf-toolbar-zoom">
-          <button className="wf-toolbar-zoom-btn" onClick={zoomOut}>-</button>
+          <button className="wf-toolbar-zoom-btn" onClick={zoomOut} aria-label="Zoom out">-</button>
           <span
-            className="wf-toolbar-zoom-label"
+            className="wf-toolbar-zoom-label wf-toolbar-zoom-label-clickable"
             onClick={zoomReset}
-            style={{ cursor: "pointer" }}
+            title="Reset zoom"
           >
             {Math.round(transform.scale * 100)}%
           </span>
-          <button className="wf-toolbar-zoom-btn" onClick={zoomIn}>+</button>
+          <button className="wf-toolbar-zoom-btn" onClick={zoomIn} aria-label="Zoom in">+</button>
         </div>
 
         <div className="wf-toolbar-sep" />
@@ -867,6 +877,7 @@ export function WorkflowEditor({
             className="wf-btn-run"
             onClick={handleExecute}
             disabled={isRunning || isStopping}
+            aria-label="Run workflow"
           >
             {isRunning ? "Running..." : "Run Workflow"}
           </button>
@@ -877,6 +888,7 @@ export function WorkflowEditor({
             className="wf-btn-stop"
             onClick={handleStopExecution}
             disabled={!canStopExecution || isStopping}
+            aria-label="Stop workflow execution"
           >
             {isStopping ? "Stopping..." : "Stop"}
           </button>
@@ -904,8 +916,7 @@ export function WorkflowEditor({
         {executionId && wfId && (executionStatus === "completed" || executionStatus === "failed" || executionStatus === "canceled") && (
           <a
             href={`/dashboard/workflows/${wfId}/executions/${executionId}`}
-            className="wf-btn-secondary"
-            style={{ fontSize: 11, textDecoration: "none", padding: "4px 10px", border: "1px solid #444", borderRadius: 6, color: "#ccc" }}
+            className="wf-btn-secondary wf-btn-link"
           >
             View Results
           </a>
@@ -915,12 +926,13 @@ export function WorkflowEditor({
           className="wf-btn-primary"
           onClick={handleSave}
           disabled={saving || !name.trim()}
+          aria-label="Save workflow"
         >
           {saving ? "Saving..." : "Save"}
         </button>
 
         {!showExecute && (
-          <span style={{ fontSize: 11, color: "#555" }}>
+          <span className="wf-toolbar-note">
             Save to enable execution
           </span>
         )}
@@ -1015,10 +1027,19 @@ export function WorkflowEditor({
                 key={node.id}
                 node={node}
                 selected={node.id === selectedNodeId}
+                expanded={node.id === selectedNodeId}
                 dragging={node.id === draggingNodeId}
                 executionStatus={nodeStatuses[node.id]?.status}
+                incomingLabels={edges
+                  .filter((e) => e.target === node.id)
+                  .map((e) => nodes.find((n) => n.id === e.source)?.label ?? "Node")}
+                outgoingLabels={edges
+                  .filter((e) => e.source === node.id)
+                  .map((e) => nodes.find((n) => n.id === e.target)?.label ?? "Node")}
                 onMouseDown={handleNodeMouseDown}
                 onClick={handleNodeClick}
+                onOpenAdvanced={handleOpenAdvancedPanel}
+                onUpdate={handleNodeUpdate}
                 onPortMouseDown={handlePortMouseDown}
                 onPortMouseUp={handlePortMouseUp}
               />
@@ -1026,15 +1047,15 @@ export function WorkflowEditor({
           </div>
         </div>
 
-        {/* Config panel */}
-        {selectedNode && (
+        {/* Advanced config panel (secondary interaction) */}
+        {advancedNode && (
           <NodeConfigPanel
-            node={selectedNode}
+            node={advancedNode}
             nodes={nodes}
             edges={edges}
             onUpdate={handleNodeUpdate}
             onDelete={handleNodeDelete}
-            onClose={() => setSelectedNodeId(null)}
+            onClose={() => setAdvancedNodeId(null)}
             token={token}
           />
         )}
@@ -1046,13 +1067,12 @@ export function WorkflowEditor({
               <span>Execution Output</span>
               {nodeStatuses[selectedNodeId] && (
                 <span
-                  style={{
-                    fontSize: 11,
-                    color: nodeStatuses[selectedNodeId].status === "completed" ? "#22c55e" : "#ef4444",
-                  }}
+                  className={`wf-output-status ${nodeStatuses[selectedNodeId].status === "completed" ? "ok" : "error"}`}
                 >
-                  {nodeStatuses[selectedNodeId].status} 
-                  {nodeStatuses[selectedNodeId].durationMs != null && ` (${nodeStatuses[selectedNodeId].durationMs}ms)`}
+                  {nodeStatuses[selectedNodeId].status}
+                  {nodeStatuses[selectedNodeId].durationMs != null ? (
+                    <span className="wf-output-status-duration"> ({nodeStatuses[selectedNodeId].durationMs}ms)</span>
+                  ) : null}
                 </span>
               )}
             </div>

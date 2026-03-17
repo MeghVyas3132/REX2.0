@@ -11,9 +11,9 @@
   min-width: 48px;
   height: 48px;
   border-radius: 24px;
-  border: 1px solid #333;
-  background: #1a1a1a;
-  color: #e5e5e5;
+  border: 1px solid var(--border-strong);
+  background: linear-gradient(180deg, var(--surface-2), #151f35);
+  color: var(--text-primary);
   font-size: 20px;
   cursor: pointer;
   z-index: 200;
@@ -26,18 +26,30 @@
 }
 
 .rex-chat-toggle:hover {
-  background: #252525;
-  border-color: #555;
+  background: #1b2740;
+  border-color: var(--accent-500);
   transform: scale(1.05);
 }
 
 .rex-chat-toggle.open {
-  background: #333;
-  border-color: #555;
+  background: var(--accent-500);
+  border-color: var(--accent-500);
   width: 48px;
   min-width: 48px;
   padding: 0;
   border-radius: 50%;
+}
+
+.rex-chat-toggle-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.rex-chat-toggle-title {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
 }
 
 /* ── Panel ──────────────────────────────────── */
@@ -49,8 +61,8 @@
   width: 380px;
   height: 520px;
   max-height: calc(100vh - 120px);
-  background: #0d0d0d;
-  border: 1px solid #2a2a2a;
+  background: rgba(8, 12, 20, 0.96);
+  border: 1px solid var(--border-muted);
   border-radius: 12px;
   z-index: 200;
   display: flex;
@@ -78,8 +90,8 @@
   align-items: center;
   justify-content: space-between;
   padding: 12px 16px;
-  border-bottom: 1px solid #1e1e1e;
-  background: #111111;
+  border-bottom: 1px solid var(--border-muted);
+  background: var(--surface-1);
   flex-shrink: 0;
 }
 
@@ -98,7 +110,7 @@
 .rex-chat-header-title {
   font-size: 13px;
   font-weight: 600;
-  color: #e5e5e5;
+  color: var(--text-primary);
 }
 
 .rex-chat-header-right {
@@ -333,11 +345,11 @@
 
 .rex-chat-input {
   flex: 1;
-  background: #1a1a1a;
-  border: 1px solid #2a2a2a;
+  background: var(--surface-2);
+  border: 1px solid var(--border-muted);
   border-radius: 8px;
   padding: 8px 12px;
-  color: #e5e5e5;
+  color: var(--text-primary);
   font-size: 13px;
   font-family: inherit;
   resize: none;
@@ -351,7 +363,16 @@
 }
 
 .rex-chat-input:focus {
-  border-color: #444;
+  border-color: var(--border-strong);
+}
+
+.rex-chat-toggle:focus-visible,
+.rex-chat-clear:focus-visible,
+.rex-chat-suggestion:focus-visible,
+.rex-chat-input:focus-visible,
+.rex-chat-send:focus-visible {
+  outline: 2px solid var(--accent-500);
+  outline-offset: 2px;
 }
 
 .rex-chat-input:disabled {

@@ -180,18 +180,27 @@ export function ChatPanel({
         className={`rex-chat-toggle ${isOpen ? "open" : ""}`}
         onClick={() => setIsOpen(!isOpen)}
         title="AI Assistant"
+        aria-label={isOpen ? "Close workflow assistant" : "Open workflow assistant"}
+        aria-expanded={isOpen}
+        aria-controls="rex-chat-panel"
       >
         {isOpen ? <CloseIcon /> : (
-          <span style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+          <span className="rex-chat-toggle-label">
             <ChatIcon />
-            <span style={{ fontSize: "11px", fontWeight: 600, letterSpacing: "0.5px" }}>REX-Bot</span>
+            <span className="rex-chat-toggle-title">REX-Bot</span>
           </span>
         )}
       </button>
 
       {/* Chat panel */}
       {isOpen && (
-        <div className="rex-chat-panel">
+        <div
+          id="rex-chat-panel"
+          className="rex-chat-panel"
+          role="dialog"
+          aria-modal="false"
+          aria-label="REX workflow assistant"
+        >
           {/* Header */}
           <div className="rex-chat-header">
             <div className="rex-chat-header-left">
@@ -226,6 +235,8 @@ export function ChatPanel({
                     <button
                       key={suggestion}
                       className="rex-chat-suggestion"
+                      type="button"
+                      aria-label={`Use suggestion: ${suggestion}`}
                       onClick={() => {
                         setInput(suggestion);
                         setTimeout(() => inputRef.current?.focus(), 50);
@@ -282,12 +293,14 @@ export function ChatPanel({
               placeholder="Ask about your workflow..."
               rows={1}
               disabled={isLoading}
+              aria-label="Ask workflow assistant"
             />
             <button
               className="rex-chat-send"
               onClick={sendMessage}
               disabled={!input.trim() || isLoading}
               title="Send"
+              aria-label="Send message"
             >
               <SendIcon />
             </button>

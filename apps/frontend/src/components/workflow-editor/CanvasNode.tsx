@@ -7,14 +7,20 @@
 import React, { useCallback } from "react";
 import type { CanvasNode } from "./types";
 import { getNodeTypeDef, getCategoryColor } from "./types";
+import { InlineNodeDetails } from "./InlineNodeDetails";
 
 interface CanvasNodeProps {
   node: CanvasNode;
   selected: boolean;
+  expanded: boolean;
   dragging: boolean;
   executionStatus?: string;
+  incomingLabels: string[];
+  outgoingLabels: string[];
   onMouseDown: (e: React.MouseEvent, nodeId: string) => void;
   onClick: (e: React.MouseEvent, nodeId: string) => void;
+  onOpenAdvanced: (nodeId: string) => void;
+  onUpdate: (nodeId: string, updates: Partial<CanvasNode>) => void;
   onPortMouseDown: (e: React.MouseEvent, nodeId: string, portType: "in" | "out") => void;
   onPortMouseUp: (e: React.MouseEvent, nodeId: string, portType: "in" | "out") => void;
 }
@@ -22,10 +28,15 @@ interface CanvasNodeProps {
 export function CanvasNodeComponent({
   node,
   selected,
+  expanded,
   dragging,
   executionStatus,
+  incomingLabels,
+  outgoingLabels,
   onMouseDown,
   onClick,
+  onOpenAdvanced,
+  onUpdate,
   onPortMouseDown,
   onPortMouseUp,
 }: CanvasNodeProps) {
@@ -82,6 +93,7 @@ export function CanvasNodeComponent({
 
   const classNames = [
     "wf-node",
+    def?.category ? `cat-${def.category}` : "",
     selected ? "selected" : "",
     dragging ? "dragging" : "",
     executionStatus ? `exec-${executionStatus}` : "",
@@ -93,52 +105,67 @@ export function CanvasNodeComponent({
 
   return (
     <div
-      className={classNames}
-      data-node-id={node.id}
+      className="wf-node-stack"
       style={{
         left: node.position.x,
         top: node.position.y,
+        ["--wf-node-color" as string]: categoryColor,
       }}
-      onMouseDown={handleMouseDown}
-      onClick={handleClick}
     >
-      {/* Input port (not on triggers) */}
-      {!isTrigger && (
-        <div
-          className="wf-port-in"
-          onMouseDown={handleInPortDown}
-          onMouseUp={handleInPortUp}
-        />
-      )}
-
-      {/* Output port */}
       <div
-        className="wf-port-out"
-        onMouseDown={handleOutPortDown}
-        onMouseUp={handleOutPortUp}
-      />
-
-      {/* Header */}
-      <div className="wf-node-header">
-        <div
-          className="wf-node-cat-dot"
-          style={{ backgroundColor: categoryColor }}
-        />
-        <span className="wf-node-type">
-          {def?.label ?? node.type}
-        </span>
-        {executionStatus && (
-          <span className={`wf-node-exec-badge ${executionStatus}`}>
-            {executionStatus === "completed" ? "OK" :
-             executionStatus === "running" ? "..." :
-             executionStatus === "failed" ? "ERR" :
-             executionStatus === "skipped" ? "SKIP" : ""}
-          </span>
+        className={classNames}
+        data-node-id={node.id}
+        onMouseDown={handleMouseDown}
+        onClick={handleClick}
+      >
+        {/* Input port (not on triggers) */}
+        {!isTrigger && (
+          <div
+            className="wf-port-in"
+            onMouseDown={handleInPortDown}
+            onMouseUp={handleInPortUp}
+          />
         )}
+
+        {/* Output port */}
+        <div
+          className="wf-port-out"
+          onMouseDown={handleOutPortDown}
+          onMouseUp={handleOutPortUp}
+        />
+
+        {/* Header */}
+        <div className="wf-node-header">
+          <div className="wf-node-cat-dot" />
+          <span className="wf-node-type">
+            {def?.label ?? node.type}
+          </span>
+          {executionStatus && (
+            <span className={`wf-node-exec-badge ${executionStatus}`}>
+              {executionStatus === "completed" ? "OK" :
+               executionStatus === "running" ? "..." :
+               executionStatus === "failed" ? "ERR" :
+               executionStatus === "skipped" ? "SKIP" : ""}
+            </span>
+          )}
+        </div>
+
+        {/* Label */}
+        <div className="wf-node-label">{node.label}</div>
+
+        {/* Optional hover preview for quick context */}
+        <div className="wf-node-hover-preview">{def?.description ?? "Node"}</div>
       </div>
 
-      {/* Label */}
-      <div className="wf-node-label">{node.label}</div>
+      {/* Primary interaction: inline node details */}
+      <InlineNodeDetails
+        node={node}
+        expanded={expanded}
+        incomingLabels={incomingLabels}
+        outgoingLabels={outgoingLabels}
+        onUpdate={onUpdate}
+        onOpenAdvanced={onOpenAdvanced}
+      />
     </div>
   );
 }

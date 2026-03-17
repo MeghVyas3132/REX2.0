@@ -7,7 +7,7 @@
     "dev": "next dev --port 3000",
     "start": "next start --port 3000",
     "lint": "next lint",
-    "clean": "rm -rf .next"
+    "clean": "node -e \"const fs=require('fs');['.next','.next-dev'].forEach((dir)=>fs.rmSync(dir,{recursive:true,force:true}))\""
   },
   "dependencies": {
     "@rex/types": "workspace:*",

@@ -690,6 +690,31 @@ export const NODE_TYPE_DEFS: NodeTypeDefinition[] = [
   },
 ];
 
+// ── Inline config keys: which fields to surface in the on-canvas quick-edit panel ──
+export const INLINE_CONFIG_KEYS: Record<string, string[]> = {
+  "webhook-trigger":    ["method"],
+  "schedule-trigger":   ["cron"],
+  "llm":                ["provider", "model"],
+  "http-request":       ["method", "url"],
+  "code":               ["timeoutMs"],
+  "transformer":        ["expression"],
+  "storage":            ["storageKey", "persistToExecutionContext"],
+  "memory-write":       ["memoryKey", "operation"],
+  "memory-read":        ["memoryKey", "outputKey"],
+  "execution-control":  ["action", "value"],
+  "evaluation":         ["valuePath", "requestRetryOnFail"],
+  "json-validator":     ["requiredFields", "strict"],
+  "condition":          ["field", "operator", "value"],
+  "data-cleaner":       ["operations"],
+  "knowledge-ingest":   ["corpusId", "scopeType", "workflowIdScope", "executionIdScope", "documentsPath"],
+  "knowledge-retrieve": ["corpusId", "scopeType", "workflowIdScope", "executionIdScope", "topK"],
+  "input-guard":        ["valuePath", "blockOnPromptInjection", "redactPII"],
+  "output-guard":       ["valuePath", "blockOnToxicity", "redactPII"],
+  "json-simplify":      ["inputPath", "outputKey"],
+  "log":                ["level", "message"],
+  "file-upload":        ["fileFormat"],
+};
+
 export function getNodeTypeDef(type: string): NodeTypeDefinition | undefined {
   return NODE_TYPE_DEFS.find((d) => d.type === type);
 }

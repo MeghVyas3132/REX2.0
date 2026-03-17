@@ -33,6 +33,7 @@ export function NodeConfigPanel({
 
   // Detect upstream file-upload nodes for LLM nodes
   const attachedFiles = getUpstreamFileNodes(node.id, nodes, edges);
+  const panelPrefix = `node-${node.id}`;
 
   function handleLabelChange(value: string) {
     onUpdate(node.id, { label: value });
@@ -62,17 +63,8 @@ export function NodeConfigPanel({
   return (
     <div className="wf-panel">
       <div className="wf-panel-header">
-        <span className="wf-panel-title">
-          <span
-            style={{
-              display: "inline-block",
-              width: 8,
-              height: 8,
-              borderRadius: "50%",
-              backgroundColor: categoryColor,
-              marginRight: 8,
-            }}
-          />
+        <span className="wf-panel-title" style={{ ["--wf-node-color" as string]: categoryColor }}>
+          <span className="wf-panel-title-dot" />
           {def?.label ?? node.type}
         </span>
         <button className="wf-panel-close" onClick={onClose}>
@@ -83,43 +75,50 @@ export function NodeConfigPanel({
       <div className="wf-panel-body">
         {/* Node Label */}
         <div className="wf-panel-field">
-          <label className="wf-panel-label">Label</label>
+          <label className="wf-panel-label" htmlFor={`${panelPrefix}-label`}>Label</label>
           <input
+            id={`${panelPrefix}-label`}
             className="wf-panel-input"
             value={node.label}
             onChange={(e) => handleLabelChange(e.target.value)}
             placeholder="Node label"
+            aria-label="Node label"
           />
         </div>
 
         {/* Type (read-only) */}
         <div className="wf-panel-field">
-          <label className="wf-panel-label">Type</label>
+          <label className="wf-panel-label" htmlFor={`${panelPrefix}-type`}>Type</label>
           <input
-            className="wf-panel-input"
+            id={`${panelPrefix}-type`}
+            className="wf-panel-input wf-panel-input-readonly"
             value={def?.label ?? node.type}
             readOnly
-            style={{ color: "#666" }}
+            aria-readonly="true"
           />
         </div>
 
         {/* Dynamic config fields */}
         {def?.configFields.map((field) => (
           <div key={field.key} className="wf-panel-field">
-            <label className="wf-panel-label">{field.label}</label>
+            <label className="wf-panel-label" htmlFor={`${panelPrefix}-${field.key}`}>{field.label}</label>
             {field.type === "textarea" ? (
               <textarea
+                id={`${panelPrefix}-${field.key}`}
                 className="wf-panel-textarea"
                 value={(node.config[field.key] as string) ?? ""}
                 onChange={(e) => handleConfigChange(field.key, e.target.value)}
                 placeholder={field.placeholder}
                 rows={5}
+                aria-label={field.label}
               />
             ) : field.type === "select" ? (
               <select
+                id={`${panelPrefix}-${field.key}`}
                 className="wf-panel-select"
                 value={(node.config[field.key] as string) ?? ""}
                 onChange={(e) => handleConfigChange(field.key, e.target.value)}
+                aria-label={field.label}
               >
                 {field.options?.map((opt) => (
                   <option key={opt.value} value={opt.value}>
@@ -129,11 +128,13 @@ export function NodeConfigPanel({
               </select>
             ) : (
               <input
+                id={`${panelPrefix}-${field.key}`}
                 className="wf-panel-input"
                 type={field.type === "number" ? "number" : "text"}
                 value={(node.config[field.key] as string) ?? ""}
                 onChange={(e) => handleConfigChange(field.key, e.target.value)}
                 placeholder={field.placeholder}
+                aria-label={field.label}
               />
             )}
           </div>
@@ -156,7 +157,7 @@ export function NodeConfigPanel({
         {node.type === "llm" && attachedFiles.length > 0 && (
           <div className="wf-attached-files">
             <div className="wf-attached-files-header">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#22c55e" strokeWidth="2">
+                <svg className="wf-icon-positive" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/>
               </svg>
               <span>File data attached — auto-injected into prompt</span>
@@ -178,7 +179,7 @@ export function NodeConfigPanel({
         {/* No file attached hint for LLM nodes */}
         {node.type === "llm" && attachedFiles.length === 0 && (
           <div className="wf-attached-files-hint">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#666" strokeWidth="2">
+            <svg className="wf-icon-muted" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/>
             </svg>
             <span>Connect a Document Intake node to auto-attach data</span>
@@ -197,8 +198,10 @@ export function NodeConfigPanel({
 
       <div className="wf-panel-footer">
         <button
+          type="button"
           className="wf-panel-delete"
           onClick={() => onDelete(node.id)}
+          aria-label="Delete current node"
         >
           Delete Node
         </button>
@@ -340,6 +343,7 @@ function FileUploadWidget({ node, onUpdate, token }: FileUploadWidgetProps) {
             type="button"
             className="wf-file-remove"
             onClick={handleRemoveFile}
+            aria-label="Remove attached file"
           >
             Remove file
           </button>
@@ -359,7 +363,7 @@ function FileUploadWidget({ node, onUpdate, token }: FileUploadWidgetProps) {
             </div>
           ) : (
             <>
-              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#666" strokeWidth="1.5">
+              <svg className="wf-icon-muted" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
                 <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
                 <polyline points="17 8 12 3 7 8"/>
                 <line x1="12" y1="3" x2="12" y2="15"/>
@@ -377,7 +381,7 @@ function FileUploadWidget({ node, onUpdate, token }: FileUploadWidgetProps) {
             type="file"
             accept={acceptMap[fileFormat] ?? ".csv,.json,.txt,.pdf"}
             onChange={handleInputChange}
-            style={{ display: "none" }}
+            className="wf-visually-hidden"
           />
         </div>
       )}

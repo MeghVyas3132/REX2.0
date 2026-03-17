@@ -1,6 +1,7 @@
 node_modules
 dist
 .next
+.next-dev
 .turbo
 *.log
 .env
@@ -9,3 +10,4 @@ dist
 coverage
 .nyc_output
 tmp
+dump.rdb

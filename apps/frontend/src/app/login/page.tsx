@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useAuth } from "@/lib/auth-context";
 import { api } from "@/lib/api";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 
 export default function LoginPage() {
   const [mode, setMode] = useState<"login" | "register">("login");
@@ -14,6 +15,25 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const { login } = useAuth();
   const router = useRouter();
+
+  const emailLooksValid = useMemo(() => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email), [email]);
+  const nameLooksValid = useMemo(() => name.trim().length >= 2, [name]);
+  const passwordChecks = useMemo(() => {
+    const hasLength = password.length >= 8;
+    const hasMixedCase = /[a-z]/.test(password) && /[A-Z]/.test(password);
+    const hasNumber = /\d/.test(password);
+    const hasSymbol = /[^A-Za-z0-9]/.test(password);
+    const score = Number(hasLength) + Number(hasMixedCase) + Number(hasNumber) + Number(hasSymbol);
+    return { hasLength, hasMixedCase, hasNumber, hasSymbol, score };
+  }, [password]);
+
+  const passwordStrength = useMemo(() => {
+    if (!password) return { label: "", tone: "" };
+    if (passwordChecks.score <= 1) return { label: "Weak", tone: "weak" };
+    if (passwordChecks.score === 2) return { label: "Fair", tone: "fair" };
+    if (passwordChecks.score === 3) return { label: "Good", tone: "good" };
+    return { label: "Strong", tone: "strong" };
+  }, [password, passwordChecks.score]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -37,153 +57,111 @@ export default function LoginPage() {
   }
 
   return (
-    <div style={styles.container}>
-      <div style={styles.card}>
-        <h1 style={styles.title}>REX</h1>
-        <p style={styles.subtitle}>Workflow Automation Engine</p>
+    <div className="auth-root">
+      <div className="auth-bg-grid" aria-hidden="true" />
+      <div className="auth-bg-glow auth-bg-glow--left" aria-hidden="true" />
+      <div className="auth-bg-glow auth-bg-glow--right" aria-hidden="true" />
 
-        <div style={styles.tabs}>
+      <Link href="/" className="auth-home-link">← Back to Home</Link>
+
+      <div className="auth-card page-reveal">
+        <h1 className="auth-title"><Link href="/" className="auth-brand-link">REX</Link></h1>
+        <p className="auth-subtitle">Responsible AI Workflow Automation</p>
+
+        <div className="auth-social-row" aria-label="Social sign-in placeholders">
+          <button type="button" className="auth-social-btn">Continue with Google</button>
+          <button type="button" className="auth-social-btn">Continue with GitHub</button>
+        </div>
+
+        <div className="auth-divider"><span>or continue with email</span></div>
+
+        <div className="auth-tabs" role="tablist" aria-label="Authentication mode">
           <button
-            style={mode === "login" ? styles.tabActive : styles.tab}
+            type="button"
+            className={mode === "login" ? "auth-tab is-active" : "auth-tab"}
+            aria-selected={mode === "login"}
             onClick={() => setMode("login")}
           >
             Sign In
           </button>
           <button
-            style={mode === "register" ? styles.tabActive : styles.tab}
+            type="button"
+            className={mode === "register" ? "auth-tab is-active" : "auth-tab"}
+            aria-selected={mode === "register"}
             onClick={() => setMode("register")}
           >
             Register
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} style={styles.form}>
+        <form onSubmit={handleSubmit} className="auth-form">
           {mode === "register" && (
+            <div className="auth-field">
+              <input
+                type="text"
+                placeholder="Name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                className={`auth-input${name && !nameLooksValid ? " is-invalid" : ""}`}
+                required
+              />
+              {name && !nameLooksValid ? <p className="auth-hint auth-hint--error">Use at least 2 characters.</p> : null}
+            </div>
+          )}
+          <div className="auth-field">
             <input
-              type="text"
-              placeholder="Name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              style={styles.input}
+              type="email"
+              placeholder="Email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className={`auth-input${email && !emailLooksValid ? " is-invalid" : ""}`}
               required
             />
-          )}
-          <input
-            type="email"
-            placeholder="Email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            style={styles.input}
-            required
-          />
-          <input
-            type="password"
-            placeholder="Password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            style={styles.input}
-            required
-            minLength={8}
-          />
+            {email && !emailLooksValid ? <p className="auth-hint auth-hint--error">Enter a valid email address.</p> : null}
+          </div>
 
-          {error && <p style={styles.error}>{error}</p>}
+          <div className="auth-field">
+            <input
+              type="password"
+              placeholder="Password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="auth-input"
+              required
+              minLength={8}
+            />
+            {(mode === "register" || password.length > 0) && (
+              <div className="auth-strength">
+                <div className="auth-strength__meter" aria-hidden="true">
+                  <span className={passwordChecks.score >= 1 ? `active ${passwordStrength.tone}` : ""} />
+                  <span className={passwordChecks.score >= 2 ? `active ${passwordStrength.tone}` : ""} />
+                  <span className={passwordChecks.score >= 3 ? `active ${passwordStrength.tone}` : ""} />
+                  <span className={passwordChecks.score >= 4 ? `active ${passwordStrength.tone}` : ""} />
+                </div>
+                {passwordStrength.label ? (
+                  <p className="auth-strength__label">Strength: <strong>{passwordStrength.label}</strong></p>
+                ) : null}
+                {mode === "register" ? (
+                  <ul className="auth-checks">
+                    <li className={passwordChecks.hasLength ? "ok" : ""}>At least 8 characters</li>
+                    <li className={passwordChecks.hasMixedCase ? "ok" : ""}>Upper + lowercase letters</li>
+                    <li className={passwordChecks.hasNumber ? "ok" : ""}>One number</li>
+                    <li className={passwordChecks.hasSymbol ? "ok" : ""}>One special symbol</li>
+                  </ul>
+                ) : null}
+              </div>
+            )}
+          </div>
 
-          <button type="submit" style={styles.button} disabled={loading}>
+          {error && <p className="auth-error">{error}</p>}
+
+          <button type="submit" className="auth-submit" disabled={loading}>
             {loading ? "Processing..." : mode === "login" ? "Sign In" : "Create Account"}
           </button>
         </form>
+
+        <p className="auth-footnote">Deterministic. Explainable. Privacy-first by design.</p>
       </div>
     </div>
   );
 }
-
-const styles: Record<string, React.CSSProperties> = {
-  container: {
-    minHeight: "100vh",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "#0a0a0a",
-  },
-  card: {
-    width: "100%",
-    maxWidth: "400px",
-    padding: "40px",
-    backgroundColor: "#111111",
-    border: "1px solid #2a2a2a",
-    borderRadius: "8px",
-  },
-  title: {
-    fontSize: "32px",
-    fontWeight: 700,
-    color: "#e5e5e5",
-    textAlign: "center" as const,
-    marginBottom: "4px",
-    letterSpacing: "4px",
-  },
-  subtitle: {
-    fontSize: "13px",
-    color: "#666666",
-    textAlign: "center" as const,
-    marginBottom: "32px",
-  },
-  tabs: {
-    display: "flex",
-    gap: "0",
-    marginBottom: "24px",
-    borderBottom: "1px solid #2a2a2a",
-  },
-  tab: {
-    flex: 1,
-    padding: "10px",
-    background: "none",
-    border: "none",
-    color: "#666666",
-    cursor: "pointer",
-    fontSize: "14px",
-    transition: "color 0.2s",
-  },
-  tabActive: {
-    flex: 1,
-    padding: "10px",
-    background: "none",
-    border: "none",
-    borderBottom: "2px solid #e5e5e5",
-    color: "#e5e5e5",
-    cursor: "pointer",
-    fontSize: "14px",
-    fontWeight: 600,
-  },
-  form: {
-    display: "flex",
-    flexDirection: "column" as const,
-    gap: "12px",
-  },
-  input: {
-    padding: "12px 16px",
-    backgroundColor: "#1a1a1a",
-    border: "1px solid #2a2a2a",
-    borderRadius: "6px",
-    color: "#e5e5e5",
-    fontSize: "14px",
-    outline: "none",
-    transition: "border-color 0.2s",
-  },
-  button: {
-    padding: "12px",
-    backgroundColor: "#e5e5e5",
-    color: "#0a0a0a",
-    border: "none",
-    borderRadius: "6px",
-    fontSize: "14px",
-    fontWeight: 600,
-    cursor: "pointer",
-    marginTop: "8px",
-    transition: "opacity 0.2s",
-  },
-  error: {
-    color: "#ef4444",
-    fontSize: "13px",
-    margin: 0,
-  },
-};

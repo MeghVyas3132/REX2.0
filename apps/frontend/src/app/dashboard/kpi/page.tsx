@@ -1,10 +1,11 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { api, type KpiSummaryClient, type KpiTimeseriesPointClient } from "@/lib/api";
 import { useAuth } from "@/lib/auth-context";
+import { AppShell, getDashboardNavItems } from "@/components/layout";
+import { Card, StateBlock } from "@/components/ui";
 
 export default function KpiPage() {
   const { user, token, loading: authLoading, logout } = useAuth();
@@ -43,211 +44,172 @@ export default function KpiPage() {
   }
 
   const latest = useMemo(() => timeseries[timeseries.length - 1] ?? null, [timeseries]);
+  const metricItems = summary
+    ? [
+        { label: "Avg Step Latency", value: `${summary.latency.avgStepMs} ms` },
+        { label: "P95 Step Latency", value: `${summary.latency.p95StepMs} ms` },
+        { label: "Retrieval Hit Rate", value: `${summary.retrieval.hitRate}%` },
+        { label: "Guardrail Triggered", value: String(summary.guardrails.triggered) },
+        { label: "Latency Breaches", value: String(summary.latency.breaches) },
+        { label: "Corpus Failures", value: String(summary.corpus.failedDocuments) },
+      ]
+    : [];
 
   if (authLoading || !token) return null;
 
   return (
-    <div style={styles.layout}>
-      <nav style={styles.sidebar}>
-        <div style={styles.brand}>REX</div>
-        <div style={styles.navLinks}>
-          <Link href="/dashboard" style={styles.navLink}>Workflows</Link>
-          <Link href="/dashboard/active-workflows" style={styles.navLink}>Active Workflows</Link>
-          <Link href="/dashboard/current-workflow" style={styles.navLink}>Current Workflow</Link>
-          <Link href="/dashboard/corpora" style={styles.navLink}>Corpora</Link>
-          <Link href="/dashboard/kpi" style={styles.navLinkActive}>KPI</Link>
-          <Link href="/dashboard/templates" style={styles.navLink}>Templates</Link>
-          <Link href="/dashboard/settings" style={styles.navLink}>Settings</Link>
-        </div>
-        <div style={styles.userSection}>
-          <span style={styles.userName}>{user?.name}</span>
-          <button onClick={logout} style={styles.logoutBtn}>Sign Out</button>
-        </div>
-      </nav>
+    <AppShell
+      title="KPI & Observability"
+      subtitle="Track latency, reliability, retrieval quality, and guardrail activity across workflow execution windows."
+      navItems={getDashboardNavItems("kpi")}
+      userName={user?.name}
+      onSignOut={logout}
+      action={
+        <select
+          className="rex-kpi-window"
+          value={String(days)}
+          onChange={(event) => setDays(Number(event.target.value))}
+          style={windowSelectStyle}
+        >
+          <option value="7">Last 7 days</option>
+          <option value="14">Last 14 days</option>
+          <option value="30">Last 30 days</option>
+        </select>
+      }
+    >
+      {error ? (
+        <StateBlock tone="error" title="Unable to load KPI metrics" description={error} />
+      ) : null}
+      {loading || !summary ? (
+        <StateBlock tone="loading" title="Loading KPI metrics" description="Calculating reliability, latency, and retrieval quality for this window." />
+      ) : (
+        <>
+          <div style={gridStyle}>
+            {metricItems.map((metric, index) => (
+              <MetricCard
+                key={metric.label}
+                label={metric.label}
+                value={metric.value}
+                delayMs={Math.min(index * 34, 260)}
+              />
+            ))}
+          </div>
 
-      <main style={styles.main}>
-        <div style={styles.headerRow}>
-          <h1 style={styles.heading}>KPI & Observability</h1>
-          <select
-            value={String(days)}
-            onChange={(event) => setDays(Number(event.target.value))}
-            style={styles.windowSelect}
-          >
-            <option value="7">Last 7 days</option>
-            <option value="14">Last 14 days</option>
-            <option value="30">Last 30 days</option>
-          </select>
-        </div>
+          <Card title="Latest Day Snapshot" className="stagger-in" style={{ marginTop: 14, animationDelay: "120ms" }}>
+            {latest ? (
+              <div style={snapshotRowStyle}>
+                <span>Date: {latest.date}</span>
+                <span>Executions: {latest.executions}</span>
+                <span>Failures: {latest.failures}</span>
+                <span>Avg Step: {latest.avgStepMs} ms</span>
+                <span>Hit Rate: {latest.retrievalHitRate}%</span>
+              </div>
+            ) : (
+              <p style={mutedStyle}>No data for this window.</p>
+            )}
+          </Card>
 
-        {error ? <p style={styles.error}>{error}</p> : null}
-        {loading || !summary ? (
-          <p style={styles.muted}>Loading KPI metrics...</p>
-        ) : (
-          <>
-            <div style={styles.grid}>
-              <MetricCard label="Avg Step Latency" value={`${summary.latency.avgStepMs} ms`} />
-              <MetricCard label="P95 Step Latency" value={`${summary.latency.p95StepMs} ms`} />
-              <MetricCard label="Retrieval Hit Rate" value={`${summary.retrieval.hitRate}%`} />
-              <MetricCard label="Guardrail Triggered" value={String(summary.guardrails.triggered)} />
-              <MetricCard label="Latency Breaches" value={String(summary.latency.breaches)} />
-              <MetricCard label="Corpus Failures" value={String(summary.corpus.failedDocuments)} />
-            </div>
-
-            <div style={styles.card}>
-              <h2 style={styles.cardTitle}>Latest Day Snapshot</h2>
-              {latest ? (
-                <div style={styles.snapshotRow}>
-                  <span>Date: {latest.date}</span>
-                  <span>Executions: {latest.executions}</span>
-                  <span>Failures: {latest.failures}</span>
-                  <span>Avg Step: {latest.avgStepMs} ms</span>
-                  <span>Hit Rate: {latest.retrievalHitRate}%</span>
-                </div>
-              ) : (
-                <p style={styles.muted}>No data for this window.</p>
-              )}
-            </div>
-
-            <div style={styles.card}>
-              <h2 style={styles.cardTitle}>Daily Trend</h2>
-              {timeseries.length === 0 ? (
-                <p style={styles.muted}>No time-series data available.</p>
-              ) : (
-                <table style={styles.table}>
-                  <thead>
-                    <tr>
-                      <th style={styles.th}>Date</th>
-                      <th style={styles.th}>Executions</th>
-                      <th style={styles.th}>Failures</th>
-                      <th style={styles.th}>Avg Step (ms)</th>
-                      <th style={styles.th}>Retrieval Hit %</th>
-                      <th style={styles.th}>Guardrail Triggers</th>
+          <Card title="Daily Trend" className="stagger-in" style={{ marginTop: 14, animationDelay: "180ms" }}>
+            {timeseries.length === 0 ? (
+              <p style={mutedStyle}>No time-series data available.</p>
+            ) : (
+              <table style={tableStyle}>
+                <thead>
+                  <tr>
+                    <th style={thStyle}>Date</th>
+                    <th style={thStyle}>Executions</th>
+                    <th style={thStyle}>Failures</th>
+                    <th style={thStyle}>Avg Step (ms)</th>
+                    <th style={thStyle}>Retrieval Hit %</th>
+                    <th style={thStyle}>Guardrail Triggers</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {timeseries.map((point) => (
+                    <tr key={point.date}>
+                      <td style={tdStyle}>{point.date}</td>
+                      <td style={tdStyle}>{point.executions}</td>
+                      <td style={tdStyle}>{point.failures}</td>
+                      <td style={tdStyle}>{point.avgStepMs}</td>
+                      <td style={tdStyle}>{point.retrievalHitRate}%</td>
+                      <td style={tdStyle}>{point.guardrailTriggers}</td>
                     </tr>
-                  </thead>
-                  <tbody>
-                    {timeseries.map((point) => (
-                      <tr key={point.date}>
-                        <td style={styles.td}>{point.date}</td>
-                        <td style={styles.td}>{point.executions}</td>
-                        <td style={styles.td}>{point.failures}</td>
-                        <td style={styles.td}>{point.avgStepMs}</td>
-                        <td style={styles.td}>{point.retrievalHitRate}%</td>
-                        <td style={styles.td}>{point.guardrailTriggers}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              )}
-            </div>
-          </>
-        )}
-      </main>
-    </div>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </Card>
+        </>
+      )}
+    </AppShell>
   );
 }
 
-function MetricCard({ label, value }: { label: string; value: string }) {
+function MetricCard({ label, value, delayMs }: { label: string; value: string; delayMs?: number }) {
   return (
-    <div style={styles.metricCard}>
-      <p style={styles.metricLabel}>{label}</p>
-      <p style={styles.metricValue}>{value}</p>
-    </div>
+    <Card className="stagger-in" style={{ animationDelay: `${delayMs ?? 0}ms` }}>
+      <p style={metricLabelStyle}>{label}</p>
+      <p style={metricValueStyle}>{value}</p>
+    </Card>
   );
 }
 
-const styles: Record<string, React.CSSProperties> = {
-  layout: { display: "flex", minHeight: "100vh", backgroundColor: "#0a0a0a" },
-  sidebar: {
-    width: "220px",
-    backgroundColor: "#111111",
-    borderRight: "1px solid #2a2a2a",
-    display: "flex",
-    flexDirection: "column",
-    padding: "20px 16px",
-  },
-  brand: {
-    fontSize: "20px",
-    fontWeight: 700,
-    color: "#e5e5e5",
-    letterSpacing: "3px",
-    marginBottom: "32px",
-  },
-  navLinks: { display: "flex", flexDirection: "column", gap: "4px", flex: 1 },
-  navLink: {
-    padding: "10px 12px",
-    borderRadius: "6px",
-    color: "#999999",
-    fontSize: "14px",
-    textDecoration: "none",
-  },
-  navLinkActive: {
-    padding: "10px 12px",
-    borderRadius: "6px",
-    backgroundColor: "#1a1a1a",
-    color: "#e5e5e5",
-    fontSize: "14px",
-    textDecoration: "none",
-    fontWeight: 500,
-  },
-  userSection: {
-    borderTop: "1px solid #2a2a2a",
-    paddingTop: "16px",
-    display: "flex",
-    flexDirection: "column",
-    gap: "8px",
-  },
-  userName: { fontSize: "13px", color: "#999999" },
-  logoutBtn: {
-    background: "none",
-    border: "1px solid #2a2a2a",
-    color: "#666666",
-    padding: "6px 12px",
-    borderRadius: "4px",
-    cursor: "pointer",
-    fontSize: "12px",
-  },
-  main: { flex: 1, padding: "32px 40px" },
-  headerRow: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px" },
-  heading: { fontSize: "24px", fontWeight: 600, color: "#e5e5e5" },
-  windowSelect: {
-    backgroundColor: "#111111",
-    color: "#e5e5e5",
-    border: "1px solid #2a2a2a",
-    borderRadius: "6px",
-    padding: "8px 10px",
-  },
-  grid: {
-    display: "grid",
-    gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
-    gap: "12px",
-    marginBottom: "16px",
-  },
-  metricCard: {
-    backgroundColor: "#111111",
-    border: "1px solid #2a2a2a",
-    borderRadius: "8px",
-    padding: "16px",
-  },
-  metricLabel: { color: "#999999", fontSize: "12px", marginBottom: "6px" },
-  metricValue: { color: "#e5e5e5", fontSize: "20px", fontWeight: 600 },
-  card: {
-    backgroundColor: "#111111",
-    border: "1px solid #2a2a2a",
-    borderRadius: "8px",
-    padding: "16px",
-    marginBottom: "16px",
-  },
-  cardTitle: { color: "#e5e5e5", fontSize: "15px", marginBottom: "10px" },
-  snapshotRow: { display: "flex", gap: "16px", color: "#b3b3b3", fontSize: "13px", flexWrap: "wrap" },
-  table: { width: "100%", borderCollapse: "collapse" },
-  th: {
-    textAlign: "left",
-    fontSize: "12px",
-    color: "#777777",
-    borderBottom: "1px solid #2a2a2a",
-    paddingBottom: "8px",
-  },
-  td: { color: "#d4d4d4", fontSize: "13px", paddingTop: "10px", paddingBottom: "10px" },
-  muted: { color: "#666666", fontSize: "14px" },
-  error: { color: "#ef4444", fontSize: "13px", marginBottom: "12px" },
+const windowSelectStyle: React.CSSProperties = {
+  backgroundColor: "var(--surface-2)",
+  color: "var(--text-primary)",
+  border: "1px solid var(--border-strong)",
+  borderRadius: 10,
+  padding: "8px 10px",
+};
+
+const gridStyle: React.CSSProperties = {
+  display: "grid",
+  gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+  gap: 12,
+};
+
+const metricLabelStyle: React.CSSProperties = {
+  margin: 0,
+  color: "var(--text-tertiary)",
+  fontSize: 12,
+};
+
+const metricValueStyle: React.CSSProperties = {
+  margin: "8px 0 0",
+  color: "var(--text-primary)",
+  fontSize: 20,
+  fontWeight: 600,
+};
+
+const snapshotRowStyle: React.CSSProperties = {
+  display: "flex",
+  gap: 16,
+  color: "var(--text-secondary)",
+  fontSize: 13,
+  flexWrap: "wrap",
+};
+
+const tableStyle: React.CSSProperties = {
+  width: "100%",
+  borderCollapse: "collapse",
+};
+
+const thStyle: React.CSSProperties = {
+  textAlign: "left",
+  fontSize: 12,
+  color: "var(--text-tertiary)",
+  borderBottom: "1px solid var(--border-muted)",
+  paddingBottom: 8,
+};
+
+const tdStyle: React.CSSProperties = {
+  color: "var(--text-secondary)",
+  fontSize: 13,
+  paddingTop: 10,
+  paddingBottom: 10,
+};
+
+const mutedStyle: React.CSSProperties = {
+  color: "var(--text-tertiary)",
+  fontSize: 14,
 };
