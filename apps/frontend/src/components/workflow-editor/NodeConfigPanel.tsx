@@ -36,10 +36,12 @@ export function NodeConfigPanel({
   const panelPrefix = `node-${node.id}`;
 
   function handleLabelChange(value: string) {
+    if (!onUpdate) return;
     onUpdate(node.id, { label: value });
   }
 
   function handleConfigChange(key: string, value: string) {
+    if (!onUpdate) return;
     const updates: Record<string, string> = { [key]: value };
 
     // Auto-switch model when provider changes on LLM nodes
@@ -67,7 +69,7 @@ export function NodeConfigPanel({
           <span className="wf-panel-title-dot" />
           {def?.label ?? node.type}
         </span>
-        <button className="wf-panel-close" onClick={onClose}>
+        <button className="wf-panel-close" onClick={() => onClose?.()}>
           x
         </button>
       </div>
@@ -86,20 +88,34 @@ export function NodeConfigPanel({
           />
         </div>
 
-        {/* Type (read-only) */}
-        <div className="wf-panel-field">
-          <label className="wf-panel-label" htmlFor={`${panelPrefix}-type`}>Type</label>
-          <input
-            id={`${panelPrefix}-type`}
-            className="wf-panel-input wf-panel-input-readonly"
-            value={def?.label ?? node.type}
-            readOnly
-            aria-readonly="true"
-          />
-        </div>
+        {/* Type (read-only, hide for triggers since it's in inline panel) */}
+        {node.type !== "trigger" && (
+          <div className="wf-panel-field">
+            <label className="wf-panel-label" htmlFor={`${panelPrefix}-type`}>Type</label>
+            <input
+              id={`${panelPrefix}-type`}
+              className="wf-panel-input wf-panel-input-readonly"
+              value={def?.label ?? node.type}
+              readOnly
+              aria-readonly="true"
+            />
+          </div>
+        )}
 
         {/* Dynamic config fields */}
-        {def?.configFields.map((field) => (
+        {def?.configFields
+          .filter((field) => {
+            // For trigger nodes, filter fields based on selected triggerType
+            if (node.type === "trigger") {
+              const triggerType = (node.config["triggerType"] as string) ?? "manual";
+              if (field.key === "triggerType") return true; // Always show trigger type selector
+              if (field.key === "method") return triggerType === "event"; // Only show for event triggers
+              if (field.key === "cron" || field.key === "intervalMs") return triggerType === "schedule"; // Only show for scheduled triggers
+              return false;
+            }
+            return true; // Show all fields for other node types
+          })
+          .map((field) => (
           <div key={field.key} className="wf-panel-field">
             <label className="wf-panel-label" htmlFor={`${panelPrefix}-${field.key}`}>{field.label}</label>
             {field.type === "textarea" ? (
@@ -200,7 +216,7 @@ export function NodeConfigPanel({
         <button
           type="button"
           className="wf-panel-delete"
-          onClick={() => onDelete(node.id)}
+          onClick={() => onDelete?.(node.id)}
           aria-label="Delete current node"
         >
           Delete Node

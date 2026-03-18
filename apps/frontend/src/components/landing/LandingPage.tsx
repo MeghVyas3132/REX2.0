@@ -3,6 +3,15 @@
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui";
+import {
+  FloatingOrbs,
+  AnimatedFeatureCard,
+  AnimatedMetric,
+  HoverGlowCard,
+  RevealOnScroll,
+  GradientText,
+} from "./animations";
+import "./premium-animations.css";
 
 const VALUES = [
   {
@@ -255,6 +264,7 @@ export function LandingPage() {
 
   return (
     <div className="lp-root">
+      <FloatingOrbs />
       <div className="lp-bg-grid" aria-hidden="true" />
       <div className="lp-bg-glow lp-bg-glow--left" aria-hidden="true" />
       <div className="lp-bg-glow lp-bg-glow--right" aria-hidden="true" />
@@ -288,7 +298,7 @@ export function LandingPage() {
         <section className="lp-section lp-hero">
           <div className="lp-hero__content lp-reveal is-visible">
             <p className="lp-kicker">Responsible, Ethical and Explainable AI Workflow Automation Platform</p>
-            <h1 className="lp-title">Build AI workflows <span>you can trust.</span></h1>
+            <h1 className="lp-title">Build AI workflows <GradientText>you can trust.</GradientText></h1>
             <p className="lp-subtitle">
               Design, run, and monitor knowledge-driven AI pipelines with full control,
               traceability, and privacy.
@@ -336,11 +346,13 @@ export function LandingPage() {
 
         <section className="lp-section lp-signature lp-reveal" aria-label="Signature platform outcomes">
           {SIGNATURE_METRICS.map((item, index) => (
-            <article key={item.label} className="lp-signature__card" style={{ transitionDelay: `${index * 70}ms` } as React.CSSProperties}>
-              <p className="lp-signature__value">{item.value}</p>
-              <h3>{item.label}</h3>
-              <p>{item.hint}</p>
-            </article>
+            <AnimatedMetric
+              key={item.label}
+              value={item.value}
+              label={item.label}
+              hint={item.hint}
+              index={index}
+            />
           ))}
         </section>
 
@@ -359,15 +371,13 @@ export function LandingPage() {
 
         <section className="lp-section lp-values" aria-label="Core values">
           {VALUES.map((item, index) => (
-            <article
-              key={item.title}
-              className="lp-value-card lp-reveal"
-              style={{ transitionDelay: `${index * 55}ms` } as React.CSSProperties}
-            >
-              <span className="lp-icon-chip" aria-hidden="true">{item.icon}</span>
-              <h3>{item.title}</h3>
-              <p>{item.description}</p>
-            </article>
+            <RevealOnScroll key={item.title} delay={index * 0.1}>
+              <HoverGlowCard className="lp-value-card">
+                <span className="lp-icon-chip" aria-hidden="true">{item.icon}</span>
+                <h3>{item.title}</h3>
+                <p>{item.description}</p>
+              </HoverGlowCard>
+            </RevealOnScroll>
           ))}
         </section>
 
@@ -402,15 +412,13 @@ export function LandingPage() {
 
           <div className="lp-feature-grid">
             {FEATURES.map((feature, index) => (
-              <article
+              <AnimatedFeatureCard
                 key={feature.title}
-                className="lp-feature-card lp-reveal"
-                style={{ transitionDelay: `${index * 55}ms` } as React.CSSProperties}
-              >
-                <span className="lp-icon-chip lp-icon-chip--feature" aria-hidden="true">{feature.icon}</span>
-                <h3>{feature.title}</h3>
-                <p>{feature.description}</p>
-              </article>
+                icon={feature.icon}
+                title={feature.title}
+                description={feature.description}
+                index={index}
+              />
             ))}
           </div>
         </section>

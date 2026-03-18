@@ -463,6 +463,7 @@ export function WorkflowEditor({
   // ── Save ──────────────────────────────────────
 
   const handleSave = useCallback(() => {
+    if (!onSave) return;
     onSave({ name, description, nodes, edges });
   }, [name, description, nodes, edges, onSave]);
 

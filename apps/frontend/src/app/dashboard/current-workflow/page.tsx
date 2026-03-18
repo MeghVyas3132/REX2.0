@@ -15,6 +15,7 @@ import {
   clearWorkflowDraft,
   type WorkflowDraft,
 } from "@/lib/workflow-draft";
+import { convertTriggersToBackend } from "@/lib/trigger-converter";
 
 export default function CurrentWorkflowPage() {
   const { user, token, loading: authLoading, logout } = useAuth();
@@ -47,11 +48,12 @@ export default function CurrentWorkflowPage() {
     setError("");
 
     try {
+      const backendNodes = convertTriggersToBackend(data.nodes);
       if (draft?.mode === "update" && draft.workflowId) {
         await api.workflows.update(token, draft.workflowId, {
           name: data.name.trim(),
           description: data.description.trim(),
-          nodes: data.nodes,
+          nodes: backendNodes,
           edges: data.edges,
         });
         clearWorkflowDraft();
@@ -63,7 +65,7 @@ export default function CurrentWorkflowPage() {
       const created = await api.workflows.create(token, {
         name: data.name.trim() || "Recovered Workflow",
         description: data.description.trim(),
-        nodes: data.nodes,
+        nodes: backendNodes,
         edges: data.edges,
       });
 

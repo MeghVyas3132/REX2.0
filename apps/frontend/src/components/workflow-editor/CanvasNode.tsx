@@ -4,7 +4,7 @@
 
 "use client";
 
-import React, { useCallback } from "react";
+import React, { useCallback, useMemo } from "react";
 import type { CanvasNode } from "./types";
 import { getNodeTypeDef, getCategoryColor } from "./types";
 import { InlineNodeDetails } from "./InlineNodeDetails";
@@ -25,6 +25,51 @@ interface CanvasNodeProps {
   onPortMouseUp: (e: React.MouseEvent, nodeId: string, portType: "in" | "out") => void;
 }
 
+// Icon mapping per node type
+function getNodeIcon(nodeType: string): string {
+  const icons: Record<string, string> = {
+    trigger: "▶",
+    "manual-trigger": "▶",
+    "webhook-trigger": "🔗",
+    "schedule-trigger": "⏱",
+    llm: "🧠",
+    "http-request": "🌐",
+    code: "{}",
+    transformer: "⚙",
+    storage: "💾",
+    "memory-write": "✍",
+    "memory-read": "👁",
+    "execution-control": "🎮",
+    evaluation: "✔",
+    "json-validator": "✓",
+    condition: "⬌",
+    "data-cleaner": "🧹",
+    "knowledge-ingest": "📥",
+    "knowledge-retrieve": "📚",
+    "input-guard": "🛡",
+    "output-guard": "🔒",
+    "json-simplify": "📋",
+    log: "📝",
+    output: "📤",
+    "file-upload": "📂",
+  };
+  return icons[nodeType] || "◆";
+}
+
+// Get subtitle/context for special nodes like triggers
+function getNodeSubtitle(nodeType: string, nodeConfig: Record<string, unknown>): string | null {
+  if (nodeType === "trigger") {
+    const triggerType = (nodeConfig["triggerType"] as string) ?? "manual";
+    const typeDisplay: Record<string, string> = {
+      manual: "Manual Run",
+      event: "Event Trigger",
+      schedule: "Scheduled Run",
+    };
+    return typeDisplay[triggerType] || "Unknown";
+  }
+  return null;
+}
+
 export function CanvasNodeComponent({
   node,
   selected,
@@ -42,6 +87,10 @@ export function CanvasNodeComponent({
 }: CanvasNodeProps) {
   const def = getNodeTypeDef(node.type);
   const categoryColor = getCategoryColor(def?.category ?? "action");
+  const subtitle = useMemo(
+    () => getNodeSubtitle(node.type, node.config),
+    [node.type, node.config]
+  );
 
   const handleMouseDown = useCallback(
     (e: React.MouseEvent) => {
@@ -134,27 +183,35 @@ export function CanvasNodeComponent({
           onMouseUp={handleOutPortUp}
         />
 
-        {/* Header */}
-        <div className="wf-node-header">
-          <div className="wf-node-cat-dot" />
-          <span className="wf-node-type">
-            {def?.label ?? node.type}
-          </span>
-          {executionStatus && (
-            <span className={`wf-node-exec-badge ${executionStatus}`}>
-              {executionStatus === "completed" ? "OK" :
-               executionStatus === "running" ? "..." :
-               executionStatus === "failed" ? "ERR" :
-               executionStatus === "skipped" ? "SKIP" : ""}
-            </span>
+        {/* Modern Node Content */}
+        <div className="wf-node-content">
+          {/* Icon + Header Section */}
+          <div className="wf-node-header">
+            <span className="wf-node-icon">{getNodeIcon(node.type)}</span>
+            <div className="wf-node-title-section">
+              <span className="wf-node-title">{def?.label ?? node.type}</span>
+              {subtitle && <span className="wf-node-subtitle">{subtitle}</span>}
+            </div>
+            {executionStatus && (
+              <span className={`wf-node-exec-badge ${executionStatus}`}>
+                {executionStatus === "completed"
+                  ? "✓"
+                  : executionStatus === "running"
+                  ? "⟳"
+                  : executionStatus === "failed"
+                  ? "✕"
+                  : executionStatus === "skipped"
+                  ? "—"
+                  : ""}
+              </span>
+            )}
+          </div>
+
+          {/* Node Label (hide for triggers since title shows info) */}
+          {node.type !== "trigger" && (
+            <div className="wf-node-label">{node.label}</div>
           )}
         </div>
-
-        {/* Label */}
-        <div className="wf-node-label">{node.label}</div>
-
-        {/* Optional hover preview for quick context */}
-        <div className="wf-node-hover-preview">{def?.description ?? "Node"}</div>
       </div>
 
       {/* Primary interaction: inline node details */}

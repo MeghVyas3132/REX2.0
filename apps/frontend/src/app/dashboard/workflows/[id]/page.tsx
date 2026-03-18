@@ -13,6 +13,7 @@ import { WorkflowEditor } from "@/components/workflow-editor";
 import type { CanvasNode, CanvasEdge } from "@/components/workflow-editor";
 import type { ExecutionPollResult } from "@/components/workflow-editor/WorkflowEditor";
 import { saveWorkflowDraft, clearWorkflowDraft } from "@/lib/workflow-draft";
+import { convertTriggersToBackend, convertTriggersFromBackend } from "@/lib/trigger-converter";
 
 export default function WorkflowDetailPage() {
   const { token, loading: authLoading } = useAuth();
@@ -56,10 +57,11 @@ export default function WorkflowDetailPage() {
     setSaveStatus("saving");
 
     try {
+      const backendNodes = convertTriggersToBackend(data.nodes);
       await api.workflows.update(token, workflowId, {
         name: data.name.trim(),
         description: data.description.trim(),
-        nodes: data.nodes.map((n) => ({
+        nodes: backendNodes.map((n) => ({
           id: n.id,
           type: n.type,
           label: n.label,
@@ -126,15 +128,19 @@ export default function WorkflowDetailPage() {
 
   if (authLoading || loading || !workflow) return null;
 
+  const initialNodes = convertTriggersFromBackend(
+    workflow.nodes.map((n) => ({
+      id: n.id,
+      type: n.type,
+      label: n.label || n.type,
+      position: n.position ?? { x: 100, y: 100 },
+      config: n.config ?? {},
+    }))
+  );
+
   return (
     <WorkflowEditor
-      initialNodes={workflow.nodes.map((n) => ({
-        id: n.id,
-        type: n.type,
-        label: n.label || n.type,
-        position: n.position ?? { x: 100, y: 100 },
-        config: n.config ?? {},
-      }))}
+      initialNodes={initialNodes}
       initialEdges={workflow.edges.map((e) => ({
         id: e.id,
         source: e.source,

@@ -15,6 +15,7 @@ import {
   saveWorkflowDraft,
   clearWorkflowDraft,
 } from "@/lib/workflow-draft";
+import { convertTriggersToBackend } from "@/lib/trigger-converter";
 
 export default function NewWorkflowPage() {
   const { token, loading: authLoading } = useAuth();
@@ -34,10 +35,11 @@ export default function NewWorkflowPage() {
     setSaveStatus("saving");
 
     try {
+      const backendNodes = convertTriggersToBackend(data.nodes);
       const res = await api.workflows.create(token, {
         name: data.name.trim(),
         description: data.description.trim(),
-        nodes: data.nodes.map((n) => ({
+        nodes: backendNodes.map((n) => ({
           id: n.id,
           type: n.type,
           label: n.label,

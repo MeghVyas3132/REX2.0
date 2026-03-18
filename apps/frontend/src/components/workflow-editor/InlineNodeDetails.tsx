@@ -29,17 +29,32 @@ export function InlineNodeDetails({
     if (!def) return [];
     const keys = INLINE_CONFIG_KEYS[node.type];
     if (keys && keys.length > 0) {
-      return keys
+      let fields = keys
         .map((key) => def.configFields.find((f) => f.key === key))
         .filter((f): f is ConfigField => f !== undefined);
+      
+      // For trigger nodes, filter fields based on selected triggerType
+      if (node.type === "trigger") {
+        const triggerType = (node.config["triggerType"] as string) ?? "manual";
+        fields = fields.filter((f) => {
+          if (f.key === "triggerType") return true; // Always show trigger type selector
+          if (f.key === "method") return triggerType === "event"; // Only show for event triggers
+          if (f.key === "cron" || f.key === "intervalMs") return triggerType === "schedule"; // Only show for scheduled triggers
+          return false;
+        });
+      }
+      
+      return fields;
     }
     // Fallback: first 3 non-textarea fields for nodes without an explicit list
     return def.configFields.filter((f) => f.type !== "textarea").slice(0, 3);
-  }, [def, node.type]);
+  }, [def, node.type, node.config]);
 
   const handleLabelChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
-      onUpdate(node.id, { label: e.target.value });
+      if (onUpdate) {
+        onUpdate(node.id, { label: e.target.value });
+      }
     },
     [node.id, onUpdate]
   );
@@ -58,7 +73,7 @@ export function InlineNodeDetails({
           updates["model"] = "gemini-2.0-flash";
         }
       }
-      onUpdate(node.id, { config: { ...node.config, ...updates } });
+      onUpdate?.(node.id, { config: { ...node.config, ...updates } });
     },
     [node.id, node.type, node.config, onUpdate]
   );
@@ -88,17 +103,24 @@ export function InlineNodeDetails({
         <button
           type="button"
           className="wf-inline-advanced-btn"
-          onClick={() => onOpenAdvanced(node.id)}
+          onClick={() => onOpenAdvanced?.(node.id)}
         >
           Advanced
         </button>
       </div>
 
-      {/* Type badge + description */}
-      <div className="wf-inline-meta">
-        <span className="wf-inline-type-badge">{def?.label ?? node.type}</span>
-        <p className="wf-inline-description">{def?.description ?? "No description available."}</p>
-      </div>
+      {/* Type badge + description (hide for trigger nodes since info is in header) */}
+      {node.type !== "trigger" && (
+        <div className="wf-inline-meta">
+          <span className="wf-inline-type-badge">{def?.label ?? node.type}</span>
+          <p className="wf-inline-description">{def?.description ?? "No description available."}</p>
+        </div>
+      )}
+      {node.type === "trigger" && (
+        <div className="wf-inline-meta">
+          <p className="wf-inline-description">{def?.description ?? "No description available."}</p>
+        </div>
+      )}
 
       {/* Editable quick-edit config fields */}
       {inlineFields.length > 0 && (

@@ -14,6 +14,7 @@ import type {
 import { WorkflowEditor } from "@/components/workflow-editor";
 import type { CanvasEdge, CanvasNode } from "@/components/workflow-editor";
 import { clearWorkflowDraft, saveWorkflowDraft } from "@/lib/workflow-draft";
+import { convertTriggersToBackend, convertTriggersFromBackend } from "@/lib/trigger-converter";
 
 type ScopeType = "user" | "workflow" | "execution";
 
@@ -194,10 +195,11 @@ export default function TemplateConfigurePage() {
 
       const created = await api.templates.instantiate(token, template.id, payload);
 
+      const backendNodes = convertTriggersToBackend(data.nodes);
       await api.workflows.update(token, created.data.id, {
         name: data.name.trim() || template.defaultWorkflowName,
         description: data.description.trim(),
-        nodes: data.nodes.map((n) => ({
+        nodes: backendNodes.map((n) => ({
           id: n.id,
           type: n.type,
           label: n.label,
@@ -226,16 +228,20 @@ export default function TemplateConfigurePage() {
   if (authLoading || !token) return null;
 
   if (configured && preview) {
+    const initialNodes = convertTriggersFromBackend(
+      preview.nodes.map((n) => ({
+        id: n.id,
+        type: n.type,
+        label: n.label,
+        position: n.position,
+        config: n.config,
+      }))
+    );
+
     return (
       <WorkflowEditor
         key={`${preview.template.id}-${preview.workflowName}`}
-        initialNodes={preview.nodes.map((n) => ({
-          id: n.id,
-          type: n.type,
-          label: n.label,
-          position: n.position,
-          config: n.config,
-        }))}
+        initialNodes={initialNodes}
         initialEdges={preview.edges.map((e) => ({
           id: e.id,
           source: e.source,

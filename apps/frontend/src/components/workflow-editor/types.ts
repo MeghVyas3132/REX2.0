@@ -58,20 +58,22 @@ export interface ConfigField {
 
 export const NODE_TYPE_DEFS: NodeTypeDefinition[] = [
   {
-    type: "manual-trigger",
-    label: "Manual Run",
+    type: "trigger",
+    label: "Trigger",
     category: "trigger",
-    description: "Manually start the workflow",
-    defaultConfig: {},
-    configFields: [],
-  },
-  {
-    type: "webhook-trigger",
-    label: "Event Trigger",
-    category: "trigger",
-    description: "Start workflow via HTTP webhook",
-    defaultConfig: { method: "POST" },
+    description: "Configure how to start the workflow",
+    defaultConfig: { triggerType: "manual", method: "POST", cron: "0 * * * *" },
     configFields: [
+      {
+        key: "triggerType",
+        label: "Trigger Type",
+        type: "select",
+        options: [
+          { value: "manual", label: "Manual Run" },
+          { value: "event", label: "Event Trigger" },
+          { value: "schedule", label: "Scheduled Run" },
+        ],
+      },
       {
         key: "method",
         label: "HTTP Method",
@@ -82,15 +84,6 @@ export const NODE_TYPE_DEFS: NodeTypeDefinition[] = [
           { value: "PUT", label: "PUT" },
         ],
       },
-    ],
-  },
-  {
-    type: "schedule-trigger",
-    label: "Scheduled Run",
-    category: "trigger",
-    description: "Run on a cron schedule",
-    defaultConfig: { cron: "0 * * * *" },
-    configFields: [
       {
         key: "cron",
         label: "Cron Expression",
@@ -692,8 +685,7 @@ export const NODE_TYPE_DEFS: NodeTypeDefinition[] = [
 
 // ── Inline config keys: which fields to surface in the on-canvas quick-edit panel ──
 export const INLINE_CONFIG_KEYS: Record<string, string[]> = {
-  "webhook-trigger":    ["method"],
-  "schedule-trigger":   ["cron"],
+  "trigger":            ["triggerType", "method", "cron"],
   "llm":                ["provider", "model"],
   "http-request":       ["method", "url"],
   "code":               ["timeoutMs"],
