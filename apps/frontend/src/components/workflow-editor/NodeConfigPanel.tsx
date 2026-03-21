@@ -7,7 +7,7 @@
 import React, { useState, useRef, useCallback } from "react";
 import type { CanvasNode, CanvasEdge } from "./types";
 import { getNodeTypeDef, getCategoryColor } from "./types";
-import { api } from "../../lib/api";
+import { api } from "@/lib/api";
 
 interface NodeConfigPanelProps {
   node: CanvasNode;
@@ -310,7 +310,7 @@ function FileUploadWidget({ node, onUpdate, token }: FileUploadWidgetProps) {
   function handleDrop(e: React.DragEvent) {
     e.preventDefault();
     setDragOver(false);
-    const file = e.dataTransfer.files[0];
+    const file = e.dataTransfer.files?.[0];
     if (file) handleFile(file);
   }
 

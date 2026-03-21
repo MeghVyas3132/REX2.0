@@ -178,6 +178,12 @@ async function bootstrap(): Promise<void> {
 }
 
 bootstrap().catch((err) => {
-  logger.error({ error: err }, "Bootstrap failed");
+  logger.error(
+    {
+      error: err instanceof Error ? err.message : String(err),
+      stack: err instanceof Error ? err.stack : undefined,
+    },
+    "Bootstrap failed"
+  );
   process.exit(1);
 });

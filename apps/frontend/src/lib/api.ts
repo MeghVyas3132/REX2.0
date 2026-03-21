@@ -23,19 +23,39 @@ async function apiCall<T>(path: string, options: ApiCallOptions = {}): Promise<T
     headers["Authorization"] = `Bearer ${token}`;
   }
 
-  const response = await fetch(`${API_BASE}${path}`, {
-    method,
-    headers,
-    body: body ? JSON.stringify(body) : undefined,
-  });
-
-  const data = await response.json();
-
-  if (!response.ok) {
-    throw new Error(data.error?.message ?? "Request failed");
+  let response: Response;
+  try {
+    response = await fetch(`${API_BASE}${path}`, {
+      method,
+      headers,
+      body: body ? JSON.stringify(body) : undefined,
+    });
+  } catch (err) {
+    throw new Error(
+      err instanceof Error ? err.message : "Network request failed"
+    );
   }
 
-  return data;
+  let data: unknown;
+  try {
+    data = await response.json();
+  } catch (err) {
+    throw new Error(
+      `Failed to parse response: ${err instanceof Error ? err.message : "Invalid JSON"}`
+    );
+  }
+
+  if (!response.ok) {
+    const errorMessage =
+      typeof data === "object" && data !== null && "error" in data
+        ? (data as Record<string, unknown>).error instanceof Object
+          ? ((data as Record<string, unknown>).error as Record<string, unknown>).message ?? "Request failed"
+          : "Request failed"
+        : "Request failed";
+    throw new Error(String(errorMessage));
+  }
+
+  return data as T;
 }
 
 export const api = {

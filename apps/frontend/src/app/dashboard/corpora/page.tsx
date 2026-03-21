@@ -109,7 +109,7 @@ export default function CorporaPage() {
       const response = await api.knowledge.listDocuments(accessToken, corpusId, 1, 100);
       setDocuments(response.data);
       if (response.data.length > 0) {
-        setSelectedDocumentId((prev) => prev || response.data[0]!.id);
+        setSelectedDocumentId((prev) => prev || response.data[0]?.id || "");
       } else {
         setSelectedDocumentId("");
       }

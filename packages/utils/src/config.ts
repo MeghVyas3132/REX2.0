@@ -2,6 +2,54 @@
 // REX - Environment Configuration Helper
 // ──────────────────────────────────────────────
 
+import { readFileSync } from "fs";
+import { resolve } from "path";
+import { fileURLToPath } from "url";
+
+// Load .env file if it exists
+function loadDotenvFile(): void {
+  try {
+    // Find the workspace root (.env file is at the root)
+    const __dirname = fileURLToPath(new URL(".", import.meta.url));
+    let envPath = resolve(__dirname, "../../.env");
+    
+    // Try different paths (development vs built)
+    const possiblePaths = [
+      envPath,
+      resolve(__dirname, "../.env"),
+      resolve(__dirname, "../../.env"),
+      resolve(__dirname, "../../../.env"),
+      ".env",
+    ];
+    
+    let envContent: string | null = null;
+    for (const path of possiblePaths) {
+      try {
+        envContent = readFileSync(path, "utf-8");
+        break;
+      } catch {}
+    }
+    
+    if (!envContent) return;
+    
+    envContent.split("\n").forEach((line) => {
+      const trimmed = line.trim();
+      if (trimmed && !trimmed.startsWith("#")) {
+        const [key, ...valueParts] = trimmed.split("=");
+        const value = valueParts.join("=").trim();
+        if (key && !process.env[key]) {
+          process.env[key] = value;
+        }
+      }
+    });
+  } catch {
+    // Silently fail if .env doesn't exist or can't be read
+  }
+}
+
+// Load .env file on module initialization
+loadDotenvFile();
+
 export function getEnvOrThrow(key: string): string {
   const value = process.env[key];
   if (!value) {
