@@ -2,13 +2,17 @@ import Link from "next/link";
 
 const demoTenants = [
   { id: "default", name: "Default Tenant", plan: "enterprise", status: "active" },
+  { id: "northstar-finance", name: "Northstar Finance", plan: "enterprise", status: "at-risk" },
+  { id: "atlas-logistics", name: "Atlas Logistics", plan: "growth", status: "active" },
 ];
 
 export default function AdminTenantsPage() {
   return (
-    <section>
+    <section className="control-header">
       <h1>Tenants</h1>
-      <table>
+      <p>Inspect plan, trust status, and route into detailed governance controls.</p>
+      <div className="control-card">
+        <table className="control-table">
         <thead>
           <tr><th>Name</th><th>Plan</th><th>Status</th><th>Actions</th></tr>
         </thead>
@@ -17,12 +21,17 @@ export default function AdminTenantsPage() {
             <tr key={tenant.id}>
               <td>{tenant.name}</td>
               <td>{tenant.plan}</td>
-              <td>{tenant.status}</td>
-              <td><Link href={`/admin/tenants/${tenant.id}`}>View</Link></td>
+              <td>
+                <span className={tenant.status === "at-risk" ? "control-badge control-badge--warn" : "control-badge"}>
+                  {tenant.status}
+                </span>
+              </td>
+              <td><Link className="control-link" href={`/admin/tenants/${tenant.id}`}>View</Link></td>
             </tr>
           ))}
         </tbody>
-      </table>
+        </table>
+      </div>
     </section>
   );
 }

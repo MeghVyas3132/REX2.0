@@ -14,6 +14,7 @@ interface NodeConfigPanelProps {
   nodes: CanvasNode[];
   edges: CanvasEdge[];
   onUpdate: (nodeId: string, updates: Partial<CanvasNode>) => void;
+  onRexFix?: (nodeId: string) => void;
   onDelete: (nodeId: string) => void;
   onClose: () => void;
   token?: string;
@@ -24,6 +25,7 @@ export function NodeConfigPanel({
   nodes,
   edges,
   onUpdate,
+  onRexFix,
   onDelete,
   onClose,
   token,
@@ -166,6 +168,14 @@ export function NodeConfigPanel({
             <a href="/dashboard/settings" className="wf-panel-notice-link">
               Manage API Keys
             </a>
+            <button
+              type="button"
+              className="wf-panel-notice-link"
+              data-tour="rex-fix-button"
+              onClick={() => onRexFix?.(node.id)}
+            >
+              Fix with REX
+            </button>
           </div>
         )}
 

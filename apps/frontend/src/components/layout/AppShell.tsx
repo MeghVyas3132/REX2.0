@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import type { CSSProperties, ReactNode } from "react";
+import type { ReactNode } from "react";
 import { Button } from "@/components/ui";
 
 export interface AppShellNavItem {
@@ -42,25 +42,20 @@ export function AppShell({
   children,
 }: AppShellProps) {
   return (
-    <div className="rex-shell w-full flex h-screen overflow-hidden" style={layoutStyle}>
-      <div className="rex-shell__atmo" aria-hidden="true" />
-      <aside className="rex-shell__sidebar w-64 flex-shrink-0 overflow-hidden" style={sidebarStyle}>
-        <div className="rex-shell__brand" style={brandStyle}>
+    <div className="rex-shell">
+      <aside className="rex-shell__sidebar">
+        <div className="rex-shell__brand">
           <BrandMark />
           <span>{brand}</span>
         </div>
 
-        <nav className="rex-shell__nav" style={navStyle}>
+        <nav className="rex-shell__nav">
           {navItems.map((item) => (
             <Link
               key={item.href}
               href={item.href}
               className="rex-shell__nav-item"
               aria-current={item.active ? "page" : undefined}
-              style={{
-                ...navItemStyle,
-                ...(item.active ? navItemActiveStyle : null),
-              }}
             >
               <span className="rex-shell__nav-icon" aria-hidden="true">
                 <SidebarIcon name={item.icon} />
@@ -70,8 +65,8 @@ export function AppShell({
           ))}
         </nav>
 
-        <div className="rex-shell__user" style={userZoneStyle}>
-          <span className="rex-shell__user-name" style={userNameStyle}>{userName || "Unknown User"}</span>
+        <div className="rex-shell__user">
+          <span className="rex-shell__user-name">{userName || "Unknown User"}</span>
           <Button variant="ghost" size="sm" onClick={onSignOut}>
             <span className="rex-shell__btn-icon" aria-hidden="true">
               <SignOutIcon />
@@ -81,143 +76,21 @@ export function AppShell({
         </div>
       </aside>
 
-      <main className="rex-shell__main page-reveal w-full flex-1 overflow-hidden flex flex-col" style={mainStyle}>
-        <div className="w-full flex flex-1 flex-col overflow-hidden px-8 py-6" style={contentWrapperStyle}>
-          <header className="rex-shell__header flex-shrink-0" style={headerStyle}>
+      <main className="rex-shell__main">
+        <div className="rex-shell__content-wrap">
+          <header className="rex-shell__header">
             <div>
-              <h1 className="rex-shell__title" style={titleStyle}>{title}</h1>
-              {subtitle ? <p className="rex-shell__subtitle" style={subtitleStyle}>{subtitle}</p> : null}
+              <h1 className="rex-shell__title">{title}</h1>
+              {subtitle ? <p className="rex-shell__subtitle">{subtitle}</p> : null}
             </div>
-            {action}
+            {action ? <div className="rex-shell__header-action">{action}</div> : null}
           </header>
-          <div className="flex-1 overflow-auto pb-2" style={contentAreaStyle}>
-            {children}
-          </div>
+          <section className="rex-shell__content">{children}</section>
         </div>
       </main>
     </div>
   );
 }
-
-const layoutStyle: CSSProperties = {
-  display: "flex",
-  background:
-    "radial-gradient(1300px 700px at 90% -20%, rgba(79,120,255,0.16), transparent 60%), var(--surface-0)",
-};
-
-const sidebarStyle: CSSProperties = {
-  width: 256,
-  borderRight: "1px solid var(--border-muted)",
-  backgroundColor: "rgba(6, 10, 18, 0.88)",
-  backdropFilter: "blur(6px)",
-  padding: "16px 10px",
-  display: "flex",
-  flexDirection: "column",
-  gap: 10,
-};
-
-const brandStyle: CSSProperties = {
-  color: "var(--text-primary)",
-  fontSize: 20,
-  letterSpacing: "0.2em",
-  fontWeight: 700,
-  padding: "4px 8px",
-  display: "inline-flex",
-  alignItems: "center",
-  gap: 8,
-};
-
-const navStyle: CSSProperties = {
-  display: "grid",
-  gap: 6,
-  flex: 1,
-  border: "1px solid color-mix(in srgb, var(--border-muted) 75%, transparent)",
-  borderRadius: 12,
-  background: "linear-gradient(180deg, rgba(15, 24, 42, 0.44), rgba(8, 14, 26, 0.22))",
-  padding: "6px",
-};
-
-const navItemStyle: CSSProperties = {
-  color: "var(--text-secondary)",
-  borderRadius: 9,
-  padding: "8px 10px",
-  fontSize: 13,
-  textDecoration: "none",
-  border: "1px solid transparent",
-  transition: "all var(--motion-fast)",
-  display: "flex",
-  alignItems: "center",
-  gap: 8,
-  width: "100%",
-};
-
-const navItemActiveStyle: CSSProperties = {
-  color: "var(--text-primary)",
-  border: "1px solid color-mix(in srgb, var(--accent-500) 42%, var(--border-strong))",
-  backgroundColor: "color-mix(in srgb, var(--accent-500) 16%, transparent)",
-  boxShadow:
-    "0 0 0 1px color-mix(in srgb, var(--accent-500) 22%, transparent), 0 6px 18px rgba(46, 122, 255, 0.16)",
-};
-
-const userZoneStyle: CSSProperties = {
-  borderTop: "1px solid var(--border-muted)",
-  paddingTop: 10,
-  display: "grid",
-  gap: 8,
-};
-
-const userNameStyle: CSSProperties = {
-  color: "var(--text-tertiary)",
-  fontSize: 12,
-  paddingInline: 2,
-};
-
-const mainStyle: CSSProperties = {
-  flex: 1,
-  display: "flex",
-  flexDirection: "column",
-  minHeight: 0,
-};
-
-const contentWrapperStyle: CSSProperties = {
-  display: "flex",
-  flexDirection: "column",
-  flex: 1,
-  minHeight: 0,
-  gap: 0,
-};
-
-const contentAreaStyle: CSSProperties = {
-  display: "flex",
-  flexDirection: "column",
-  minHeight: 0,
-  gap: 0,
-  width: "100%",
-};
-
-const headerStyle: CSSProperties = {
-  display: "flex",
-  justifyContent: "space-between",
-  alignItems: "flex-start",
-  marginBottom: 24,
-  gap: 18,
-};
-
-const titleStyle: CSSProperties = {
-  margin: 0,
-  color: "var(--text-primary)",
-  fontSize: 28,
-  lineHeight: 1.2,
-  letterSpacing: "-0.02em",
-};
-
-const subtitleStyle: CSSProperties = {
-  margin: "10px 0 0",
-  color: "var(--text-tertiary)",
-  fontSize: 13,
-  maxWidth: 760,
-  lineHeight: 1.5,
-};
 
 function BrandMark() {
   return (

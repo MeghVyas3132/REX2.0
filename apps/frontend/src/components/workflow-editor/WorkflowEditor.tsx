@@ -10,6 +10,7 @@ import { NodePalette } from "./NodePalette";
 import { CanvasNodeComponent } from "./CanvasNode";
 import { NodeConfigPanel } from "./NodeConfigPanel";
 import { ChatPanel } from "./ChatPanel";
+import { useTour } from "@/components/tour";
 import "./workflow-editor.css";
 import "./chat-panel.css";
 
@@ -144,6 +145,8 @@ export function WorkflowEditor({
   onBack,
   showExecute = false,
 }: WorkflowEditorProps) {
+  const { state: tourState, dispatch, start } = useTour();
+
   // State
   const [nodes, setNodes] = useState<CanvasNode[]>(initialNodes);
   const [edges, setEdges] = useState<CanvasEdge[]>(initialEdges);
@@ -187,6 +190,12 @@ export function WorkflowEditor({
       executionPollRef.current = { executionId: null, active: false };
     };
   }, []);
+
+  useEffect(() => {
+    if (!tourState.isCompleted && !tourState.isActive && tourState.currentStep === "idle") {
+      start();
+    }
+  }, [tourState.isCompleted, tourState.isActive, tourState.currentStep, start]);
 
   // ── Canvas coordinate conversion ──────────────
 
@@ -235,8 +244,12 @@ export function WorkflowEditor({
 
       setNodes((prev) => [...prev, newNode]);
       setSelectedNodeId(newNode.id);
+
+      if (def.type === "trigger" || def.type === "llm") {
+        dispatch({ type: "NODE_DROPPED", nodeSlug: def.type });
+      }
     },
-    [screenToCanvas]
+    [screenToCanvas, dispatch]
   );
 
   // ── Node drag ─────────────────────────────────
@@ -315,10 +328,42 @@ export function WorkflowEditor({
           ...prev,
           { id: uuid(), source: connectionDrag.sourceId, target: nodeId },
         ]);
+
+        const sourceType = nodes.find((n) => n.id === connectionDrag.sourceId)?.type;
+        const targetType = nodes.find((n) => n.id === nodeId)?.type;
+        if (sourceType && targetType) {
+          dispatch({
+            type: "CONNECTION_MADE",
+            fromNodeType: sourceType,
+            toNodeType: targetType,
+          });
+        }
       }
       setConnectionDrag(null);
     },
-    [connectionDrag, edges]
+    [connectionDrag, edges, nodes, dispatch]
+  );
+
+  const handleRexFix = useCallback(
+    (nodeId: string) => {
+      dispatch({ type: "REX_FIX_CLICKED" });
+      setNodes((prev) =>
+        prev.map((node) => {
+          if (node.id !== nodeId || node.type !== "llm") return node;
+          return {
+            ...node,
+            config: {
+              ...node.config,
+              systemPrompt:
+                (node.config["systemPrompt"] as string) ||
+                "Ensure responses include a consent check and policy-safe output.",
+              complianceGuard: "enabled",
+            },
+          };
+        })
+      );
+    },
+    [dispatch]
   );
 
   // ── Mouse move / up (global) ──────────────────
@@ -541,6 +586,7 @@ export function WorkflowEditor({
           setNodeOutputs(outputs);
 
           if (result.status === "completed") {
+            dispatch({ type: "REX_CERTIFIED" });
             executionPollRef.current = { executionId: execId, active: false };
             setEdgeFlowDelays(buildEdgeFlowDelays(edges, result.steps));
             setIsRunning(false);
@@ -582,7 +628,7 @@ export function WorkflowEditor({
       setExecutionError("Failed to start execution");
       setIsRunning(false);
     }
-  }, [onExecute, onPollExecution, edges]);
+  }, [onExecute, onPollExecution, edges, dispatch]);
 
   const handleStopExecution = useCallback(async () => {
     if (!onStopExecution || !executionId || isStopping) return;
@@ -956,6 +1002,7 @@ export function WorkflowEditor({
         <div
           ref={canvasRef}
           className={`wf-canvas-wrap ${isPanning ? "panning" : ""}`}
+          data-tour="canvas"
           onMouseDown={handleCanvasMouseDown}
           onDragOver={handleCanvasDragOver}
           onDrop={handleCanvasDrop}
@@ -1055,6 +1102,7 @@ export function WorkflowEditor({
             nodes={nodes}
             edges={edges}
             onUpdate={handleNodeUpdate}
+            onRexFix={handleRexFix}
             onDelete={handleNodeDelete}
             onClose={() => setAdvancedNodeId(null)}
             token={token}

@@ -179,6 +179,7 @@ export function CanvasNodeComponent({
         {/* Output port */}
         <div
           className="wf-port-out"
+          data-tour="node-output-handle"
           onMouseDown={handleOutPortDown}
           onMouseUp={handleOutPortUp}
         />
@@ -210,6 +211,9 @@ export function CanvasNodeComponent({
           {/* Node Label (hide for triggers since title shows info) */}
           {node.type !== "trigger" && (
             <div className="wf-node-label">{node.label}</div>
+          )}
+          {node.type === "llm" && (
+            <div className="wf-inline-type-badge" data-tour="rex-badge">REX attention</div>
           )}
         </div>
       </div>

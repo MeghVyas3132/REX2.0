@@ -21,7 +21,7 @@ const CATEGORIES: { key: string; label: string; icon: string }[] = [
 
 export function NodePalette({ onDragStart }: NodePaletteProps) {
   return (
-    <div className="wf-palette">
+    <div className="wf-palette" data-tour="node-palette">
       <div className="wf-palette-header">
         <div className="wf-palette-title">Node Library</div>
         <div className="wf-palette-subtitle">Drag onto canvas to compose flow</div>
@@ -40,6 +40,7 @@ export function NodePalette({ onDragStart }: NodePaletteProps) {
               <div
                 key={def.type}
                 className="wf-palette-item"
+                data-tour={def.type === "trigger" ? "node-trigger" : def.type === "llm" ? "node-llm" : undefined}
                 style={{ ["--wf-node-color" as string]: getCategoryColor(def.category) }}
                 draggable
                 onDragStart={(e) => onDragStart(e, def)}

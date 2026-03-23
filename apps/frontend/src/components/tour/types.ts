@@ -1,39 +1,65 @@
-import React from 'react';
+import React from "react";
+
+export type TourStepId =
+  | "idle"
+  | "welcome"
+  | "palette_intro"
+  | "waiting_trigger_drop"
+  | "waiting_llm_drop"
+  | "waiting_connection"
+  | "rex_attention"
+  | "waiting_fix_click"
+  | "certified"
+  | "complete";
+
+export type TourAdvanceMode = "click" | "action";
+export type TourPlacement = "top" | "bottom" | "left" | "right";
 
 export interface TourStep {
-  id: string;
+  id: TourStepId;
   title: string;
   description: string;
-  selector: string; // CSS selector for the element
-  placement?: 'top' | 'bottom' | 'left' | 'right'; // Tooltip placement
-  action?: () => void; // Optional callback when step is shown
-  actionLabel?: string; // Custom label for action button
+  selector?: string;
+  placement?: TourPlacement;
+  advanceMode: TourAdvanceMode;
+  showBackdrop?: boolean;
+  ctaLabel?: string;
 }
 
-export interface TourState {
+export interface TourMachineState {
   isActive: boolean;
-  currentStepIndex: number;
-  steps: TourStep[];
+  currentStep: TourStepId;
   isCompleted: boolean;
+  isSkipped: boolean;
 }
 
-export type TourAction =
-  | { type: 'START'; payload: TourStep[] }
-  | { type: 'NEXT' }
-  | { type: 'PREVIOUS' }
-  | { type: 'GO_TO_STEP'; payload: number }
-  | { type: 'SKIP' }
-  | { type: 'COMPLETE' };
+export type TourMachineEvent =
+  | { type: "START" }
+  | { type: "NEXT" }
+  | { type: "PREVIOUS" }
+  | { type: "SKIP" }
+  | { type: "COMPLETE" }
+  | { type: "NODE_DROPPED"; nodeSlug: string }
+  | { type: "CONNECTION_MADE"; fromNodeType: string; toNodeType: string }
+  | { type: "REX_FIX_CLICKED" }
+  | { type: "REX_CERTIFIED" }
+  | { type: "RESET" };
+
+export interface TourSnapshot {
+  currentStep: TourStepId;
+  isCompleted: boolean;
+  isSkipped: boolean;
+}
 
 export interface UseTourReturn {
-  state: TourState;
-  dispatch: React.Dispatch<TourAction>;
-  start: (steps: TourStep[]) => void;
+  state: TourMachineState;
+  dispatch: React.Dispatch<TourMachineEvent>;
+  start: () => void;
   next: () => void;
   previous: () => void;
-  goToStep: (index: number) => void;
   skip: () => void;
   complete: () => void;
-  currentStep: TourStep | null;
+  restart: () => void;
+  currentStep: TourStep;
   progress: { current: number; total: number };
 }

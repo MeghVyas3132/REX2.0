@@ -57,23 +57,15 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="auth-root">
-      <div className="auth-bg-grid" aria-hidden="true" />
-      <div className="auth-bg-glow auth-bg-glow--left" aria-hidden="true" />
-      <div className="auth-bg-glow auth-bg-glow--right" aria-hidden="true" />
+    <div className="auth-root auth-root--quiet">
+      <div className="auth-grid" aria-hidden="true" />
 
       <Link href="/" className="auth-home-link">← Back to Home</Link>
 
-      <div className="auth-card page-reveal">
-        <h1 className="auth-title"><Link href="/" className="auth-brand-link">REX</Link></h1>
-        <p className="auth-subtitle">Responsible AI Workflow Automation</p>
-
-        <div className="auth-social-row" aria-label="Social sign-in placeholders">
-          <button type="button" className="auth-social-btn">Continue with Google</button>
-          <button type="button" className="auth-social-btn">Continue with GitHub</button>
-        </div>
-
-        <div className="auth-divider"><span>or continue with email</span></div>
+      <div className="auth-panel page-reveal">
+        <Link href="/" className="auth-brand-link">REX</Link>
+        <h1 className="auth-title">Welcome back</h1>
+        <p className="auth-subtitle">Sign in to continue building trusted workflows.</p>
 
         <div className="auth-tabs" role="tablist" aria-label="Authentication mode">
           <button
@@ -82,7 +74,7 @@ export default function LoginPage() {
             aria-selected={mode === "login"}
             onClick={() => setMode("login")}
           >
-            Sign In
+            Sign in
           </button>
           <button
             type="button"
@@ -90,40 +82,44 @@ export default function LoginPage() {
             aria-selected={mode === "register"}
             onClick={() => setMode("register")}
           >
-            Register
+            Create account
           </button>
         </div>
 
         <form onSubmit={handleSubmit} className="auth-form">
           {mode === "register" && (
-            <div className="auth-field">
+            <label className="auth-field">
+              <span>Name</span>
               <input
                 type="text"
-                placeholder="Name"
+                placeholder="Jane Doe"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 className={`auth-input${name && !nameLooksValid ? " is-invalid" : ""}`}
                 required
               />
               {name && !nameLooksValid ? <p className="auth-hint auth-hint--error">Use at least 2 characters.</p> : null}
-            </div>
+            </label>
           )}
-          <div className="auth-field">
+
+          <label className="auth-field">
+            <span>Email</span>
             <input
               type="email"
-              placeholder="Email"
+              placeholder="you@company.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               className={`auth-input${email && !emailLooksValid ? " is-invalid" : ""}`}
               required
             />
             {email && !emailLooksValid ? <p className="auth-hint auth-hint--error">Enter a valid email address.</p> : null}
-          </div>
+          </label>
 
-          <div className="auth-field">
+          <label className="auth-field">
+            <span>Password</span>
             <input
               type="password"
-              placeholder="Password"
+              placeholder="••••••••"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               className="auth-input"
@@ -151,16 +147,16 @@ export default function LoginPage() {
                 ) : null}
               </div>
             )}
-          </div>
+          </label>
 
           {error && <p className="auth-error">{error}</p>}
 
           <button type="submit" className="auth-submit" disabled={loading}>
-            {loading ? "Processing..." : mode === "login" ? "Sign In" : "Create Account"}
+            {loading ? "Processing..." : mode === "login" ? "Sign in" : "Create account"}
           </button>
         </form>
 
-        <p className="auth-footnote">Deterministic. Explainable. Privacy-first by design.</p>
+        <p className="auth-footnote">Responsible automation for regulated teams.</p>
       </div>
     </div>
   );

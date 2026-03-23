@@ -6,4 +6,10 @@
 
 export { TourProvider, useTour } from './tour-context';
 export { TourSpotlight } from './tour-spotlight';
-export type { TourStep, TourState, TourAction, UseTourReturn } from './types';
+export type {
+	TourStep,
+	TourStepId,
+	TourMachineState,
+	TourMachineEvent,
+	UseTourReturn,
+} from './types';

@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useRef, useState } from 'react';
+import { usePathname } from 'next/navigation';
 import { useTour } from './tour-context';
 import './tour-spotlight.css';
 
@@ -12,25 +13,30 @@ interface Position {
 }
 
 export const TourSpotlight: React.FC = () => {
-  const { state, currentStep, next, previous, skip } = useTour();
+  const pathname = usePathname();
+  const { state, currentStep, next, previous, skip, complete, progress } = useTour();
   const [position, setPosition] = useState<Position | null>(null);
   const [tooltipPos, setTooltipPos] = useState<{ left: number; top: number }>({
     left: 0,
     top: 0,
   });
-  const [isExiting] = useState(false);
+  const [targetFound, setTargetFound] = useState(true);
   const spotlightRef = useRef<HTMLDivElement>(null);
 
-  // Track element position changes
   useEffect(() => {
-    if (!state.isActive || !currentStep) return;
+    if (!state.isActive || !currentStep.selector) {
+      setPosition(null);
+      return;
+    }
 
     const updatePosition = () => {
-      const element = document.querySelector(currentStep.selector);
+      const element = document.querySelector(currentStep.selector as string);
       if (!element) {
-        console.warn(`Tour element not found: ${currentStep.selector}`);
+        setTargetFound(false);
+        setPosition(null);
         return;
       }
+      setTargetFound(true);
 
       const rect = element.getBoundingClientRect();
       setPosition({
@@ -40,18 +46,15 @@ export const TourSpotlight: React.FC = () => {
         height: rect.height,
       });
 
-      // Scroll element into view
       element.scrollIntoView({ behavior: 'smooth', block: 'center' });
     };
 
     updatePosition();
 
     // Use IntersectionObserver for element tracking
-    const observer = new IntersectionObserver(updatePosition, {
-      threshold: 0,
-    });
+    const observer = new IntersectionObserver(updatePosition, { threshold: 0 });
 
-    const element = document.querySelector(currentStep.selector);
+    const element = document.querySelector(currentStep.selector as string);
     if (element) observer.observe(element);
 
     window.addEventListener('resize', updatePosition);
@@ -62,11 +65,10 @@ export const TourSpotlight: React.FC = () => {
       window.removeEventListener('resize', updatePosition);
       window.removeEventListener('scroll', updatePosition);
     };
-  }, [state.isActive, currentStep]);
+  }, [state.isActive, currentStep.selector]);
 
-  // Calculate tooltip position
   useEffect(() => {
-    if (!position) return;
+    if (!position || !targetFound) return;
 
     const padding = 16;
     const tooltipWidth = 360;
@@ -107,66 +109,48 @@ export const TourSpotlight: React.FC = () => {
     }
 
     setTooltipPos({ left, top });
-  }, [position, currentStep?.placement]);
+  }, [position, currentStep.placement, targetFound]);
 
-  // Keyboard navigation
   useEffect(() => {
     if (!state.isActive) return;
 
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') skip();
-      if (e.key === 'ArrowRight') next();
+      if (e.key === 'ArrowRight' && currentStep.advanceMode === 'click') next();
       if (e.key === 'ArrowLeft') previous();
+      if (e.key === 'Enter' && state.currentStep === 'certified') complete();
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [state.isActive, next, previous, skip]);
+  }, [state.isActive, currentStep.advanceMode, state.currentStep, next, previous, skip, complete]);
 
-  // Execute step action
-  useEffect(() => {
-    if (currentStep?.action) {
-      currentStep.action();
-    }
-  }, [currentStep]);
+  const isWorkflowRoute =
+    pathname.startsWith('/dashboard/workflows') || pathname.startsWith('/studio/workflows');
 
-  if (!state.isActive || !currentStep || !position) return null;
+  if (!state.isActive || !isWorkflowRoute) return null;
 
-  const isLastStep = state.currentStepIndex === state.steps.length - 1;
-  const radius = Math.max(position.width, position.height) / 2 + 8;
-  const cx = position.x + position.width / 2;
-  const cy = position.y + position.height / 2;
+  const hasSpotlight = Boolean(position && targetFound && currentStep.selector);
+  const isLastStep = state.currentStep === 'certified';
+  const hole = hasSpotlight
+    ? {
+        left: Math.max(0, position!.x - 8),
+        top: Math.max(0, position!.y - 8),
+        width: position!.width + 16,
+        height: position!.height + 16,
+      }
+    : null;
 
   return (
-    <div
-      ref={spotlightRef}
-      className={`tour-spotlight ${isExiting ? 'tour-spotlight--hidden' : ''}`.trim()}
-    >
-      {/* SVG Spotlight Mask */}
-      <svg className="tour-spotlight__svg" role="none">
-        <defs>
-          <mask id="tour-spotlight-mask">
-            <rect width="100%" height="100%" fill="white" />
-            <circle cx={cx} cy={cy} r={radius} fill="black" />
-          </mask>
-        </defs>
-        <rect
-          width="100%"
-          height="100%"
-          fill="black"
-          fillOpacity="0.5"
-          mask="url(#tour-spotlight-mask)"
-        />
-        <circle
-          className="tour-spotlight__circle"
-          cx={cx}
-          cy={cy}
-          r={radius}
-          strokeWidth="2"
-        />
-      </svg>
+    <div ref={spotlightRef} className="tour-spotlight">
+      {currentStep.showBackdrop && <div className="tour-spotlight__backdrop" />}
+      {hole && (
+        <>
+          <div className="tour-spotlight__cutout" style={hole} />
+          <div className="tour-spotlight__ring" style={hole} />
+        </>
+      )}
 
-      {/* Tooltip */}
       <div
         className={`tour-tooltip tour-tooltip--${currentStep.placement || 'bottom'}`.trim()}
         style={{
@@ -178,17 +162,23 @@ export const TourSpotlight: React.FC = () => {
       >
         <h3 className="tour-tooltip__title">{currentStep.title}</h3>
         <p className="tour-tooltip__description">{currentStep.description}</p>
+        {!targetFound && currentStep.selector && (
+          <p className="tour-tooltip__hint">Waiting for this section to appear.</p>
+        )}
+        {currentStep.advanceMode === 'action' && (
+          <p className="tour-tooltip__hint">Complete the action on canvas to continue.</p>
+        )}
 
         <div className="tour-tooltip__footer">
           <span className="tour-tooltip__progress">
-            {state.currentStepIndex + 1} / {state.steps.length}
+            {progress.current} / {progress.total}
           </span>
 
           <div className="tour-tooltip__controls">
             <button
               className="tour-tooltip__button"
               onClick={previous}
-              disabled={state.currentStepIndex === 0}
+              disabled={progress.current <= 1}
               aria-label="Previous step"
             >
               Back
@@ -197,18 +187,21 @@ export const TourSpotlight: React.FC = () => {
             {!isLastStep ? (
               <button
                 className="tour-tooltip__button tour-tooltip__button--primary"
-                onClick={next}
+                onClick={() => {
+                  if (currentStep.advanceMode === 'click') next();
+                }}
+                disabled={currentStep.advanceMode === 'action'}
                 aria-label="Next step"
               >
-                Next
+                {currentStep.ctaLabel || 'Next'}
               </button>
             ) : (
               <button
                 className="tour-tooltip__button tour-tooltip__button--primary"
-                onClick={next}
+                onClick={complete}
                 aria-label="Complete tour"
               >
-                Done
+                {currentStep.ctaLabel || 'Done'}
               </button>
             )}
 
