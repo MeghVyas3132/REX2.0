@@ -91,48 +91,54 @@ export default function DashboardPage() {
         <CanvasDots />
       </div>
 
-      {error ? (
-        <StateBlock tone="error" title="Unable to update workflows" description={error} />
-      ) : null}
+      <div className="w-full max-w-5xl mx-auto space-y-6">
+        {error ? (
+          <StateBlock tone="error" title="Unable to update workflows" description={error} />
+        ) : null}
 
-      {/* Stats strip */}
-      {!loading && (
-        <div className="wf-stats-strip stagger-in" style={{ "--stagger-delay": "40ms" } as React.CSSProperties}>
-          <StatPill icon={<GridIcon />} label="Total" value={String(totalWorkflows)} />
-          <StatPill icon={<FlashIcon />} label="Active" value={String(activeCount)} accent />
-          <StatPill icon={<ClockIcon />} label="Last updated" value={totalWorkflows > 0 ? new Date(Math.max(...workflows.map(w => new Date(w.updatedAt).getTime()))).toLocaleDateString() : "—"} />
-        </div>
-      )}
+        {/* Stats grid — only show when there are workflows */}
+        {!loading && totalWorkflows > 0 && (
+          <div className="wf-stats-grid stagger-in" style={{ "--stagger-delay": "40ms" } as React.CSSProperties}>
+            <StatCard icon={<GridIcon />} label="Total Workflows" value={String(totalWorkflows)} />
+            <StatCard icon={<FlashIcon />} label="Active Workflows" value={String(activeCount)} accent />
+            <StatCard icon={<ClockIcon />} label="Last Updated" value={totalWorkflows > 0 ? new Date(Math.max(...workflows.map(w => new Date(w.updatedAt).getTime()))).toLocaleDateString() : "—"} />
+          </div>
+        )}
 
-      {loading ? (
-        <StateBlock tone="loading" title="Loading workflows" description="Syncing saved workflow definitions and execution status." />
-      ) : workflows.length === 0 ? (
-        <EmptyState />
-      ) : (
-        <div className="wf-grid">
-          {workflows.map((wf, index) => (
-            <WorkflowCard
-              key={wf.id}
-              wf={wf}
-              index={index}
-              deleting={deletingWorkflowId === wf.id}
-              onDelete={() => void handleDeleteWorkflow(wf.id, wf.name)}
-            />
-          ))}
-        </div>
-      )}
+        {loading ? (
+          <StateBlock tone="loading" title="Loading workflows" description="Syncing saved workflow definitions and execution status." />
+        ) : workflows.length === 0 ? (
+          <EmptyState />
+        ) : (
+          <div className="wf-grid">
+            {workflows.map((wf, index) => (
+              <WorkflowCard
+                key={wf.id}
+                wf={wf}
+                index={index}
+                deleting={deletingWorkflowId === wf.id}
+                onDelete={() => void handleDeleteWorkflow(wf.id, wf.name)}
+              />
+            ))}
+          </div>
+        )}
+      </div>
     </AppShell>
   );
 }
 
 /* ─── Sub-components ─────────────────────────────────────────────── */
 
-function StatPill({ icon, label, value, accent }: { icon: React.ReactNode; label: string; value: string; accent?: boolean }) {
+function StatCard({ icon, label, value, accent }: { icon: React.ReactNode; label: string; value: string; accent?: boolean }) {
   return (
-    <div className={`wf-stat-pill${accent ? " wf-stat-pill--accent" : ""}`}>
-      <span className="wf-stat-icon" aria-hidden="true">{icon}</span>
-      <span className="wf-stat-value">{value}</span>
-      <span className="wf-stat-label">{label}</span>
+    <div className={`wf-stat-card${accent ? " wf-stat-card--accent" : ""}`}>
+      <div className="wf-stat-card__header">
+        <span className={`wf-stat-card__icon${accent ? " wf-stat-card__icon--accent" : ""}`} aria-hidden="true">{icon}</span>
+      </div>
+      <div className="wf-stat-card__content">
+        <p className="wf-stat-card__label">{label}</p>
+        <p className="wf-stat-card__value">{value}</p>
+      </div>
     </div>
   );
 }
@@ -186,11 +192,11 @@ function WorkflowCard({ wf, index, deleting, onDelete }: {
 
 function EmptyState() {
   return (
-    <div className="wf-empty stagger-in" style={{ "--stagger-delay": "80ms" } as React.CSSProperties}>
+    <div className="wf-empty stagger-in w-full min-h-[360px] max-h-[480px] p-6 flex flex-col items-center justify-center text-center" style={{ "--stagger-delay": "80ms" } as React.CSSProperties}>
       <div className="wf-empty__illustration" aria-hidden="true">
         <EmptyIllustration />
       </div>
-      <div className="wf-empty__body">
+      <div className="wf-empty__body flex flex-col items-center space-y-4 text-center">
         <p className="wf-empty__kicker">Workflow Studio</p>
         <h2 className="wf-empty__title">Build your first workflow</h2>
         <p className="wf-empty__desc">
@@ -202,7 +208,7 @@ function EmptyState() {
           <span>Setup in under 5 minutes</span>
           <span>Deterministic + auditable</span>
         </div>
-        <div className="wf-empty__actions">
+        <div className="wf-empty__actions flex flex-col items-center gap-3">
           <Link href="/dashboard/workflows/new" className="rex-link-reset">
             <Button variant="primary" size="md">
               <span className="wf-btn-icon" aria-hidden="true"><PlusIcon /></span>

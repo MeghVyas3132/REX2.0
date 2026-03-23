@@ -139,36 +139,38 @@ export default function WorkflowDetailPage() {
   );
 
   return (
-    <WorkflowEditor
-      initialNodes={initialNodes}
-      initialEdges={workflow.edges.map((e) => ({
-        id: e.id,
-        source: e.source,
-        target: e.target,
-        condition: e.condition,
-      }))}
-      workflowName={workflow.name}
-      workflowDescription={workflow.description}
-      workflowId={workflowId}
-      token={token || undefined}
-      saving={saving}
-      saveStatus={saveStatus}
-      onSave={handleSave}
-      onStateChange={(data) => {
-        saveWorkflowDraft({
-          mode: "update",
-          workflowId,
-          name: data.name,
-          description: data.description,
-          nodes: data.nodes,
-          edges: data.edges,
-        });
-      }}
-      onExecute={handleExecute}
-      onPollExecution={handlePollExecution}
-      onStopExecution={handleStopExecution}
-      onBack={() => router.push("/dashboard")}
-      showExecute
-    />
+    <div style={{ display: "flex", flexDirection: "column", height: "100%", width: "100%", minHeight: 0 }}>
+      <WorkflowEditor
+        initialNodes={initialNodes}
+        initialEdges={workflow.edges.map((e) => ({
+          id: e.id,
+          source: e.source,
+          target: e.target,
+          condition: e.condition,
+        }))}
+        workflowName={workflow.name}
+        workflowDescription={workflow.description}
+        workflowId={workflowId}
+        token={token || undefined}
+        saving={saving}
+        saveStatus={saveStatus}
+        onSave={handleSave}
+        onStateChange={(data) => {
+          saveWorkflowDraft({
+            mode: "update",
+            workflowId,
+            name: data.name,
+            description: data.description,
+            nodes: data.nodes,
+            edges: data.edges,
+          });
+        }}
+        onExecute={handleExecute}
+        onPollExecution={handlePollExecution}
+        onStopExecution={handleStopExecution}
+        onBack={() => router.push("/dashboard")}
+        showExecute
+      />
+    </div>
   );
 }

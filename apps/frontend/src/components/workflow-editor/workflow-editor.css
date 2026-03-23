@@ -5,7 +5,9 @@
 .wf-editor {
   display: flex;
   flex-direction: column;
-  height: 100vh;
+  height: 100%;
+  width: 100%;
+  min-height: 0;
   background: radial-gradient(1000px 420px at 88% -18%, rgba(79, 120, 255, 0.12), transparent 56%), var(--surface-0);
   color: var(--text-primary);
   overflow: hidden;
@@ -229,6 +231,7 @@
   flex: 1;
   overflow: hidden;
   position: relative;
+  min-height: 0;
 }
 
 /* ── Node Palette ───────────────────────────── */
@@ -379,6 +382,8 @@
   position: relative;
   overflow: hidden;
   cursor: default;
+  min-height: 0;
+  width: 100%;
 }
 
 .wf-canvas-wrap.panning {
@@ -1190,7 +1195,7 @@
 
 /* ── Empty state ────────────────────────────── */
 
-.wf-empty {
+.wf-editor .wf-empty {
   position: absolute;
   top: 50%;
   left: 50%;
@@ -1200,14 +1205,14 @@
   z-index: 1;
 }
 
-.wf-empty-title {
+.wf-editor .wf-empty-title {
   font-size: 16px;
   font-weight: 500;
   color: #444;
   margin-bottom: 6px;
 }
 
-.wf-empty-desc {
+.wf-editor .wf-empty-desc {
   font-size: 13px;
   color: #333;
 }

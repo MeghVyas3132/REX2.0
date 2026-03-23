@@ -42,9 +42,9 @@ export function AppShell({
   children,
 }: AppShellProps) {
   return (
-    <div className="rex-shell" style={layoutStyle}>
+    <div className="rex-shell w-full flex h-screen overflow-hidden" style={layoutStyle}>
       <div className="rex-shell__atmo" aria-hidden="true" />
-      <aside className="rex-shell__sidebar" style={sidebarStyle}>
+      <aside className="rex-shell__sidebar w-64 flex-shrink-0 overflow-hidden" style={sidebarStyle}>
         <div className="rex-shell__brand" style={brandStyle}>
           <BrandMark />
           <span>{brand}</span>
@@ -81,15 +81,19 @@ export function AppShell({
         </div>
       </aside>
 
-      <main className="rex-shell__main page-reveal" style={mainStyle}>
-        <header className="rex-shell__header" style={headerStyle}>
-          <div>
-            <h1 className="rex-shell__title" style={titleStyle}>{title}</h1>
-            {subtitle ? <p className="rex-shell__subtitle" style={subtitleStyle}>{subtitle}</p> : null}
+      <main className="rex-shell__main page-reveal w-full flex-1 overflow-hidden flex flex-col" style={mainStyle}>
+        <div className="w-full flex flex-1 flex-col overflow-hidden px-8 py-6" style={contentWrapperStyle}>
+          <header className="rex-shell__header flex-shrink-0" style={headerStyle}>
+            <div>
+              <h1 className="rex-shell__title" style={titleStyle}>{title}</h1>
+              {subtitle ? <p className="rex-shell__subtitle" style={subtitleStyle}>{subtitle}</p> : null}
+            </div>
+            {action}
+          </header>
+          <div className="flex-1 overflow-auto pb-2" style={contentAreaStyle}>
+            {children}
           </div>
-          {action}
-        </header>
-        {children}
+        </div>
       </main>
     </div>
   );
@@ -97,13 +101,12 @@ export function AppShell({
 
 const layoutStyle: CSSProperties = {
   display: "flex",
-  minHeight: "100vh",
   background:
     "radial-gradient(1300px 700px at 90% -20%, rgba(79,120,255,0.16), transparent 60%), var(--surface-0)",
 };
 
 const sidebarStyle: CSSProperties = {
-  width: 224,
+  width: 256,
   borderRight: "1px solid var(--border-muted)",
   backgroundColor: "rgba(6, 10, 18, 0.88)",
   backdropFilter: "blur(6px)",
@@ -171,7 +174,25 @@ const userNameStyle: CSSProperties = {
 
 const mainStyle: CSSProperties = {
   flex: 1,
-  padding: "30px 34px",
+  display: "flex",
+  flexDirection: "column",
+  minHeight: 0,
+};
+
+const contentWrapperStyle: CSSProperties = {
+  display: "flex",
+  flexDirection: "column",
+  flex: 1,
+  minHeight: 0,
+  gap: 0,
+};
+
+const contentAreaStyle: CSSProperties = {
+  display: "flex",
+  flexDirection: "column",
+  minHeight: 0,
+  gap: 0,
+  width: "100%",
 };
 
 const headerStyle: CSSProperties = {
@@ -191,10 +212,11 @@ const titleStyle: CSSProperties = {
 };
 
 const subtitleStyle: CSSProperties = {
-  margin: "8px 0 0",
+  margin: "10px 0 0",
   color: "var(--text-tertiary)",
   fontSize: 13,
   maxWidth: 760,
+  lineHeight: 1.5,
 };
 
 function BrandMark() {
