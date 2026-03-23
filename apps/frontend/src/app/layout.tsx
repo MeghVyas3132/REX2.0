@@ -1,17 +1,17 @@
 import "./globals.css";
 import Providers from "./providers";
-import { Space_Grotesk, IBM_Plex_Sans } from "next/font/google";
+import { Geist, Geist_Mono } from "next/font/google";
 
-const fontDisplay = Space_Grotesk({
-  subsets: ["latin"],
-  variable: "--font-display",
-  weight: ["500", "600", "700"],
-});
-
-const fontBody = IBM_Plex_Sans({
+const fontBody = Geist({
   subsets: ["latin"],
   variable: "--font-body",
   weight: ["400", "500", "600"],
+});
+
+const fontMono = Geist_Mono({
+  subsets: ["latin"],
+  variable: "--font-mono",
+  weight: ["400", "500"],
 });
 
 export const metadata = {
@@ -26,7 +26,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className={`${fontDisplay.variable} ${fontBody.variable}`}>
+      <body className={`${fontBody.variable} ${fontMono.variable}`}>
         <Providers>{children}</Providers>
       </body>
     </html>

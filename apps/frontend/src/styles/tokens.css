@@ -1,0 +1,254 @@
+/* ──────────────────────────────────────────────────────────
+   REX 2.0 Design System — Core Tokens
+   Philosophy: Sophisticated · Expensive · Subtle
+   ────────────────────────────────────────────────────────── */
+
+@import url('https://api.fontshare.com/v2/css?f[]=cabinet-grotesk@400,500,700,800&display=swap');
+
+@theme inline {
+  /* ── TYPE ── */
+  --font-display: 'Cabinet Grotesk', sans-serif;
+  --font-body: 'Geist', sans-serif;
+  --font-mono: 'Geist Mono', monospace;
+
+  /* ── COLOUR: Neutrals (light mode — the baseline) ── */
+  --color-bg-base: #fafafa;
+  --color-bg-surface: #ffffff;
+  --color-bg-subtle: #f4f4f5;
+  --color-bg-muted: #e4e4e7;
+  --color-bg-inverted: #09090b;
+
+  /* ── COLOUR: Neutrals (dark mode — defined for .dark class) ── */
+  --color-bg-base-dark: #080808;
+  --color-bg-surface-dark: #0f0f0f;
+  --color-bg-subtle-dark: #161616;
+  --color-bg-muted-dark: #222222;
+
+  /* ── COLOUR: Text ── */
+  --color-text-primary: #09090b;
+  --color-text-secondary: #52525b;
+  --color-text-tertiary: #a1a1aa;
+  --color-text-disabled: #d4d4d8;
+  --color-text-inverse: #fafafa;
+
+  /* ── COLOUR: Borders ── */
+  --color-border: rgba(0, 0, 0, 0.08);
+  --color-border-strong: rgba(0, 0, 0, 0.16);
+
+  /* ── COLOUR: Blue (action, status, brand) ── */
+  --color-blue-50: #eff6ff;
+  --color-blue-100: #dbeafe;
+  --color-blue-200: #bfdbfe;
+  --color-blue-300: #93c5fd;
+  --color-blue-400: #60a5fa;
+  --color-blue-500: #3b82f6;
+  --color-blue-600: #2563eb;
+  --color-blue-700: #1d4ed8;
+  --color-blue-800: #1e40af;
+  --color-blue-900: #1e3a8a;
+  --color-blue-950: #172554;
+
+  /* ── COLOUR: Green (running / success / certified) ── */
+  --color-green-500: #22c55e;
+  --color-green-bg: rgba(34, 197, 94, 0.08);
+  --color-green-border: rgba(34, 197, 94, 0.20);
+  --color-green-text: #15803d;
+
+  /* ── COLOUR: Amber (pending / partial / warning) ── */
+  --color-amber-500: #f59e0b;
+  --color-amber-bg: rgba(245, 158, 11, 0.08);
+  --color-amber-border: rgba(245, 158, 11, 0.20);
+  --color-amber-text: #92400e;
+
+  /* ── COLOUR: Red (error / failed / not certified) ── */
+  --color-red-500: #ef4444;
+  --color-red-bg: rgba(239, 68, 68, 0.08);
+  --color-red-border: rgba(239, 68, 68, 0.20);
+  --color-red-text: #991b1b;
+
+  /* ── COLOUR: Canvas-specific ── */
+  --color-canvas-bg: #f7f7f8;
+  --color-canvas-dot: rgba(0, 0, 0, 0.12);
+  --color-canvas-node-bg: #ffffff;
+  --color-canvas-node-border: rgba(0, 0, 0, 0.10);
+  --color-canvas-node-border-selected: #3b82f6;
+  --color-canvas-edge: rgba(0, 0, 0, 0.18);
+  --color-canvas-edge-active: #3b82f6;
+  --color-canvas-edge-width: 1.5px;
+
+  /* ── SPACING SCALE ── */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+  --space-16: 64px;
+  --space-20: 80px;
+  --space-24: 96px;
+
+  /* ── RADIUS ── */
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 10px;
+  --radius-xl: 14px;
+  --radius-2xl: 20px;
+  --radius-full: 9999px;
+
+  /* ── SHADOWS ── */
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.04);
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.07), 0 2px 4px rgba(0, 0, 0, 0.04);
+  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.08), 0 4px 8px rgba(0, 0, 0, 0.04);
+  --shadow-xl: 0 20px 48px rgba(0, 0, 0, 0.10), 0 8px 16px rgba(0, 0, 0, 0.05);
+
+  /* ── GLOW EFFECTS ── */
+  --glow-blue: 0 0 0 3px rgba(59, 130, 246, 0.15), 0 0 16px rgba(59, 130, 246, 0.12);
+  --glow-green: 0 0 0 3px rgba(34, 197, 94, 0.12), 0 0 12px rgba(34, 197, 94, 0.10);
+  --glow-red: 0 0 0 3px rgba(239, 68, 68, 0.12), 0 0 12px rgba(239, 68, 68, 0.10);
+
+  /* ── MOTION ── */
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-smooth: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-sharp: cubic-bezier(0.4, 0, 0, 1);
+
+  --duration-instant: 80ms;
+  --duration-fast: 150ms;
+  --duration-base: 220ms;
+  --duration-slow: 380ms;
+  --duration-enter: 500ms;
+
+  /* ── KEYFRAMES ── */
+  @keyframes fade-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+
+  @keyframes fade-up {
+    from {
+      opacity: 0;
+      transform: translateY(12px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes fade-down {
+    from {
+      opacity: 0;
+      transform: translateY(-8px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes scale-in {
+    from {
+      opacity: 0;
+      transform: scale(0.96);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+
+  @keyframes node-enter {
+    from {
+      opacity: 0;
+      transform: scale(0.90) translateY(6px);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1) translateY(0);
+    }
+  }
+
+  @keyframes status-pulse {
+    0%, 100% {
+      opacity: 1;
+      transform: scale(1);
+    }
+    50% {
+      opacity: 0.6;
+      transform: scale(0.85);
+    }
+  }
+
+  @keyframes rex-attention {
+    0%, 100% {
+      box-shadow: none;
+    }
+    50% {
+      box-shadow: var(--glow-red);
+    }
+  }
+
+  @keyframes shimmer {
+    from {
+      background-position: -200% 0;
+    }
+    to {
+      background-position: 200% 0;
+    }
+  }
+
+  @keyframes orbit {
+    0% {
+      transform: rotate(calc(var(--angle) * 1deg)) translateY(calc(var(--radius) * 1px)) rotate(calc(var(--angle) * -1deg));
+    }
+    100% {
+      transform: rotate(calc(var(--angle) * 1deg + 360deg)) translateY(calc(var(--radius) * 1px)) rotate(calc((var(--angle) * -1deg) - 360deg));
+    }
+  }
+
+  @keyframes rippling {
+    0% {
+      opacity: 1;
+    }
+    100% {
+      transform: scale(2);
+      opacity: 0;
+    }
+  }
+}
+
+/* ── DARK MODE ── */
+.dark {
+  --color-bg-base: var(--color-bg-base-dark);
+  --color-bg-surface: var(--color-bg-surface-dark);
+  --color-bg-subtle: var(--color-bg-subtle-dark);
+  --color-bg-muted: var(--color-bg-muted-dark);
+
+  --color-text-primary: #fafafa;
+  --color-text-secondary: #a1a1aa;
+  --color-text-tertiary: #52525b;
+  --color-text-disabled: #3f3f46;
+
+  --color-border: rgba(255, 255, 255, 0.07);
+  --color-border-strong: rgba(255, 255, 255, 0.12);
+
+  --color-green-text: #4ade80;
+  --color-amber-text: #fbbf24;
+  --color-red-text: #f87171;
+
+  --color-canvas-bg: #0a0a0a;
+  --color-canvas-dot: rgba(255, 255, 255, 0.06);
+  --color-canvas-node-bg: #111111;
+  --color-canvas-node-border: rgba(255, 255, 255, 0.08);
+  --color-canvas-edge: rgba(255, 255, 255, 0.14);
+
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.30);
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.40), 0 1px 2px rgba(0, 0, 0, 0.30);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.50), 0 2px 4px rgba(0, 0, 0, 0.30);
+  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.55), 0 4px 8px rgba(0, 0, 0, 0.35);
+  --shadow-xl: 0 20px 48px rgba(0, 0, 0, 0.60), 0 8px 16px rgba(0, 0, 0, 0.40);
+}

@@ -1,0 +1,133 @@
+/* ──────────────────────────────────────────────
+   Modal / Dialog Component
+   Overlay with focus management
+   ────────────────────────────────────────────── */
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.50);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  animation: fade-in var(--duration-base) var(--ease-smooth) both;
+
+  @media (prefers-reduced-motion: reduce) {
+    backdrop-filter: none;
+    animation: fade-in var(--duration-instant);
+  }
+}
+
+.modal-overlay--exit {
+  animation: fade-out var(--duration-base) var(--ease-smooth) both;
+}
+
+.modal {
+  background-color: var(--color-bg-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-2xl);
+  box-shadow: var(--shadow-xl);
+  max-width: 90vw;
+  max-height: 90vh;
+  overflow: auto;
+  animation: scale-in var(--duration-base) var(--ease-smooth) both;
+  position: relative;
+
+  @media (prefers-reduced-motion: reduce) {
+    animation: fade-in var(--duration-instant);
+  }
+}
+
+.modal--small {
+  width: 420px;
+}
+
+.modal--medium {
+  width: 560px;
+}
+
+.modal--large {
+  width: 720px;
+}
+
+.modal__header {
+  padding: var(--space-6);
+  border-bottom: 1px solid var(--color-border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+
+.modal__title {
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--color-text-primary);
+  margin: 0;
+}
+
+.modal__close {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  color: var(--color-text-tertiary);
+  transition: color var(--duration-fast) var(--ease-smooth);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+
+  &:hover {
+    color: var(--color-text-primary);
+  }
+
+  &:focus-visible {
+    outline: 1.5px solid var(--color-blue-500);
+    outline-offset: -2px;
+  }
+}
+
+.modal__body {
+  padding: var(--space-6);
+}
+
+.modal__footer {
+  padding: var(--space-6);
+  border-top: 1px solid var(--color-border);
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-3);
+}
+
+/* ── KEYFRAMES ── */
+@keyframes fade-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+/* ── DARK MODE ── */
+.dark {
+  .modal {
+    background-color: var(--color-bg-surface);
+    border-color: var(--color-border);
+  }
+
+  .modal__header {
+    border-bottom-color: var(--color-border);
+  }
+
+  .modal__footer {
+    border-top-color: var(--color-border);
+  }
+}

@@ -1,0 +1,212 @@
+/* ──────────────────────────────────────────────
+   Tour Spotlight
+   Animated SVG overlay with tooltip
+   ────────────────────────────────────────────── */
+
+.tour-spotlight {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  pointer-events: none;
+  animation: fade-in var(--duration-slow) var(--ease-smooth);
+
+  @media (prefers-reduced-motion: reduce) {
+    animation: fade-in var(--duration-instant);
+  }
+}
+
+.tour-spotlight--hidden {
+  animation: fade-out var(--duration-slow) var(--ease-smooth);
+}
+
+.tour-spotlight__svg {
+  width: 100%;
+  height: 100%;
+}
+
+.tour-spotlight__mask {
+  filter: drop-shadow(0 0 0 9999px rgba(0, 0, 0, 0.50));
+}
+
+.tour-spotlight__circle {
+  fill: none;
+  animation: pulse-glow var(--duration-slow) var(--ease-smooth-in) infinite;
+
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
+  }
+}
+
+@keyframes pulse-glow {
+  0% {
+    stroke: rgba(59, 130, 246, 0.5);
+    stroke-width: 1.5;
+  }
+  50% {
+    stroke: rgba(59, 130, 246, 0.3);
+    stroke-width: 2;
+  }
+  100% {
+    stroke: rgba(59, 130, 246, 0.5);
+    stroke-width: 1.5;
+  }
+}
+
+/* Tooltip Container */
+.tour-tooltip {
+  position: absolute;
+  background-color: var(--color-bg-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-xl);
+  padding: var(--space-4);
+  max-width: 360px;
+  z-index: 10000;
+  pointer-events: auto;
+  animation: scale-in var(--duration-base) var(--ease-smooth) both;
+
+  @media (prefers-reduced-motion: reduce) {
+    animation: fade-in var(--duration-instant);
+  }
+}
+
+.tour-tooltip--top {
+  transform: translateX(-50%);
+  bottom: auto;
+}
+
+.tour-tooltip--bottom {
+  transform: translateX(-50%);
+  top: auto;
+}
+
+.tour-tooltip--left {
+  transform: translateY(-50%);
+  right: auto;
+}
+
+.tour-tooltip--right {
+  transform: translateY(-50%);
+  left: auto;
+}
+
+/* Arrow/pointer */
+.tour-tooltip::before {
+  content: '';
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  background-color: var(--color-bg-surface);
+  border: 1px solid var(--color-border);
+  transform: rotate(45deg);
+}
+
+.tour-tooltip--top::before {
+  bottom: -5px;
+  left: 50%;
+  margin-left: -4px;
+}
+
+.tour-tooltip--bottom::before {
+  top: -5px;
+  left: 50%;
+  margin-left: -4px;
+}
+
+.tour-tooltip--left::before {
+  right: -5px;
+  top: 50%;
+  margin-top: -4px;
+}
+
+.tour-tooltip--right::before {
+  left: -5px;
+  top: 50%;
+  margin-top: -4px;
+}
+
+/* Content */
+.tour-tooltip__title {
+  font-family: var(--font-display);
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--color-text-primary);
+  margin: 0 0 var(--space-2) 0;
+}
+
+.tour-tooltip__description {
+  font-size: 14px;
+  color: var(--color-text-secondary);
+  margin: 0 0 var(--space-4) 0;
+  line-height: 1.5;
+}
+
+/* Footer with controls */
+.tour-tooltip__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.tour-tooltip__progress {
+  font-size: 12px;
+  color: var(--color-text-tertiary);
+  font-weight: 500;
+  letter-spacing: 0.5px;
+}
+
+.tour-tooltip__controls {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.tour-tooltip__button {
+  background: none;
+  border: none;
+  padding: 4px 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-blue-500);
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  transition: all var(--duration-fast) var(--ease-smooth);
+
+  &:hover {
+    background-color: var(--color-bg-subtle);
+    color: var(--color-blue-600);
+  }
+
+  &:focus-visible {
+    outline: 1.5px solid var(--color-blue-500);
+    outline-offset: -2px;
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+.tour-tooltip__button--primary {
+  background-color: var(--color-blue-500);
+  color: white;
+
+  &:hover {
+    background-color: var(--color-blue-600);
+  }
+}
+
+/* Dark Mode */
+.dark {
+  .tour-tooltip {
+    background-color: var(--color-bg-surface);
+    border-color: var(--color-border);
+  }
+
+  .tour-tooltip::before {
+    background-color: var(--color-bg-surface);
+    border-color: var(--color-border);
+  }
+}
