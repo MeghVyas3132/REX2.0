@@ -64,6 +64,20 @@
       "when": 1773077800000,
       "tag": "0008_prop3_schema_repair",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1774297000000,
+      "tag": "0009_multitenancy_foundation",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1774297100000,
+      "tag": "0010_data_subject_requests",
+      "breakpoints": true
     }
   ]
 }

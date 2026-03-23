@@ -8,6 +8,8 @@
     "dev": "turbo run dev",
     "lint": "turbo run lint",
     "typecheck": "turbo run typecheck",
+    "test": "pnpm --filter @rex/backend test && pnpm --filter @rex/engine test",
+    "verify:e2e": "pnpm typecheck && pnpm build && pnpm test && pnpm --filter @rex/frontend build",
     "db:generate": "pnpm --filter @rex/database db:generate",
     "db:migrate": "pnpm --filter @rex/database db:migrate",
     "db:seed": "pnpm --filter @rex/database db:seed",

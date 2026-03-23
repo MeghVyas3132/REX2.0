@@ -26,6 +26,7 @@ import {
   parseEmbedding,
 } from "@rex/utils";
 import { enqueueKnowledgeIngestion } from "../queue/client.js";
+import { DEFAULT_TENANT_ID } from "./tenant-default.js";
 
 const logger = createLogger("knowledge-service");
 
@@ -188,6 +189,7 @@ export function createKnowledgeService(db: Database): KnowledgeService {
       const [corpus] = await db
         .insert(knowledgeCorpora)
         .values({
+          tenantId: DEFAULT_TENANT_ID,
           userId,
           name: input.name,
           description: input.description ?? "",
@@ -209,12 +211,12 @@ export function createKnowledgeService(db: Database): KnowledgeService {
 
     async ingestDocument(userId, input) {
       const [corpus] = await db
-        .select({ id: knowledgeCorpora.id, userId: knowledgeCorpora.userId })
+        .select({ id: knowledgeCorpora.id, userId: knowledgeCorpora.userId, tenantId: knowledgeCorpora.tenantId })
         .from(knowledgeCorpora)
         .where(eq(knowledgeCorpora.id, input.corpusId))
         .limit(1);
 
-      if (!corpus || corpus.userId !== userId) {
+      if (!corpus || corpus.userId !== userId || corpus.tenantId !== DEFAULT_TENANT_ID) {
         throw new Error("Knowledge corpus not found or access denied");
       }
 
@@ -222,6 +224,7 @@ export function createKnowledgeService(db: Database): KnowledgeService {
       const [document] = await db
         .insert(knowledgeDocuments)
         .values({
+          tenantId: DEFAULT_TENANT_ID,
           corpusId: input.corpusId,
           userId,
           sourceType: input.sourceType ?? "upload",
@@ -269,6 +272,7 @@ export function createKnowledgeService(db: Database): KnowledgeService {
 
     async listCorpora(userId, filters, page, limit) {
       const conditions = [eq(knowledgeCorpora.userId, userId)];
+      conditions.push(eq(knowledgeCorpora.tenantId, DEFAULT_TENANT_ID));
       if (filters.scopeType) {
         conditions.push(eq(knowledgeCorpora.scopeType, filters.scopeType));
       }
@@ -306,7 +310,7 @@ export function createKnowledgeService(db: Database): KnowledgeService {
       const [corpus] = await db
         .select({ id: knowledgeCorpora.id })
         .from(knowledgeCorpora)
-        .where(and(eq(knowledgeCorpora.id, corpusId), eq(knowledgeCorpora.userId, userId)))
+        .where(and(eq(knowledgeCorpora.id, corpusId), eq(knowledgeCorpora.userId, userId), eq(knowledgeCorpora.tenantId, DEFAULT_TENANT_ID)))
         .limit(1);
 
       if (!corpus) {

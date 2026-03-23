@@ -27,6 +27,7 @@ interface TemplateService {
     input: WorkflowTemplateInstantiateInput
   ): TemplatePreviewResult;
   instantiate(
+    tenantId: string,
     userId: string,
     templateId: string,
     input: WorkflowTemplateInstantiateInput
@@ -680,7 +681,7 @@ export function createTemplateService(workflowService: WorkflowService): Templat
       return buildTemplatePreviewOrThrow(templateId, input);
     },
 
-    async instantiate(userId, templateId, input) {
+    async instantiate(tenantId, userId, templateId, input) {
       const preview = buildTemplatePreviewOrThrow(templateId, input);
 
       logger.info(
@@ -696,6 +697,7 @@ export function createTemplateService(workflowService: WorkflowService): Templat
       );
 
       return await workflowService.create(
+        tenantId,
         userId,
         preview.workflowName,
         preview.description,

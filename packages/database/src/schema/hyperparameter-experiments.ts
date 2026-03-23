@@ -6,11 +6,15 @@ import { pgTable, uuid, varchar, timestamp, index, jsonb } from "drizzle-orm/pg-
 import { users } from "./users.js";
 import { workflows } from "./workflows.js";
 import { hyperparameterProfiles } from "./hyperparameter-profiles.js";
+import { tenants } from "./tenants.js";
 
 export const hyperparameterExperiments = pgTable(
   "hyperparameter_experiments",
   {
     id: uuid("id").defaultRandom().primaryKey(),
+    tenantId: uuid("tenant_id")
+      .notNull()
+      .references(() => tenants.id, { onDelete: "cascade" }),
     userId: uuid("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
@@ -29,6 +33,7 @@ export const hyperparameterExperiments = pgTable(
     updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
   },
   (table) => ({
+    tenantIdIdx: index("hyperparameter_experiments_tenant_id_idx").on(table.tenantId),
     userIdIdx: index("hyperparameter_experiments_user_id_idx").on(table.userId),
     workflowIdIdx: index("hyperparameter_experiments_workflow_id_idx").on(table.workflowId),
     statusIdx: index("hyperparameter_experiments_status_idx").on(table.status),

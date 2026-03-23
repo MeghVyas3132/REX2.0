@@ -493,6 +493,100 @@ export const api = {
         token,
       }),
   },
+
+  publications: {
+    list: (token: string, catalog = false) =>
+      apiCall<{ success: boolean; data: Array<Record<string, unknown>> }>(
+        `/api/publications${catalog ? "?catalog=true" : ""}`,
+        { token }
+      ),
+    get: (token: string, id: string) =>
+      apiCall<{ success: boolean; data: Record<string, unknown> }>(
+        `/api/publications/${id}`,
+        { token }
+      ),
+    create: (token: string, payload: Record<string, unknown>) =>
+      apiCall<{ success: boolean; data: { id: string } }>(
+        "/api/publications",
+        { method: "POST", body: payload, token }
+      ),
+    update: (token: string, id: string, payload: Record<string, unknown>) =>
+      apiCall<{ success: boolean; data: { id: string } }>(
+        `/api/publications/${id}`,
+        { method: "PATCH", body: payload, token }
+      ),
+    remove: (token: string, id: string) =>
+      apiCall<{ success: boolean; data: { deleted: true } }>(
+        `/api/publications/${id}`,
+        { method: "DELETE", token }
+      ),
+    publish: (token: string, id: string) =>
+      apiCall<{ success: boolean; data: { id: string } }>(
+        `/api/publications/${id}/publish`,
+        { method: "POST", token }
+      ),
+    unpublish: (token: string, id: string) =>
+      apiCall<{ success: boolean; data: { id: string } }>(
+        `/api/publications/${id}/unpublish`,
+        { method: "POST", token }
+      ),
+    execute: (token: string, id: string, inputs: Record<string, unknown>) =>
+      apiCall<{ success: boolean; data: { executionId: string } }>(
+        `/api/publications/${id}/execute`,
+        { method: "POST", body: { inputs }, token }
+      ),
+  },
+
+  rex: {
+    listScores: (token: string, workflowId: string, recompute = false) =>
+      apiCall<{ success: boolean; data: Array<Record<string, unknown>> }>(
+        `/api/workflows/${workflowId}/rex-scores${recompute ? "?recompute=true" : ""}`,
+        { token }
+      ),
+    previewFixes: (token: string, workflowId: string, nodeId: string) =>
+      apiCall<{ success: boolean; data: { nodeId: string; fixes: string[] } }>(
+        `/api/workflows/${workflowId}/rex-fixes/preview/${nodeId}`,
+        { token }
+      ),
+    applyFixes: (token: string, workflowId: string, nodeId: string, actions: string[]) =>
+      apiCall<{ success: boolean; data: Record<string, unknown> }>(
+        `/api/workflows/${workflowId}/rex-fixes/apply`,
+        { method: "POST", body: { nodeId, actions }, token }
+      ),
+  },
+
+  compliance: {
+    getWorkflowLegalBasis: (token: string, workflowId: string) =>
+      apiCall<{ success: boolean; data: Record<string, unknown> | null }>(
+        `/api/compliance/workflows/${workflowId}/legal-basis`,
+        { token }
+      ),
+    setWorkflowLegalBasis: (token: string, workflowId: string, payload: Record<string, unknown>) =>
+      apiCall<{ success: boolean; data: { id: string } }>(
+        `/api/compliance/workflows/${workflowId}/legal-basis`,
+        { method: "PUT", body: payload, token }
+      ),
+    listDataSubjectRequests: (token: string, mine = false) =>
+      apiCall<{ success: boolean; data: Array<Record<string, unknown>> }>(
+        `/api/compliance/data-subject-requests${mine ? "?mine=true" : ""}`,
+        { token }
+      ),
+    createDataSubjectRequest: (token: string, payload: Record<string, unknown>) =>
+      apiCall<{ success: boolean; data: { id: string } }>(
+        "/api/compliance/data-subject-requests",
+        { method: "POST", body: payload, token }
+      ),
+    respondDataSubjectRequest: (token: string, requestId: string, payload: Record<string, unknown>) =>
+      apiCall<{ success: boolean; data: { id: string } }>(
+        `/api/compliance/data-subject-requests/${requestId}/respond`,
+        { method: "POST", body: payload, token }
+      ),
+    report: (token: string) =>
+      apiCall<{ success: boolean; data: Record<string, unknown> }>(
+        "/api/compliance/report",
+        { token }
+      ),
+  },
 };
 
 // Client-side types

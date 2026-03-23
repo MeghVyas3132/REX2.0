@@ -329,3 +329,65 @@ export const upsertRetentionPolicySchema = z.object({
   config: z.record(z.unknown()).optional(),
   isActive: z.boolean().optional(),
 });
+
+// Publication schemas
+export const createPublicationSchema = z.object({
+  workflowId: z.string().uuid(),
+  title: z.string().min(1).max(255),
+  description: z.string().max(4000).optional(),
+  icon: z.string().max(80).optional(),
+  inputSchema: z.record(z.unknown()),
+  outputDisplay: z.record(z.unknown()),
+  category: z.string().max(100).optional(),
+  tags: z.array(z.string().min(1).max(80)).max(50).optional(),
+});
+
+export const updatePublicationSchema = createPublicationSchema.partial().omit({ workflowId: true });
+
+export const executePublicationSchema = z.object({
+  inputs: z.record(z.unknown()).default({}),
+});
+
+// Legal basis schemas
+export const setWorkflowLegalBasisSchema = z.object({
+  workflowId: z.string().uuid(),
+  gdprBasis: z
+    .enum([
+      "consent",
+      "legitimate_interest",
+      "contract",
+      "legal_obligation",
+      "vital_interests",
+      "public_task",
+    ])
+    .nullable()
+    .optional(),
+  dpdpBasis: z
+    .enum(["consent", "legitimate_use", "legal_obligation", "medical_emergency"])
+    .nullable()
+    .optional(),
+  purposeDescription: z.string().min(1).max(4000),
+  dataCategories: z.array(z.string().min(1).max(120)).max(100).default([]),
+  crossBorderTransfer: z.boolean().optional(),
+  transferSafeguards: z.string().max(4000).nullable().optional(),
+  retentionDays: z.coerce.number().int().min(1).max(3650).nullable().optional(),
+});
+
+// Data subject request schemas
+export const createDataSubjectRequestSchema = z.object({
+  requestType: z.enum([
+    "access",
+    "rectification",
+    "erasure",
+    "restriction",
+    "portability",
+    "objection",
+  ]),
+  description: z.string().min(1).max(4000),
+  dueDate: z.string().datetime().optional(),
+});
+
+export const respondDataSubjectRequestSchema = z.object({
+  status: z.enum(["in_progress", "completed", "rejected"]),
+  response: z.string().max(8000).optional(),
+});

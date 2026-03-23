@@ -6,6 +6,7 @@
 import { and, eq } from "drizzle-orm";
 import type { Database } from "@rex/database";
 import { iamPolicies, workflowPermissions, workflows } from "@rex/database";
+import { DEFAULT_TENANT_ID } from "./tenant-default.js";
 
 export interface PolicyService {
   listWorkflowPermissions(ownerUserId: string, workflowId: string): Promise<Array<{
@@ -115,6 +116,7 @@ export function createPolicyService(db: Database): PolicyService {
       }
 
       await db.insert(workflowPermissions).values({
+        tenantId: DEFAULT_TENANT_ID,
         workflowId,
         userId: input.userId,
         role: input.role,
@@ -168,6 +170,7 @@ export function createPolicyService(db: Database): PolicyService {
       const [created] = await db
         .insert(iamPolicies)
         .values({
+          tenantId: DEFAULT_TENANT_ID,
           userId: input.userId ?? actorUserId,
           workflowId: input.workflowId ?? null,
           action: input.action,

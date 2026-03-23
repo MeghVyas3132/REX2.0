@@ -5,6 +5,7 @@
 import { and, eq, gt } from "drizzle-orm";
 import type { Database } from "@rex/database";
 import { executionAuthorizations, executions } from "@rex/database";
+import { DEFAULT_TENANT_ID } from "./tenant-default.js";
 
 export interface ExecutionAuthorizationService {
   issue(params: {
@@ -35,6 +36,7 @@ export function createExecutionAuthorizationService(
       const [auth] = await db
         .insert(executionAuthorizations)
         .values({
+          tenantId: DEFAULT_TENANT_ID,
           executionId: params.executionId,
           workflowId: params.workflowId,
           userId: params.userId,

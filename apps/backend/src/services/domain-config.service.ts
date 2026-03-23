@@ -5,6 +5,7 @@
 import { and, eq, isNull, or } from "drizzle-orm";
 import type { Database } from "@rex/database";
 import { domainConfigs } from "@rex/database";
+import { DEFAULT_TENANT_ID } from "./tenant-default.js";
 
 export interface RuntimeDomainConfig {
   llm?: {
@@ -101,6 +102,7 @@ export function createDomainConfigService(db: Database): DomainConfigService {
       const [created] = await db
         .insert(domainConfigs)
         .values({
+          tenantId: DEFAULT_TENANT_ID,
           userId,
           workflowId: input.workflowId ?? null,
           domain,

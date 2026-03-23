@@ -38,6 +38,7 @@ export function registerWorkflowRoutes(
       }
 
       const userId = (request.user as { sub: string }).sub;
+      const tenantId = (request.user as { tenantId?: string }).tenantId ?? "00000000-0000-0000-0000-000000000001";
       try {
         await iamService.assertRole(userId, ["admin", "editor"]);
       } catch (err) {
@@ -50,6 +51,7 @@ export function registerWorkflowRoutes(
         throw err;
       }
       const workflow = await workflowService.create(
+        tenantId,
         userId,
         parsed.data.name,
         parsed.data.description,
@@ -63,9 +65,10 @@ export function registerWorkflowRoutes(
     // List workflows
     scoped.get("/api/workflows", async (request: FastifyRequest, reply: FastifyReply) => {
       const userId = (request.user as { sub: string }).sub;
+      const tenantId = (request.user as { tenantId?: string }).tenantId ?? "00000000-0000-0000-0000-000000000001";
       const pagination = paginationSchema.parse(request.query);
 
-      const result = await workflowService.list(userId, pagination.page, pagination.limit);
+      const result = await workflowService.list(tenantId, userId, pagination.page, pagination.limit);
 
       return reply.send({
         success: true,
@@ -105,9 +108,10 @@ export function registerWorkflowRoutes(
     // Get single workflow
     scoped.get("/api/workflows/:workflowId", async (request: FastifyRequest, reply: FastifyReply) => {
       const userId = (request.user as { sub: string }).sub;
+      const tenantId = (request.user as { tenantId?: string }).tenantId ?? "00000000-0000-0000-0000-000000000001";
       const { workflowId } = request.params as { workflowId: string };
 
-      const workflow = await workflowService.getById(userId, workflowId);
+      const workflow = await workflowService.getById(tenantId, userId, workflowId);
       if (!workflow) {
         return reply.status(404).send({
           success: false,
@@ -129,6 +133,7 @@ export function registerWorkflowRoutes(
       }
 
       const userId = (request.user as { sub: string }).sub;
+      const tenantId = (request.user as { tenantId?: string }).tenantId ?? "00000000-0000-0000-0000-000000000001";
       const { workflowId } = request.params as { workflowId: string };
       try {
         await iamService.assertWorkflowAction(userId, workflowId, "edit");
@@ -143,7 +148,7 @@ export function registerWorkflowRoutes(
       }
 
       try {
-        const workflow = await workflowService.update(userId, workflowId, parsed.data);
+        const workflow = await workflowService.update(tenantId, userId, workflowId, parsed.data);
         return reply.send({ success: true, data: workflow });
       } catch {
         return reply.status(404).send({
@@ -156,6 +161,7 @@ export function registerWorkflowRoutes(
     // Delete workflow
     scoped.delete("/api/workflows/:workflowId", async (request: FastifyRequest, reply: FastifyReply) => {
       const userId = (request.user as { sub: string }).sub;
+      const tenantId = (request.user as { tenantId?: string }).tenantId ?? "00000000-0000-0000-0000-000000000001";
       const { workflowId } = request.params as { workflowId: string };
       try {
         await iamService.assertWorkflowAction(userId, workflowId, "delete");
@@ -170,7 +176,7 @@ export function registerWorkflowRoutes(
       }
 
       try {
-        await workflowService.delete(userId, workflowId);
+        await workflowService.delete(tenantId, userId, workflowId);
         return reply.send({ success: true, data: { deleted: true } });
       } catch {
         return reply.status(404).send({

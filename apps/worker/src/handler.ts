@@ -68,6 +68,7 @@ export async function handleExecutionJob(
   db: Database
 ): Promise<void> {
   const { executionId, workflowId, triggerPayload, userId } = job.data;
+  let tenantId = "00000000-0000-0000-0000-000000000001";
   const config = loadConfig();
 
   logger.info({
@@ -113,6 +114,7 @@ export async function handleExecutionJob(
     if (!workflow) {
       throw new ExecutionStoppedError(`Workflow ${workflowId} not found`);
     }
+    tenantId = workflow.tenantId;
 
     const resolvedDomainConfig = await resolveRuntimeDomainConfig(
       db,
@@ -135,7 +137,13 @@ export async function handleExecutionJob(
       const [key] = await db
         .select()
         .from(apiKeys)
-        .where(and(eq(apiKeys.userId, userId), eq(apiKeys.provider, provider)))
+        .where(
+          and(
+            eq(apiKeys.tenantId, tenantId),
+            eq(apiKeys.userId, userId),
+            eq(apiKeys.provider, provider)
+          )
+        )
         .limit(1);
 
       if (!key) {
@@ -168,9 +176,9 @@ export async function handleExecutionJob(
       triggerPayload,
       getApiKey,
       retrieveKnowledge: async (query) =>
-        queryKnowledgeForExecution(db, query, resolvedDomainConfig, getProviderApiKey),
+        queryKnowledgeForExecution(db, tenantId, query, resolvedDomainConfig, getProviderApiKey),
       ingestKnowledge: async (input) =>
-        ingestKnowledgeForExecution(db, input, resolvedDomainConfig, getProviderApiKey),
+        ingestKnowledgeForExecution(db, tenantId, input, resolvedDomainConfig, getProviderApiKey),
       initialContext: {
         memory: {
           triggerPayload,
@@ -194,6 +202,7 @@ export async function handleExecutionJob(
       onStepComplete: async (step: ExecutionStepResult) => {
         // Persist each step result to database
         await db.insert(executionSteps).values({
+          tenantId,
           executionId,
           nodeId: step.nodeId,
           nodeType: step.nodeType,
@@ -206,6 +215,7 @@ export async function handleExecutionJob(
 
         await persistStepAttempts(db, executionId, step);
         await persistGuardrailEvent(db, {
+          tenantId,
           executionId,
           workflowId,
           userId,
@@ -231,7 +241,7 @@ export async function handleExecutionJob(
       })
       .where(eq(executions.id, executionId));
 
-    await evaluateAlertRulesForExecution(db, userId, workflowId, executionId);
+    await evaluateAlertRulesForExecution(db, tenantId, userId, workflowId, executionId);
 
     logger.info({
       executionId,
@@ -273,7 +283,7 @@ export async function handleExecutionJob(
       })
       .where(eq(executions.id, executionId));
 
-    await evaluateAlertRulesForExecution(db, userId, workflowId, executionId);
+    await evaluateAlertRulesForExecution(db, tenantId, userId, workflowId, executionId);
 
     throw err; // Re-throw for BullMQ retry logic
   }
@@ -331,6 +341,7 @@ async function persistStepAttempts(
 async function persistGuardrailEvent(
   db: Database,
   input: {
+    tenantId: string;
     executionId: string;
     workflowId: string;
     userId: string;
@@ -358,6 +369,7 @@ async function persistGuardrailEvent(
 
   try {
     await db.insert(guardrailEvents).values({
+      tenantId: input.tenantId,
       userId: input.userId,
       workflowId: input.workflowId,
       executionId: input.executionId,
@@ -591,6 +603,7 @@ async function assertExecutionAuthorized(
 
 async function evaluateAlertRulesForExecution(
   db: Database,
+  tenantId: string,
   userId: string,
   workflowId: string,
   executionId: string
@@ -601,6 +614,7 @@ async function evaluateAlertRulesForExecution(
       .from(alertRules)
       .where(
         and(
+          eq(alertRules.tenantId, tenantId),
           eq(alertRules.userId, userId),
           eq(alertRules.isActive, true),
           or(eq(alertRules.workflowId, workflowId), isNull(alertRules.workflowId))
@@ -616,6 +630,7 @@ async function evaluateAlertRulesForExecution(
           .from(executionSteps)
           .where(
             and(
+              eq(executionSteps.tenantId, tenantId),
               eq(executionSteps.executionId, executionId),
               gte(executionSteps.durationMs, rule.threshold)
             )
@@ -624,6 +639,7 @@ async function evaluateAlertRulesForExecution(
         if (!step) continue;
 
         await db.insert(alertEvents).values({
+          tenantId,
           userId,
           workflowId,
           alertRuleId: rule.id,
@@ -645,6 +661,7 @@ async function evaluateAlertRulesForExecution(
           .from(guardrailEvents)
           .where(
             and(
+              eq(guardrailEvents.tenantId, tenantId),
               eq(guardrailEvents.userId, userId),
               eq(guardrailEvents.workflowId, workflowId),
               gte(guardrailEvents.createdAt, windowStart)
@@ -653,6 +670,7 @@ async function evaluateAlertRulesForExecution(
 
         if (events.length < rule.threshold) continue;
         await db.insert(alertEvents).values({
+          tenantId,
           userId,
           workflowId,
           alertRuleId: rule.id,
@@ -674,16 +692,23 @@ async function evaluateAlertRulesForExecution(
         const failed = await db
           .select({ id: knowledgeDocuments.id })
           .from(knowledgeDocuments)
-          .where(and(eq(knowledgeDocuments.userId, userId), eq(knowledgeDocuments.status, "failed")));
+          .where(
+            and(
+              eq(knowledgeDocuments.tenantId, tenantId),
+              eq(knowledgeDocuments.userId, userId),
+              eq(knowledgeDocuments.status, "failed")
+            )
+          );
         const total = await db
           .select({ id: knowledgeDocuments.id })
           .from(knowledgeDocuments)
-          .where(eq(knowledgeDocuments.userId, userId));
+          .where(and(eq(knowledgeDocuments.tenantId, tenantId), eq(knowledgeDocuments.userId, userId)));
 
         const failurePct = total.length === 0 ? 0 : (failed.length / total.length) * 100;
         if (failurePct < rule.threshold) continue;
 
         await db.insert(alertEvents).values({
+          tenantId,
           userId,
           workflowId: null,
           alertRuleId: rule.id,
@@ -860,6 +885,7 @@ function asNumber(value: unknown): number | null {
 
 async function queryKnowledgeForExecution(
   db: Database,
+  tenantId: string,
   query: RuntimeKnowledgeQuery,
   domainConfig: Record<string, unknown>,
   getProviderApiKey: (provider: ApiProviderType) => Promise<string | null>
@@ -875,6 +901,7 @@ async function queryKnowledgeForExecution(
 
   const scope = normalizeRuntimeQueryScope(query);
   const corpusConditions = [
+    eq(knowledgeCorpora.tenantId, tenantId),
     eq(knowledgeCorpora.userId, query.userId),
     eq(knowledgeCorpora.status, "ready"),
   ];
@@ -986,6 +1013,7 @@ async function queryKnowledgeForExecution(
 
 async function ingestKnowledgeForExecution(
   db: Database,
+  tenantId: string,
   input: RuntimeKnowledgeIngestionRequest,
   domainConfig: Record<string, unknown>,
   getProviderApiKey: (provider: ApiProviderType) => Promise<string | null>
@@ -994,7 +1022,7 @@ async function ingestKnowledgeForExecution(
   const retrievalConfig = toRecord(domainConfig["retrieval"]);
   const embeddingProviderType = parseEmbeddingProvider(retrievalConfig["embeddingProvider"]) ?? "deterministic";
   const embeddingModel = asString(retrievalConfig["embeddingModel"]) ?? undefined;
-  const corpusId = await resolveRuntimeCorpusForIngestion(db, input, scope);
+  const corpusId = await resolveRuntimeCorpusForIngestion(db, tenantId, input, scope);
   const sourceType = input.sourceType ?? "inline";
   const title = input.title.trim().slice(0, 255) || "Runtime Document";
   const contentText = input.contentText.trim();
@@ -1006,6 +1034,7 @@ async function ingestKnowledgeForExecution(
   const [document] = await db
     .insert(knowledgeDocuments)
     .values({
+      tenantId,
       corpusId,
       userId: input.userId,
       sourceType,
@@ -1088,6 +1117,7 @@ async function ingestKnowledgeForExecution(
 
 async function resolveRuntimeCorpusForIngestion(
   db: Database,
+  tenantId: string,
   input: RuntimeKnowledgeIngestionRequest,
   scope: {
     scopeType: "user" | "workflow" | "execution";
@@ -1101,6 +1131,7 @@ async function resolveRuntimeCorpusForIngestion(
       .from(knowledgeCorpora)
       .where(
         and(
+          eq(knowledgeCorpora.tenantId, tenantId),
           eq(knowledgeCorpora.id, input.corpusId),
           eq(knowledgeCorpora.userId, input.userId)
         )
@@ -1113,6 +1144,7 @@ async function resolveRuntimeCorpusForIngestion(
   }
 
   const conditions = [
+    eq(knowledgeCorpora.tenantId, tenantId),
     eq(knowledgeCorpora.userId, input.userId),
     eq(knowledgeCorpora.scopeType, scope.scopeType),
   ];
@@ -1137,6 +1169,7 @@ async function resolveRuntimeCorpusForIngestion(
   const [created] = await db
     .insert(knowledgeCorpora)
     .values({
+      tenantId,
       userId: input.userId,
       name: `Runtime Corpus ${new Date().toISOString()}`,
       description: "Runtime-ingested corpus for workflow execution",

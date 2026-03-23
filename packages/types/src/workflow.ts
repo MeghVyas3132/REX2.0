@@ -2,14 +2,26 @@
 // REX - Workflow Types
 // ──────────────────────────────────────────────
 
+import type { RexScore } from "./rex.js";
+
 export type WorkflowStatus = "active" | "inactive";
 
 export interface WorkflowNode {
   id: string;
   type: string;
+  pluginSlug?: string;
   label: string;
   position: { x: number; y: number };
   config: Record<string, unknown>;
+  rexScore?: RexScore;
+  rexEnabled?: boolean;
+  legalBasisNodeId?: string;
+  auditEnabled?: boolean;
+  piiHandlingConfig?: {
+    anonymise: boolean;
+    fields: string[];
+    retentionDays?: number;
+  };
 }
 
 export interface WorkflowEdge {

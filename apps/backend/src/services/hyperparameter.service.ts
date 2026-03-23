@@ -10,6 +10,7 @@ import {
   hyperparameterProfiles,
   workflows,
 } from "@rex/database";
+import { DEFAULT_TENANT_ID } from "./tenant-default.js";
 
 export interface HyperparameterService {
   listProfiles(userId: string, workflowId?: string): Promise<Array<{
@@ -103,6 +104,7 @@ export function createHyperparameterService(db: Database): HyperparameterService
       const [created] = await db
         .insert(hyperparameterProfiles)
         .values({
+          tenantId: DEFAULT_TENANT_ID,
           userId,
           workflowId: input.workflowId ?? null,
           name: input.name,
@@ -144,6 +146,7 @@ export function createHyperparameterService(db: Database): HyperparameterService
       const [experiment] = await db
         .insert(hyperparameterExperiments)
         .values({
+          tenantId: DEFAULT_TENANT_ID,
           userId,
           workflowId,
           profileAId,

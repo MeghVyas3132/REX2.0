@@ -6,11 +6,15 @@
 import { pgTable, uuid, varchar, timestamp, index, jsonb, boolean } from "drizzle-orm/pg-core";
 import { users } from "./users.js";
 import { workflows } from "./workflows.js";
+import { tenants } from "./tenants.js";
 
 export const domainConfigs = pgTable(
   "domain_configs",
   {
     id: uuid("id").defaultRandom().primaryKey(),
+    tenantId: uuid("tenant_id")
+      .notNull()
+      .references(() => tenants.id, { onDelete: "cascade" }),
     userId: uuid("user_id").references(() => users.id, { onDelete: "cascade" }),
     workflowId: uuid("workflow_id").references(() => workflows.id, { onDelete: "cascade" }),
     domain: varchar("domain", { length: 80 }).default("default").notNull(),
@@ -20,6 +24,7 @@ export const domainConfigs = pgTable(
     updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
   },
   (table) => ({
+    tenantIdIdx: index("domain_configs_tenant_id_idx").on(table.tenantId),
     userIdIdx: index("domain_configs_user_id_idx").on(table.userId),
     workflowIdIdx: index("domain_configs_workflow_id_idx").on(table.workflowId),
     domainIdx: index("domain_configs_domain_idx").on(table.domain),

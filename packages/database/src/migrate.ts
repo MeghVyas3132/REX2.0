@@ -3,6 +3,8 @@
 // ──────────────────────────────────────────────
 
 import { migrate } from "drizzle-orm/postgres-js/migrator";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import { getDatabase, closeConnection } from "./connection.js";
 
 async function runMigrations() {
@@ -11,9 +13,14 @@ async function runMigrations() {
     throw new Error("DATABASE_URL is required for migrations");
   }
 
+  const migrationsFolder = resolve(
+    dirname(fileURLToPath(import.meta.url)),
+    "../drizzle"
+  );
+
   console.log("Running migrations...");
   const db = getDatabase(databaseUrl);
-  await migrate(db, { migrationsFolder: "./drizzle" });
+  await migrate(db, { migrationsFolder });
   console.log("Migrations completed successfully");
   await closeConnection();
   process.exit(0);

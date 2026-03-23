@@ -21,6 +21,10 @@ import { registerFileUploadRoutes } from "./routes/file-upload.routes.js";
 import { registerKnowledgeRoutes } from "./routes/knowledge.routes.js";
 import { registerTemplateRoutes } from "./routes/template.routes.js";
 import { registerGovernanceRoutes } from "./routes/governance.routes.js";
+import { registerAdminRoutes } from "./routes/admin.routes.js";
+import { registerTenantRoutes } from "./routes/tenant.routes.js";
+import { registerPublicationRoutes } from "./routes/publication.routes.js";
+import { registerRexRoutes } from "./routes/rex.routes.js";
 import { startScheduler } from "./services/scheduler.service.js";
 import { createKnowledgeService } from "./services/knowledge.service.js";
 import { createTemplateService } from "./services/template.service.js";
@@ -35,6 +39,10 @@ import { createHyperparameterService } from "./services/hyperparameter.service.j
 import { createAlertingService } from "./services/alerting.service.js";
 import { createComplianceService } from "./services/compliance.service.js";
 import { createExecutionAuthorizationService } from "./services/execution-authorization.service.js";
+import { applyAuthContext } from "./middleware/auth.js";
+import { createTenantMiddleware } from "./middleware/tenant.js";
+import { createPublicationService } from "./services/publication.service.js";
+import { createRexAutofixService } from "./services/rex-autofix.service.js";
 
 const logger = createLogger("server");
 
@@ -68,18 +76,6 @@ async function bootstrap(): Promise<void> {
     secret: config.jwt.secret,
   });
 
-  // Authentication decorator
-  app.decorate("authenticate", async function (request: Parameters<typeof app.authenticate>[0], reply: Parameters<typeof app.authenticate>[1]) {
-    try {
-      await request.jwtVerify();
-    } catch {
-      return reply.status(401).send({
-        success: false,
-        error: { code: "UNAUTHORIZED", message: "Invalid or expired token" },
-      });
-    }
-  });
-
   // Services (dependency injection)
   const authService = createAuthService(db);
   const iamService = createIAMService(db);
@@ -104,6 +100,16 @@ async function bootstrap(): Promise<void> {
   const policyService = createPolicyService(db);
   const alertingService = createAlertingService(db);
   const complianceService = createComplianceService(db);
+  const publicationService = createPublicationService(db);
+  const rexAutofixService = createRexAutofixService(db);
+  const tenantMiddleware = createTenantMiddleware(db);
+
+  // Authentication decorator
+  app.decorate("authenticate", async function (request: Parameters<typeof app.authenticate>[0], reply: Parameters<typeof app.authenticate>[1]) {
+    await applyAuthContext(request, reply);
+    if (reply.sent) return;
+    await tenantMiddleware(request, reply);
+  });
 
   // Routes
   registerAuthRoutes(app, authService);
@@ -127,6 +133,10 @@ async function bootstrap(): Promise<void> {
     alertingService,
     complianceService
   );
+  registerAdminRoutes(app, db);
+  registerTenantRoutes(app, db);
+  registerPublicationRoutes(app, publicationService, executionService, iamService);
+  registerRexRoutes(app, rexAutofixService, iamService);
 
   // Start scheduler for cron/interval workflows
   startScheduler(db, executionService);

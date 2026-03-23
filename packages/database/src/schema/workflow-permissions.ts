@@ -5,11 +5,15 @@
 import { pgTable, uuid, varchar, timestamp, index, jsonb, uniqueIndex } from "drizzle-orm/pg-core";
 import { users } from "./users.js";
 import { workflows } from "./workflows.js";
+import { tenants } from "./tenants.js";
 
 export const workflowPermissions = pgTable(
   "workflow_permissions",
   {
     id: uuid("id").defaultRandom().primaryKey(),
+    tenantId: uuid("tenant_id")
+      .notNull()
+      .references(() => tenants.id, { onDelete: "cascade" }),
     workflowId: uuid("workflow_id")
       .notNull()
       .references(() => workflows.id, { onDelete: "cascade" }),
@@ -23,6 +27,7 @@ export const workflowPermissions = pgTable(
     updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
   },
   (table) => ({
+    tenantIdIdx: index("workflow_permissions_tenant_id_idx").on(table.tenantId),
     workflowIdIdx: index("workflow_permissions_workflow_id_idx").on(table.workflowId),
     userIdIdx: index("workflow_permissions_user_id_idx").on(table.userId),
     expiresAtIdx: index("workflow_permissions_expires_at_idx").on(table.expiresAt),

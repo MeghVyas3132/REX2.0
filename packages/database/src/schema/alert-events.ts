@@ -6,11 +6,15 @@ import { pgTable, uuid, varchar, timestamp, index, jsonb } from "drizzle-orm/pg-
 import { users } from "./users.js";
 import { workflows } from "./workflows.js";
 import { alertRules } from "./alert-rules.js";
+import { tenants } from "./tenants.js";
 
 export const alertEvents = pgTable(
   "alert_events",
   {
     id: uuid("id").defaultRandom().primaryKey(),
+    tenantId: uuid("tenant_id")
+      .notNull()
+      .references(() => tenants.id, { onDelete: "cascade" }),
     userId: uuid("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
@@ -24,6 +28,7 @@ export const alertEvents = pgTable(
     resolvedAt: timestamp("resolved_at", { withTimezone: true }),
   },
   (table) => ({
+    tenantIdIdx: index("alert_events_tenant_id_idx").on(table.tenantId),
     userIdIdx: index("alert_events_user_id_idx").on(table.userId),
     workflowIdIdx: index("alert_events_workflow_id_idx").on(table.workflowId),
     ruleTypeIdx: index("alert_events_rule_type_idx").on(table.ruleType),

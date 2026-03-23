@@ -14,9 +14,10 @@ import {
   knowledgeDocuments,
   workflows,
 } from "@rex/database";
+import { DEFAULT_TENANT_ID } from "./tenant-default.js";
 
 export interface AlertingService {
-  listRules(userId: string): Promise<Array<{
+  listRules(userId: string, tenantId?: string): Promise<Array<{
     id: string;
     workflowId: string | null;
     ruleType: string;
@@ -35,8 +36,8 @@ export interface AlertingService {
     windowMinutes?: number;
     config?: Record<string, unknown>;
     isActive?: boolean;
-  }): Promise<{ id: string }>;
-  listEvents(userId: string, limit?: number): Promise<Array<{
+  }, tenantId?: string): Promise<{ id: string }>;
+  listEvents(userId: string, limit?: number, tenantId?: string): Promise<Array<{
     id: string;
     workflowId: string | null;
     ruleType: string;
@@ -46,17 +47,17 @@ export interface AlertingService {
     triggeredAt: Date;
     resolvedAt: Date | null;
   }>>;
-  evaluateForExecution(userId: string, workflowId: string, executionId: string): Promise<void>;
-  getPrometheusMetrics(userId: string): Promise<string>;
+  evaluateForExecution(userId: string, workflowId: string, executionId: string, tenantId?: string): Promise<void>;
+  getPrometheusMetrics(userId: string, tenantId?: string): Promise<string>;
 }
 
 export function createAlertingService(db: Database): AlertingService {
   return {
-    async listRules(userId) {
+    async listRules(userId, tenantId = DEFAULT_TENANT_ID) {
       const rows = await db
         .select()
         .from(alertRules)
-        .where(eq(alertRules.userId, userId))
+        .where(and(eq(alertRules.userId, userId), eq(alertRules.tenantId, tenantId)))
         .orderBy(desc(alertRules.updatedAt));
       return rows.map((row) => ({
         id: row.id,
@@ -70,7 +71,7 @@ export function createAlertingService(db: Database): AlertingService {
       }));
     },
 
-    async upsertRule(userId, input) {
+    async upsertRule(userId, input, tenantId = DEFAULT_TENANT_ID) {
       if (input.id) {
         const [updated] = await db
           .update(alertRules)
@@ -84,7 +85,13 @@ export function createAlertingService(db: Database): AlertingService {
             isActive: input.isActive ?? true,
             updatedAt: new Date(),
           })
-          .where(and(eq(alertRules.id, input.id), eq(alertRules.userId, userId)))
+          .where(
+            and(
+              eq(alertRules.id, input.id),
+              eq(alertRules.userId, userId),
+              eq(alertRules.tenantId, tenantId)
+            )
+          )
           .returning({ id: alertRules.id });
         if (!updated) throw new Error("Rule not found or access denied");
         return updated;
@@ -93,6 +100,7 @@ export function createAlertingService(db: Database): AlertingService {
       const [created] = await db
         .insert(alertRules)
         .values({
+          tenantId,
           userId,
           workflowId: input.workflowId ?? null,
           ruleType: input.ruleType,
@@ -107,11 +115,11 @@ export function createAlertingService(db: Database): AlertingService {
       return created;
     },
 
-    async listEvents(userId, limit = 100) {
+    async listEvents(userId, limit = 100, tenantId = DEFAULT_TENANT_ID) {
       const rows = await db
         .select()
         .from(alertEvents)
-        .where(eq(alertEvents.userId, userId))
+        .where(and(eq(alertEvents.userId, userId), eq(alertEvents.tenantId, tenantId)))
         .orderBy(desc(alertEvents.triggeredAt))
         .limit(Math.max(1, Math.min(limit, 500)));
       return rows.map((row) => ({
@@ -126,13 +134,14 @@ export function createAlertingService(db: Database): AlertingService {
       }));
     },
 
-    async evaluateForExecution(userId, workflowId, executionId) {
+    async evaluateForExecution(userId, workflowId, executionId, tenantId = DEFAULT_TENANT_ID) {
       const rules = await db
         .select()
         .from(alertRules)
         .where(
           and(
             eq(alertRules.userId, userId),
+            eq(alertRules.tenantId, tenantId),
             eq(alertRules.isActive, true),
             or(eq(alertRules.workflowId, workflowId), isNull(alertRules.workflowId))
           )
@@ -148,6 +157,7 @@ export function createAlertingService(db: Database): AlertingService {
             .where(
               and(
                 eq(executionSteps.executionId, executionId),
+                eq(executionSteps.tenantId, tenantId),
                 gte(executionSteps.durationMs, rule.threshold)
               )
             )
@@ -155,6 +165,7 @@ export function createAlertingService(db: Database): AlertingService {
 
           if (step) {
             await createAlertEvent(db, {
+              tenantId,
               userId,
               workflowId,
               alertRuleId: rule.id,
@@ -175,6 +186,7 @@ export function createAlertingService(db: Database): AlertingService {
             .where(
               and(
                 eq(guardrailEvents.userId, userId),
+                eq(guardrailEvents.tenantId, tenantId),
                 eq(guardrailEvents.workflowId, workflowId),
                 gte(guardrailEvents.createdAt, windowStart)
               )
@@ -182,6 +194,7 @@ export function createAlertingService(db: Database): AlertingService {
 
           if (events.length >= rule.threshold) {
             await createAlertEvent(db, {
+              tenantId,
               userId,
               workflowId,
               alertRuleId: rule.id,
@@ -200,11 +213,22 @@ export function createAlertingService(db: Database): AlertingService {
             db
               .select({ total: knowledgeDocuments.id })
               .from(knowledgeDocuments)
-              .where(and(eq(knowledgeDocuments.userId, userId), eq(knowledgeDocuments.status, "failed"))),
+              .where(
+                and(
+                  eq(knowledgeDocuments.userId, userId),
+                  eq(knowledgeDocuments.tenantId, tenantId),
+                  eq(knowledgeDocuments.status, "failed")
+                )
+              ),
             db
               .select({ total: knowledgeDocuments.id })
               .from(knowledgeDocuments)
-              .where(eq(knowledgeDocuments.userId, userId)),
+              .where(
+                and(
+                  eq(knowledgeDocuments.userId, userId),
+                  eq(knowledgeDocuments.tenantId, tenantId)
+                )
+              ),
           ]);
 
           const failed = failedCount.length;
@@ -212,6 +236,7 @@ export function createAlertingService(db: Database): AlertingService {
           const failurePct = total === 0 ? 0 : (failed / total) * 100;
           if (failurePct >= rule.threshold) {
             await createAlertEvent(db, {
+              tenantId,
               userId,
               workflowId: null,
               alertRuleId: rule.id,
@@ -230,22 +255,31 @@ export function createAlertingService(db: Database): AlertingService {
       }
     },
 
-    async getPrometheusMetrics(userId) {
+    async getPrometheusMetrics(userId, tenantId = DEFAULT_TENANT_ID) {
       const [rules, events, executionRows, corporaRows] = await Promise.all([
         db
           .select({ id: alertRules.id })
           .from(alertRules)
-          .where(and(eq(alertRules.userId, userId), eq(alertRules.isActive, true))),
-        db.select().from(alertEvents).where(eq(alertEvents.userId, userId)),
+          .where(
+            and(
+              eq(alertRules.userId, userId),
+              eq(alertRules.tenantId, tenantId),
+              eq(alertRules.isActive, true)
+            )
+          ),
+        db
+          .select()
+          .from(alertEvents)
+          .where(and(eq(alertEvents.userId, userId), eq(alertEvents.tenantId, tenantId))),
         db
           .select({ status: executions.status })
           .from(executions)
           .innerJoin(workflows, eq(workflows.id, executions.workflowId))
-          .where(eq(workflows.userId, userId)),
+          .where(and(eq(workflows.userId, userId), eq(workflows.tenantId, tenantId))),
         db
           .select({ status: knowledgeCorpora.status })
           .from(knowledgeCorpora)
-          .where(eq(knowledgeCorpora.userId, userId)),
+          .where(and(eq(knowledgeCorpora.userId, userId), eq(knowledgeCorpora.tenantId, tenantId))),
       ]);
 
       const lines = [
@@ -271,6 +305,7 @@ export function createAlertingService(db: Database): AlertingService {
 async function createAlertEvent(
   db: Database,
   input: {
+    tenantId: string;
     userId: string;
     workflowId: string | null;
     alertRuleId: string | null;
@@ -281,6 +316,7 @@ async function createAlertEvent(
   }
 ): Promise<void> {
   await db.insert(alertEvents).values({
+    tenantId: input.tenantId,
     userId: input.userId,
     workflowId: input.workflowId,
     alertRuleId: input.alertRuleId,

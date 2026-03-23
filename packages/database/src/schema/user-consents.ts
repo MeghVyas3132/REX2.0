@@ -4,11 +4,15 @@
 
 import { pgTable, uuid, varchar, timestamp, index, boolean, jsonb } from "drizzle-orm/pg-core";
 import { users } from "./users.js";
+import { tenants } from "./tenants.js";
 
 export const userConsents = pgTable(
   "user_consents",
   {
     id: uuid("id").defaultRandom().primaryKey(),
+    tenantId: uuid("tenant_id")
+      .notNull()
+      .references(() => tenants.id, { onDelete: "cascade" }),
     userId: uuid("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
@@ -20,6 +24,7 @@ export const userConsents = pgTable(
     updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
   },
   (table) => ({
+    tenantIdIdx: index("user_consents_tenant_id_idx").on(table.tenantId),
     userIdIdx: index("user_consents_user_id_idx").on(table.userId),
     consentTypeIdx: index("user_consents_consent_type_idx").on(table.consentType),
     createdAtIdx: index("user_consents_created_at_idx").on(table.createdAt),

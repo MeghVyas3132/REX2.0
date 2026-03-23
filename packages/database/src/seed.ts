@@ -6,6 +6,8 @@
 import { getDatabase, closeConnection } from "./connection";
 import { users, workflows } from "./schema";
 
+const DEFAULT_TENANT_ID = "00000000-0000-0000-0000-000000000001";
+
 async function seed() {
   const databaseUrl = process.env["DATABASE_URL"];
   if (!databaseUrl) {
@@ -226,6 +228,7 @@ async function seed() {
 
   for (const wf of workflowDefs) {
     await db.insert(workflows).values({
+      tenantId: DEFAULT_TENANT_ID,
       userId,
       name: wf.name,
       description: wf.description,

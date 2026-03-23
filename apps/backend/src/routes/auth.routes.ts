@@ -23,7 +23,17 @@ export function registerAuthRoutes(
 
     try {
       const user = await authService.register(parsed.data.email, parsed.data.name, parsed.data.password);
-      const token = app.jwt.sign({ sub: user.id, email: user.email, role: user.role });
+      const token = app.jwt.sign({
+        sub: user.id,
+        email: user.email,
+        role: user.role,
+        globalRole: user.globalRole,
+        tenantId: user.tenantId,
+        currentTenantId: user.tenantId,
+        tenantRole: user.tenantRole,
+        interfaceAccess: user.interfaceAccess,
+        abacAttributes: user.abacAttributes,
+      });
 
       return reply.status(201).send({
         success: true,
@@ -51,7 +61,17 @@ export function registerAuthRoutes(
 
     try {
       const user = await authService.login(parsed.data.email, parsed.data.password);
-      const token = app.jwt.sign({ sub: user.id, email: user.email, role: user.role });
+      const token = app.jwt.sign({
+        sub: user.id,
+        email: user.email,
+        role: user.role,
+        globalRole: user.globalRole,
+        tenantId: user.tenantId,
+        currentTenantId: user.tenantId,
+        tenantRole: user.tenantRole,
+        interfaceAccess: user.interfaceAccess,
+        abacAttributes: user.abacAttributes,
+      });
 
       return reply.send({
         success: true,

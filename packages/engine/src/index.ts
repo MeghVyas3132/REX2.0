@@ -30,3 +30,20 @@ export {
   KnowledgeIngestNode,
   KnowledgeRetrieveNode,
 } from "./nodes/index.js";
+
+export {
+  PluginRegistry,
+  globalRegistry,
+  type RegisteredPlugin,
+  type NodeExecutorFn,
+  type ExecutionContext,
+  type AuditEvent,
+} from "./registry/index.js";
+export { loadBuiltinPlugins } from "./registry/loader.js";
+export {
+  validateNodeConfigAgainstManifest,
+  maskSensitiveInput,
+  type PluginValidationResult,
+} from "./registry/validator.js";
+export { createTenantByokResolver, type ByokKeyStore } from "./registry/resolver.js";
+export { computeRexScore, type WorkflowGraph, type TenantConfig } from "./rex/scorer.js";

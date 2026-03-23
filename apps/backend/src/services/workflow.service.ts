@@ -12,6 +12,7 @@ const logger = createLogger("workflow-service");
 
 export interface WorkflowService {
   create(
+    tenantId: string,
     userId: string,
     name: string,
     description: string,
@@ -19,10 +20,20 @@ export interface WorkflowService {
     edges: WorkflowEdge[],
     sourceTemplate?: WorkflowTemplateSourceInput
   ): Promise<WorkflowRecord>;
-  getById(userId: string, workflowId: string): Promise<WorkflowRecord | null>;
-  list(userId: string, page: number, limit: number): Promise<{ data: WorkflowRecord[]; total: number }>;
-  update(userId: string, workflowId: string, data: Partial<WorkflowUpdateInput>): Promise<WorkflowRecord>;
-  delete(userId: string, workflowId: string): Promise<void>;
+  getById(tenantId: string, userId: string, workflowId: string): Promise<WorkflowRecord | null>;
+  list(
+    tenantId: string,
+    userId: string,
+    page: number,
+    limit: number
+  ): Promise<{ data: WorkflowRecord[]; total: number }>;
+  update(
+    tenantId: string,
+    userId: string,
+    workflowId: string,
+    data: Partial<WorkflowUpdateInput>
+  ): Promise<WorkflowRecord>;
+  delete(tenantId: string, userId: string, workflowId: string): Promise<void>;
 }
 
 export interface WorkflowRecord {
@@ -57,12 +68,13 @@ interface WorkflowUpdateInput {
 
 export function createWorkflowService(db: Database): WorkflowService {
   return {
-    async create(userId, name, description, nodes, edges, sourceTemplate) {
+    async create(tenantId, userId, name, description, nodes, edges, sourceTemplate) {
       logger.info({ userId, name }, "Creating workflow");
 
       const [workflow] = await db
         .insert(workflows)
         .values({
+          tenantId,
           userId,
           name,
           description,
@@ -84,31 +96,37 @@ export function createWorkflowService(db: Database): WorkflowService {
       return workflow as WorkflowRecord;
     },
 
-    async getById(userId, workflowId) {
+    async getById(tenantId, userId, workflowId) {
       const [workflow] = await db
         .select()
         .from(workflows)
-        .where(and(eq(workflows.id, workflowId), eq(workflows.userId, userId)))
+        .where(
+          and(
+            eq(workflows.id, workflowId),
+            eq(workflows.userId, userId),
+            eq(workflows.tenantId, tenantId)
+          )
+        )
         .limit(1);
 
       return (workflow as WorkflowRecord) ?? null;
     },
 
-    async list(userId, page, limit) {
+    async list(tenantId, userId, page, limit) {
       const offset = (page - 1) * limit;
 
       const [data, totalResult] = await Promise.all([
         db
           .select()
           .from(workflows)
-          .where(eq(workflows.userId, userId))
+          .where(and(eq(workflows.userId, userId), eq(workflows.tenantId, tenantId)))
           .orderBy(desc(workflows.updatedAt))
           .limit(limit)
           .offset(offset),
         db
           .select({ total: count() })
           .from(workflows)
-          .where(eq(workflows.userId, userId)),
+          .where(and(eq(workflows.userId, userId), eq(workflows.tenantId, tenantId))),
       ]);
 
       const total = totalResult[0]?.total ?? 0;
@@ -119,7 +137,7 @@ export function createWorkflowService(db: Database): WorkflowService {
       };
     },
 
-    async update(userId, workflowId, data) {
+    async update(tenantId, userId, workflowId, data) {
       const updateData: Record<string, unknown> = {
         updatedAt: new Date(),
       };
@@ -138,7 +156,13 @@ export function createWorkflowService(db: Database): WorkflowService {
       const [workflow] = await db
         .update(workflows)
         .set(updateData)
-        .where(and(eq(workflows.id, workflowId), eq(workflows.userId, userId)))
+        .where(
+          and(
+            eq(workflows.id, workflowId),
+            eq(workflows.userId, userId),
+            eq(workflows.tenantId, tenantId)
+          )
+        )
         .returning();
 
       if (!workflow) {
@@ -149,10 +173,16 @@ export function createWorkflowService(db: Database): WorkflowService {
       return workflow as WorkflowRecord;
     },
 
-    async delete(userId, workflowId) {
+    async delete(tenantId, userId, workflowId) {
       const result = await db
         .delete(workflows)
-        .where(and(eq(workflows.id, workflowId), eq(workflows.userId, userId)))
+        .where(
+          and(
+            eq(workflows.id, workflowId),
+            eq(workflows.userId, userId),
+            eq(workflows.tenantId, tenantId)
+          )
+        )
         .returning({ id: workflows.id });
 
       if (result.length === 0) {

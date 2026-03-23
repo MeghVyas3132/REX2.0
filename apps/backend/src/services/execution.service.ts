@@ -19,6 +19,7 @@ import type { IAMService } from "./iam.service.js";
 import type { DomainConfigService } from "./domain-config.service.js";
 import type { ExecutionAuthorizationService } from "./execution-authorization.service.js";
 import type { HyperparameterService } from "./hyperparameter.service.js";
+import { DEFAULT_TENANT_ID } from "./tenant-default.js";
 
 const logger = createLogger("execution-service");
 
@@ -196,6 +197,7 @@ export function createExecutionService(
       const [execution] = await db
         .insert(executions)
         .values({
+          tenantId: DEFAULT_TENANT_ID,
           workflowId,
           status: "pending",
           triggerPayload: payload,
@@ -513,7 +515,14 @@ export function createExecutionService(
     },
 
     async storeStepResult(executionId, step) {
+      const [execution] = await db
+        .select({ tenantId: executions.tenantId })
+        .from(executions)
+        .where(eq(executions.id, executionId))
+        .limit(1);
+
       await db.insert(executionSteps).values({
+        tenantId: execution?.tenantId ?? DEFAULT_TENANT_ID,
         executionId,
         nodeId: step.nodeId,
         nodeType: step.nodeType,

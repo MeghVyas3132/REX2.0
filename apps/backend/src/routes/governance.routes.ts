@@ -9,6 +9,7 @@ import {
   addWorkspaceMemberSchema,
   assignWorkflowWorkspaceSchema,
   compareHyperparameterProfilesSchema,
+  createDataSubjectRequestSchema,
   createWorkspaceSchema,
   deleteMeSchema,
   iamPolicySchema,
@@ -16,6 +17,8 @@ import {
   listAlertEventsQuerySchema,
   listHyperparameterProfilesQuerySchema,
   listModelsQuerySchema,
+  respondDataSubjectRequestSchema,
+  setWorkflowLegalBasisSchema,
   setConsentSchema,
   upsertAlertRuleSchema,
   upsertDomainConfigSchema,
@@ -42,6 +45,10 @@ const workflowParamsSchema = z.object({
 
 const workspaceParamsSchema = z.object({
   workspaceId: z.string().uuid(),
+});
+
+const dataSubjectRequestParamsSchema = z.object({
+  requestId: z.string().uuid(),
 });
 
 export function registerGovernanceRoutes(
@@ -336,7 +343,7 @@ export function registerGovernanceRoutes(
 
     scoped.get("/api/compliance/consents", async (request: FastifyRequest, reply: FastifyReply) => {
       const userId = (request.user as { sub: string }).sub;
-      const data = await complianceService.listConsents(userId);
+      const data = await complianceService.listConsents(userId, request.ctx.tenantId);
       return reply.send({ success: true, data });
     });
 
@@ -347,7 +354,7 @@ export function registerGovernanceRoutes(
       }
 
       const userId = (request.user as { sub: string }).sub;
-      const data = await complianceService.setConsent(userId, parsed.data);
+      const data = await complianceService.setConsent(userId, parsed.data, request.ctx.tenantId);
       return reply.send({ success: true, data });
     });
 
@@ -358,13 +365,111 @@ export function registerGovernanceRoutes(
       }
 
       const userId = (request.user as { sub: string }).sub;
-      const data = await complianceService.upsertRetentionPolicy(userId, parsed.data);
+      const data = await complianceService.upsertRetentionPolicy(userId, parsed.data, request.ctx.tenantId);
       return reply.send({ success: true, data });
     });
 
     scoped.post("/api/compliance/retention-sweep", async (request: FastifyRequest, reply: FastifyReply) => {
       const userId = (request.user as { sub: string }).sub;
-      const data = await complianceService.runRetentionSweep(userId);
+      const data = await complianceService.runRetentionSweep(userId, request.ctx.tenantId);
+      return reply.send({ success: true, data });
+    });
+
+    scoped.get("/api/compliance/workflows/:workflowId/legal-basis", async (request: FastifyRequest, reply: FastifyReply) => {
+      const params = workflowParamsSchema.safeParse(request.params);
+      if (!params.success) {
+        return reply.status(400).send(validationError(params.error.flatten(), "Invalid workflow id"));
+      }
+
+      const data = await complianceService.getWorkflowLegalBasis(request.ctx.tenantId, params.data.workflowId);
+      return reply.send({ success: true, data });
+    });
+
+    scoped.put("/api/compliance/workflows/:workflowId/legal-basis", async (request: FastifyRequest, reply: FastifyReply) => {
+      const params = workflowParamsSchema.safeParse(request.params);
+      if (!params.success) {
+        return reply.status(400).send(validationError(params.error.flatten(), "Invalid workflow id"));
+      }
+
+      const parsed = setWorkflowLegalBasisSchema.omit({ workflowId: true }).safeParse(request.body);
+      if (!parsed.success) {
+        return reply.status(400).send(validationError(parsed.error.flatten(), "Invalid input"));
+      }
+
+      const userId = (request.user as { sub: string }).sub;
+      const data = await complianceService.setWorkflowLegalBasis({
+        tenantId: request.ctx.tenantId,
+        workflowId: params.data.workflowId,
+        reviewedBy: userId,
+        gdprBasis: parsed.data.gdprBasis,
+        dpdpBasis: parsed.data.dpdpBasis,
+        purposeDescription: parsed.data.purposeDescription,
+        dataCategories: parsed.data.dataCategories,
+        crossBorderTransfer: parsed.data.crossBorderTransfer,
+        transferSafeguards: parsed.data.transferSafeguards,
+        retentionDays: parsed.data.retentionDays,
+      });
+      return reply.send({ success: true, data });
+    });
+
+    scoped.post("/api/compliance/data-subject-requests", async (request: FastifyRequest, reply: FastifyReply) => {
+      const parsed = createDataSubjectRequestSchema.safeParse(request.body);
+      if (!parsed.success) {
+        return reply.status(400).send(validationError(parsed.error.flatten(), "Invalid input"));
+      }
+
+      const userId = (request.user as { sub: string }).sub;
+      const data = await complianceService.createDataSubjectRequest({
+        tenantId: request.ctx.tenantId,
+        subjectUserId: userId,
+        requestType: parsed.data.requestType,
+        description: parsed.data.description,
+        dueDate: parsed.data.dueDate ? new Date(parsed.data.dueDate) : undefined,
+      });
+      return reply.status(201).send({ success: true, data });
+    });
+
+    scoped.get("/api/compliance/data-subject-requests", async (request: FastifyRequest, reply: FastifyReply) => {
+      const userId = (request.user as { sub: string }).sub;
+      const query = request.query as { mine?: string };
+      const data = await complianceService.listDataSubjectRequests(
+        request.ctx.tenantId,
+        query.mine === "true" ? userId : undefined
+      );
+      return reply.send({ success: true, data });
+    });
+
+    scoped.post("/api/compliance/data-subject-requests/:requestId/respond", async (request: FastifyRequest, reply: FastifyReply) => {
+      const params = dataSubjectRequestParamsSchema.safeParse(request.params);
+      if (!params.success) {
+        return reply.status(400).send(validationError(params.error.flatten(), "Invalid request id"));
+      }
+
+      const parsed = respondDataSubjectRequestSchema.safeParse(request.body);
+      if (!parsed.success) {
+        return reply.status(400).send(validationError(parsed.error.flatten(), "Invalid input"));
+      }
+
+      const userId = (request.user as { sub: string }).sub;
+      try {
+        await iamService.assertRole(userId, ["admin", "editor"]);
+      } catch (err) {
+        return respondIAMError(err, reply);
+      }
+
+      const data = await complianceService.respondDataSubjectRequest({
+        tenantId: request.ctx.tenantId,
+        requestId: params.data.requestId,
+        actorUserId: userId,
+        status: parsed.data.status,
+        response: parsed.data.response,
+      });
+
+      return reply.send({ success: true, data });
+    });
+
+    scoped.get("/api/compliance/report", async (request: FastifyRequest, reply: FastifyReply) => {
+      const data = await complianceService.getComplianceReport(request.ctx.tenantId);
       return reply.send({ success: true, data });
     });
 

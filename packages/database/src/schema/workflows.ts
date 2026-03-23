@@ -5,11 +5,15 @@
 import { pgTable, uuid, varchar, integer, timestamp, jsonb, index } from "drizzle-orm/pg-core";
 import { users } from "./users.js";
 import { workspaces } from "./workspaces.js";
+import { tenants } from "./tenants.js";
 
 export const workflows = pgTable(
   "workflows",
   {
     id: uuid("id").defaultRandom().primaryKey(),
+    tenantId: uuid("tenant_id")
+      .notNull()
+      .references(() => tenants.id, { onDelete: "cascade" }),
     userId: uuid("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
@@ -27,6 +31,7 @@ export const workflows = pgTable(
     updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
   },
   (table) => ({
+    tenantIdIdx: index("workflows_tenant_id_idx").on(table.tenantId),
     userIdIdx: index("workflows_user_id_idx").on(table.userId),
     workspaceIdIdx: index("workflows_workspace_id_idx").on(table.workspaceId),
     statusIdx: index("workflows_status_idx").on(table.status),

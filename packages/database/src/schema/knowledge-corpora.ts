@@ -6,11 +6,15 @@ import { pgTable, uuid, varchar, timestamp, index, jsonb } from "drizzle-orm/pg-
 import { users } from "./users.js";
 import { workflows } from "./workflows.js";
 import { executions } from "./executions.js";
+import { tenants } from "./tenants.js";
 
 export const knowledgeCorpora = pgTable(
   "knowledge_corpora",
   {
     id: uuid("id").defaultRandom().primaryKey(),
+    tenantId: uuid("tenant_id")
+      .notNull()
+      .references(() => tenants.id, { onDelete: "cascade" }),
     userId: uuid("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
@@ -25,6 +29,7 @@ export const knowledgeCorpora = pgTable(
     updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
   },
   (table) => ({
+    tenantIdIdx: index("knowledge_corpora_tenant_id_idx").on(table.tenantId),
     userIdIdx: index("knowledge_corpora_user_id_idx").on(table.userId),
     scopeTypeIdx: index("knowledge_corpora_scope_type_idx").on(table.scopeType),
     workflowIdIdx: index("knowledge_corpora_workflow_id_idx").on(table.workflowId),

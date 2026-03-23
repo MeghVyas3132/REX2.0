@@ -5,6 +5,7 @@
 import { and, eq } from "drizzle-orm";
 import type { Database } from "@rex/database";
 import { workspaceMembers, workspaces, workflows } from "@rex/database";
+import { DEFAULT_TENANT_ID } from "./tenant-default.js";
 
 export interface WorkspaceService {
   ensurePersonalWorkspace(userId: string): Promise<{ id: string; name: string }>;
@@ -36,6 +37,7 @@ export function createWorkspaceService(db: Database): WorkspaceService {
       const [created] = await db
         .insert(workspaces)
         .values({
+          tenantId: DEFAULT_TENANT_ID,
           ownerUserId: userId,
           name: "Personal",
         })
@@ -43,6 +45,7 @@ export function createWorkspaceService(db: Database): WorkspaceService {
       if (!created) throw new Error("Failed to create personal workspace");
 
       await db.insert(workspaceMembers).values({
+        tenantId: DEFAULT_TENANT_ID,
         workspaceId: created.id,
         userId,
         role: "admin",
@@ -71,6 +74,7 @@ export function createWorkspaceService(db: Database): WorkspaceService {
       const [workspace] = await db
         .insert(workspaces)
         .values({
+          tenantId: DEFAULT_TENANT_ID,
           ownerUserId: userId,
           name: normalizedName,
         })
@@ -78,6 +82,7 @@ export function createWorkspaceService(db: Database): WorkspaceService {
       if (!workspace) throw new Error("Failed to create workspace");
 
       await db.insert(workspaceMembers).values({
+        tenantId: DEFAULT_TENANT_ID,
         workspaceId: workspace.id,
         userId,
         role: "admin",
@@ -116,6 +121,7 @@ export function createWorkspaceService(db: Database): WorkspaceService {
       }
 
       await db.insert(workspaceMembers).values({
+        tenantId: DEFAULT_TENANT_ID,
         workspaceId,
         userId: memberUserId,
         role,

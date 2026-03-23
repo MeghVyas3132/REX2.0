@@ -4,11 +4,15 @@
 
 import { pgTable, uuid, varchar, integer, timestamp, jsonb, index } from "drizzle-orm/pg-core";
 import { executions } from "./executions.js";
+import { tenants } from "./tenants.js";
 
 export const executionSteps = pgTable(
   "execution_steps",
   {
     id: uuid("id").defaultRandom().primaryKey(),
+    tenantId: uuid("tenant_id")
+      .notNull()
+      .references(() => tenants.id, { onDelete: "cascade" }),
     executionId: uuid("execution_id")
       .notNull()
       .references(() => executions.id, { onDelete: "cascade" }),
@@ -22,6 +26,7 @@ export const executionSteps = pgTable(
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   },
   (table) => ({
+    tenantIdIdx: index("execution_steps_tenant_id_idx").on(table.tenantId),
     executionIdIdx: index("execution_steps_execution_id_idx").on(table.executionId),
     nodeIdIdx: index("execution_steps_node_id_idx").on(table.nodeId),
   })

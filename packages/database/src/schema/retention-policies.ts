@@ -4,11 +4,15 @@
 
 import { pgTable, uuid, varchar, timestamp, index, jsonb, boolean, integer } from "drizzle-orm/pg-core";
 import { users } from "./users.js";
+import { tenants } from "./tenants.js";
 
 export const retentionPolicies = pgTable(
   "retention_policies",
   {
     id: uuid("id").defaultRandom().primaryKey(),
+    tenantId: uuid("tenant_id")
+      .notNull()
+      .references(() => tenants.id, { onDelete: "cascade" }),
     userId: uuid("user_id").references(() => users.id, { onDelete: "cascade" }),
     resourceType: varchar("resource_type", { length: 80 }).notNull(), // executions | knowledge_documents | guardrail_events | audit_logs
     retentionDays: integer("retention_days").notNull(),
@@ -18,6 +22,7 @@ export const retentionPolicies = pgTable(
     updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
   },
   (table) => ({
+    tenantIdIdx: index("retention_policies_tenant_id_idx").on(table.tenantId),
     userIdIdx: index("retention_policies_user_id_idx").on(table.userId),
     resourceTypeIdx: index("retention_policies_resource_type_idx").on(table.resourceType),
     activeIdx: index("retention_policies_is_active_idx").on(table.isActive),

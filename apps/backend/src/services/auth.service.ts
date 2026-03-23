@@ -5,16 +5,29 @@
 import bcrypt from "bcrypt";
 import { eq } from "drizzle-orm";
 import type { Database } from "@rex/database";
-import { users } from "@rex/database";
+import { tenantUsers, tenants, users } from "@rex/database";
 import { createLogger } from "@rex/utils";
+import { DEFAULT_TENANT_ID } from "./tenant-default.js";
 
 const logger = createLogger("auth-service");
 const SALT_ROUNDS = 12;
 
 export interface AuthService {
-  register(email: string, name: string, password: string): Promise<{ id: string; email: string; name: string; role: string }>;
-  login(email: string, password: string): Promise<{ id: string; email: string; name: string; role: string }>;
-  getUserById(userId: string): Promise<{ id: string; email: string; name: string; role: string } | null>;
+  register(email: string, name: string, password: string): Promise<AuthUserWithTenant>;
+  login(email: string, password: string): Promise<AuthUserWithTenant>;
+  getUserById(userId: string): Promise<AuthUserWithTenant | null>;
+}
+
+interface AuthUserWithTenant {
+  id: string;
+  email: string;
+  name: string;
+  role: string;
+  globalRole: string;
+  tenantId: string;
+  tenantRole: string;
+  interfaceAccess: string;
+  abacAttributes: Record<string, unknown>;
 }
 
 export function createAuthService(db: Database): AuthService {
@@ -32,15 +45,51 @@ export function createAuthService(db: Database): AuthService {
 
       const [user] = await db
         .insert(users)
-        .values({ email, name, passwordHash, role: "editor", consentGivenAt: new Date() })
-        .returning({ id: users.id, email: users.email, name: users.name, role: users.role });
+        .values({
+          email,
+          name,
+          passwordHash,
+          role: "editor",
+          globalRole: "user",
+          consentGivenAt: new Date(),
+        })
+        .returning({
+          id: users.id,
+          email: users.email,
+          name: users.name,
+          role: users.role,
+          globalRole: users.globalRole,
+        });
 
       if (!user) {
         throw new ServiceError("Failed to create user", "CREATE_FAILED", 500);
       }
 
+      const [existingMembership] = await db
+        .select({ id: tenantUsers.id })
+        .from(tenantUsers)
+        .where(eq(tenantUsers.userId, user.id))
+        .limit(1);
+
+      if (!existingMembership) {
+        await db.insert(tenantUsers).values({
+          tenantId: DEFAULT_TENANT_ID,
+          userId: user.id,
+          tenantRole: "org_editor",
+          interfaceAccess: "both",
+          abacAttributes: {},
+          isActive: true,
+        });
+      }
+
       logger.info({ userId: user.id }, "User registered");
-      return user;
+      return {
+        ...user,
+        tenantId: DEFAULT_TENANT_ID,
+        tenantRole: "org_editor",
+        interfaceAccess: "both",
+        abacAttributes: {},
+      };
     },
 
     async login(email, password) {
@@ -61,18 +110,58 @@ export function createAuthService(db: Database): AuthService {
         throw new ServiceError("Invalid email or password", "INVALID_CREDENTIALS", 401);
       }
 
+      const [membership] = await db
+        .select({
+          tenantId: tenantUsers.tenantId,
+          tenantRole: tenantUsers.tenantRole,
+          interfaceAccess: tenantUsers.interfaceAccess,
+          abacAttributes: tenantUsers.abacAttributes,
+        })
+        .from(tenantUsers)
+        .innerJoin(tenants, eq(tenants.id, tenantUsers.tenantId))
+        .where(eq(tenantUsers.userId, user.id))
+        .limit(1);
+
       logger.info({ userId: user.id }, "User logged in");
-      return { id: user.id, email: user.email, name: user.name, role: user.role };
+      return {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        role: user.role,
+        globalRole: user.globalRole,
+        tenantId: membership?.tenantId ?? DEFAULT_TENANT_ID,
+        tenantRole: membership?.tenantRole ?? "org_editor",
+        interfaceAccess: membership?.interfaceAccess ?? "both",
+        abacAttributes: (membership?.abacAttributes as Record<string, unknown> | null) ?? {},
+      };
     },
 
     async getUserById(userId) {
       const [user] = await db
-        .select({ id: users.id, email: users.email, name: users.name, role: users.role })
+        .select({ id: users.id, email: users.email, name: users.name, role: users.role, globalRole: users.globalRole })
         .from(users)
         .where(eq(users.id, userId))
         .limit(1);
+      if (!user) return null;
 
-      return user ?? null;
+      const [membership] = await db
+        .select({
+          tenantId: tenantUsers.tenantId,
+          tenantRole: tenantUsers.tenantRole,
+          interfaceAccess: tenantUsers.interfaceAccess,
+          abacAttributes: tenantUsers.abacAttributes,
+        })
+        .from(tenantUsers)
+        .where(eq(tenantUsers.userId, userId))
+        .limit(1);
+
+      return {
+        ...user,
+        tenantId: membership?.tenantId ?? DEFAULT_TENANT_ID,
+        tenantRole: membership?.tenantRole ?? "org_editor",
+        interfaceAccess: membership?.interfaceAccess ?? "both",
+        abacAttributes: (membership?.abacAttributes as Record<string, unknown> | null) ?? {},
+      };
     },
   };
 }

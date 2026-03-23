@@ -57,6 +57,7 @@ export function registerTemplateRoutes(
       }
 
       const userId = (request.user as { sub: string }).sub;
+      const tenantId = (request.user as { tenantId?: string }).tenantId ?? "00000000-0000-0000-0000-000000000001";
       try {
         await iamService.assertRole(userId, ["admin", "editor"]);
       } catch (err) {
@@ -72,6 +73,7 @@ export function registerTemplateRoutes(
 
       try {
         const workflow = await templateService.instantiate(
+          tenantId,
           userId,
           templateId,
           parsed.data
