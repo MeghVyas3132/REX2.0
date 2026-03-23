@@ -18,7 +18,7 @@ export const TourSpotlight: React.FC = () => {
     left: 0,
     top: 0,
   });
-  const [isExiting, setIsExiting] = useState(false);
+  const [isExiting] = useState(false);
   const spotlightRef = useRef<HTMLDivElement>(null);
 
   // Track element position changes

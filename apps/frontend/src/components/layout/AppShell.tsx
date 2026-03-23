@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import type { CSSProperties, ReactNode } from "react";
-import { Button } from "@/components/ui/Button";
+import { Button } from "@/components/ui";
 
 export interface AppShellNavItem {
   label: string;

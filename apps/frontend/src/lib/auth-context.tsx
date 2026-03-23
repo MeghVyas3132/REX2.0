@@ -1,7 +1,3 @@
-// ──────────────────────────────────────────────
-// REX - Auth Context (Client-Side)
-// ──────────────────────────────────────────────
-
 "use client";
 
 import { createContext, useContext, useState, useEffect, useCallback } from "react";

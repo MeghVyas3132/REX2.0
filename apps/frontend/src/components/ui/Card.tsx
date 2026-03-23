@@ -3,15 +3,34 @@
 import React from 'react';
 import './card.css';
 
-export interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
+export interface CardProps extends Omit<React.HTMLAttributes<HTMLDivElement>, 'title'> {
   interactive?: boolean;
   withHover?: boolean;
+  title?: React.ReactNode;
+  subtitle?: React.ReactNode;
+  action?: React.ReactNode;
+  headerRight?: React.ReactNode;
 }
 
 export const Card = React.forwardRef<HTMLDivElement, CardProps>(
-  ({ interactive = false, withHover = true, className = '', children, ...props }, ref) => {
+  (
+    {
+      interactive = false,
+      withHover = true,
+      className = '',
+      title,
+      subtitle,
+      action,
+      headerRight,
+      children,
+      ...props
+    },
+    ref
+  ) => {
     const interactiveClass = interactive ? 'card--interactive' : '';
     const hoverClass = !interactive && withHover ? 'card--hover' : '';
+
+    const resolvedAction = headerRight ?? action;
 
     return (
       <div
@@ -19,6 +38,19 @@ export const Card = React.forwardRef<HTMLDivElement, CardProps>(
         className={`card ${interactiveClass} ${hoverClass} ${className}`.trim()}
         {...props}
       >
+        {(title || subtitle || resolvedAction) && (
+          <div className="card__header">
+            <div>
+              {title ? <h3 className="card__title">{title}</h3> : null}
+              {subtitle ? (
+                <p style={{ margin: "6px 0 0", color: "var(--text-tertiary)", fontSize: 12 }}>
+                  {subtitle}
+                </p>
+              ) : null}
+            </div>
+            {resolvedAction ? <div>{resolvedAction}</div> : null}
+          </div>
+        )}
         {children}
       </div>
     );
@@ -27,7 +59,7 @@ export const Card = React.forwardRef<HTMLDivElement, CardProps>(
 
 Card.displayName = 'Card';
 
-export interface CardHeaderProps extends React.HTMLAttributes<HTMLDivElement> {
+export interface CardHeaderProps extends Omit<React.HTMLAttributes<HTMLDivElement>, 'title'> {
   title?: React.ReactNode;
   action?: React.ReactNode;
 }
@@ -65,9 +97,3 @@ export const CardFooter = React.forwardRef<HTMLDivElement, CardFooterProps>(
 );
 
 CardFooter.displayName = 'CardFooter';
-
-const subtitleStyle: CSSProperties = {
-  margin: "6px 0 0",
-  color: "var(--text-tertiary)",
-  fontSize: 12,
-};

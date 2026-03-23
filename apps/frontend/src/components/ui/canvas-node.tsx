@@ -42,13 +42,6 @@ export const CanvasNode = React.forwardRef<HTMLDivElement, CanvasNodeProps>(
     const errorClass = status === 'error' ? 'canvas-node--error' : '';
     const newClass = isNew ? 'new' : '';
 
-    const statusDotVariant =
-      status === 'success'
-        ? 'success'
-        : status === 'error'
-          ? 'error'
-          : 'success';
-
     return (
       <div
         ref={ref}

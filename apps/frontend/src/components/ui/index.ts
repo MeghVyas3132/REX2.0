@@ -9,11 +9,13 @@
  * - Motion respects prefers-reduced-motion accessibility preference
  */
 
-export { Button, type ButtonProps } from './button';
+export { Button, type ButtonProps } from './Button';
+export { Badge } from './Badge';
+export { StateBlock } from './StateBlock';
 export { Input, TextArea, Select, type InputProps, type TextAreaProps, type SelectProps } from './form';
 export { StatusBadge, StatusDot, type StatusBadgeProps, type StatusDotProps } from './status-badge';
 export { RexBadge, type RexBadgeProps, type RexScore } from './rex-badge';
-export { Card, CardHeader, CardBody, CardFooter, type CardProps, type CardHeaderProps, type CardBodyProps, type CardFooterProps } from './card';
+export { Card, CardHeader, CardBody, CardFooter, type CardProps, type CardHeaderProps, type CardBodyProps, type CardFooterProps } from './Card';
 export { CanvasNode, type CanvasNodeProps, type NodeCategory } from './canvas-node';
 export { Modal, type ModalProps } from './modal';
 

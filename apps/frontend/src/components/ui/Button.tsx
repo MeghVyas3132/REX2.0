@@ -6,7 +6,7 @@ import './button.css';
 export interface ButtonProps
   extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: 'primary' | 'secondary' | 'ghost' | 'danger';
-  size?: 'compact' | 'default';
+  size?: 'compact' | 'default' | 'sm' | 'md' | 'lg';
   isBlock?: boolean;
   isLoading?: boolean;
   children: React.ReactNode;
@@ -27,7 +27,8 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
     ref,
   ) => {
     const variantClass = `btn--${variant}`;
-    const sizeClass = size === 'compact' ? 'btn--compact' : '';
+    const isCompact = size === 'compact' || size === 'sm';
+    const sizeClass = isCompact ? 'btn--compact' : '';
     const blockClass = isBlock ? 'btn--block' : '';
     const loadingClass = isLoading ? 'btn--loading' : '';
 

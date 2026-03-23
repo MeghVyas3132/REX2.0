@@ -4,10 +4,6 @@
    ────────────────────────────────────────────── */
 
 @import '../styles/globals.css';
-    radial-gradient(780px 380px at 12% 110%, rgba(52, 211, 153, 0.12), transparent 62%),
-    radial-gradient(860px 460px at 104% -12%, rgba(79, 120, 255, 0.2), transparent 64%);
-  animation: rex-atmo-float 14s ease-in-out infinite alternate;
-}
 
 .rex-shell__sidebar,
 .rex-shell__main {

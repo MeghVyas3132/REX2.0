@@ -19,7 +19,6 @@ export interface RexBadgeProps {
 export const RexBadge = ({
   score,
   gaps = [],
-  onClickFix,
   className = '',
 }: RexBadgeProps) => {
   const [showTooltip, setShowTooltip] = useState(false);
