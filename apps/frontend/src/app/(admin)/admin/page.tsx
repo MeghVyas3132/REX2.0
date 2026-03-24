@@ -1,16 +1,17 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth-context";
+import { PageContainer, PageHeader, PageSection } from "@/components/layout";
 
 export default function AdminPage() {
   const { token, loading: authLoading } = useAuth();
   const router = useRouter();
   const [tenantsCount, setTenantsCount] = useState(0);
-  const [pluginsCount, setPluginsCount] = useState(0);
-  const [auditEventsCount, setAuditEventsCount] = useState(0);
+  const [nodeCount, setNodeCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -24,14 +25,12 @@ export default function AdminPage() {
     const load = async () => {
       try {
         setError(null);
-        const [tenantsRes, pluginsRes, auditRes] = await Promise.all([
+        const [tenantsRes, pluginsRes] = await Promise.all([
           api.admin.listTenants(token),
           api.admin.listPlugins(token),
-          api.admin.getAuditLog(token),
         ]);
         setTenantsCount(tenantsRes.data.length);
-        setPluginsCount(pluginsRes.data.length);
-        setAuditEventsCount(auditRes.data.length);
+        setNodeCount(pluginsRes.data.length);
       } catch (err) {
         setError(err instanceof Error ? err.message : "Failed to load admin dashboard");
       } finally {
@@ -42,47 +41,108 @@ export default function AdminPage() {
     void load();
   }, [authLoading, token, router]);
 
-  const pluginHealth = useMemo(() => {
-    if (pluginsCount === 0) return "0%";
-    return `${Math.round(((pluginsCount - Math.max(1, Math.floor(pluginsCount * 0.08))) / pluginsCount) * 100)}%`;
-  }, [pluginsCount]);
-
   if (authLoading || !token) return null;
 
   return (
-    <section className="control-header">
-      <h1>Global Admin Command Deck</h1>
-      <p>Operate tenancy, catalogue quality, and trust posture from one control surface.</p>
+    <PageContainer>
+      <PageHeader
+        title="System Administration"
+        description="Manage tenants, nodes, and global settings"
+      />
 
-      {error ? <p className="control-error">{error}</p> : null}
+      {error && <p style={{ color: "#f87171", marginBottom: "20px" }}>{error}</p>}
 
       {isLoading ? (
-        <div className="control-grid" aria-label="Loading admin metrics">
-          <article className="control-card control-skeleton" />
-          <article className="control-card control-skeleton" />
-          <article className="control-card control-skeleton" />
-        </div>
-      ) : null}
+        <PageSection>
+          <div style={{ textAlign: "center", padding: "40px", color: "rgba(255,255,255,0.6)" }}>
+            Loading dashboard...
+          </div>
+        </PageSection>
+      ) : (
+        <>
+          <PageSection title="Quick Stats">
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "20px" }}>
+              <div style={{ padding: "20px", background: "rgba(255,255,255,0.05)", borderRadius: "8px", border: "1px solid rgba(255,255,255,0.1)" }}>
+                <h3 style={{ margin: "0 0 8px 0", color: "#fff" }}>Active Tenants</h3>
+                <p style={{ margin: "0 0 12px 0", fontSize: "32px", fontWeight: "bold", color: "#3b82f6" }}>
+                  {tenantsCount}
+                </p>
+                <p style={{ margin: "0", fontSize: "14px", color: "rgba(255,255,255,0.6)" }}>
+                  Organizations in the system
+                </p>
+              </div>
+              <div style={{ padding: "20px", background: "rgba(255,255,255,0.05)", borderRadius: "8px", border: "1px solid rgba(255,255,255,0.1)" }}>
+                <h3 style={{ margin: "0 0 8px 0", color: "#fff" }}>Registered Nodes</h3>
+                <p style={{ margin: "0 0 12px 0", fontSize: "32px", fontWeight: "bold", color: "#3b82f6" }}>
+                  {nodeCount}
+                </p>
+                <p style={{ margin: "0", fontSize: "14px", color: "rgba(255,255,255,0.6)" }}>
+                  Available workflow node types
+                </p>
+              </div>
+            </div>
+          </PageSection>
 
-      {!isLoading ? (
-        <div className="control-grid">
-          <article className="control-card">
-            <h2>Active Tenants</h2>
-            <p className="control-kpi">{tenantsCount}</p>
-            <p>Enterprise tenants currently provisioned across all regions.</p>
-          </article>
-          <article className="control-card">
-            <h2>Audit Events</h2>
-            <p className="control-kpi">{auditEventsCount}</p>
-            <p>Administrative actions tracked in the global audit timeline.</p>
-          </article>
-          <article className="control-card">
-            <h2>Plugin Health</h2>
-            <p className="control-kpi">{pluginHealth}</p>
-            <p>Catalogue readiness based on currently active plugin definitions.</p>
-          </article>
-        </div>
-      ) : null}
-    </section>
+          <PageSection title="Quick Links">
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "12px" }}>
+              <Link
+                href="/admin/tenants"
+                style={{
+                  padding: "16px",
+                  background: "rgba(59, 130, 246, 0.1)",
+                  border: "1px solid #3b82f6",
+                  borderRadius: "6px",
+                  cursor: "pointer",
+                  textDecoration: "none",
+                  color: "#3b82f6",
+                  textAlign: "center",
+                  fontWeight: "500",
+                  transition: "all 0.2s ease",
+                }}
+                onMouseEnter={(e) => {
+                  const el = e.currentTarget;
+                  el.style.background = "#3b82f6";
+                  el.style.color = "#fff";
+                }}
+                onMouseLeave={(e) => {
+                  const el = e.currentTarget;
+                  el.style.background = "rgba(59, 130, 246, 0.1)";
+                  el.style.color = "#3b82f6";
+                }}
+              >
+                Manage Tenants
+              </Link>
+              <Link
+                href="/admin"
+                style={{
+                  padding: "16px",
+                  background: "rgba(59, 130, 246, 0.1)",
+                  border: "1px solid #3b82f6",
+                  borderRadius: "6px",
+                  cursor: "pointer",
+                  textDecoration: "none",
+                  color: "#3b82f6",
+                  textAlign: "center",
+                  fontWeight: "500",
+                  transition: "all 0.2s ease",
+                }}
+                onMouseEnter={(e) => {
+                  const el = e.currentTarget;
+                  el.style.background = "#3b82f6";
+                  el.style.color = "#fff";
+                }}
+                onMouseLeave={(e) => {
+                  const el = e.currentTarget;
+                  el.style.background = "rgba(59, 130, 246, 0.1)";
+                  el.style.color = "#3b82f6";
+                }}
+              >
+                Node Registry
+              </Link>
+            </div>
+          </PageSection>
+        </>
+      )}
+    </PageContainer>
   );
 }

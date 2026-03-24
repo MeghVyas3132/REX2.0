@@ -16,6 +16,7 @@ import {
   clearWorkflowDraft,
 } from "@/lib/workflow-draft";
 import { convertTriggersToBackend } from "@/lib/trigger-converter";
+import { PageContainer } from "@/components/layout";
 
 export default function NewWorkflowPage() {
   const { token, loading: authLoading } = useAuth();
@@ -68,42 +69,44 @@ export default function NewWorkflowPage() {
   if (authLoading || !token) return null;
 
   return (
-    <WorkflowEditor
-      key={`new-${initialDraft?.updatedAt ?? "empty"}`}
-      initialNodes={
-        initialDraft?.mode === "create"
-          ? (initialDraft.nodes as CanvasNode[])
-          : []
-      }
-      initialEdges={
-        initialDraft?.mode === "create"
-          ? (initialDraft.edges as CanvasEdge[])
-          : []
-      }
-      workflowName={
-        initialDraft?.mode === "create"
-          ? initialDraft.name
-          : "Untitled Workflow"
-      }
-      workflowDescription={
-        initialDraft?.mode === "create"
-          ? initialDraft.description
-          : ""
-      }
-      onSave={handleSave}
-      onStateChange={(data) => {
-        saveWorkflowDraft({
-          mode: "create",
-          name: data.name,
-          description: data.description,
-          nodes: data.nodes,
-          edges: data.edges,
-        });
-      }}
-      onBack={() => router.push("/dashboard")}
-      saving={saving}
-      saveStatus={saveStatus}
-      token={token || undefined}
-    />
+    <PageContainer maxWidth="full">
+      <WorkflowEditor
+        key={`new-${initialDraft?.updatedAt ?? "empty"}`}
+        initialNodes={
+          initialDraft?.mode === "create"
+            ? (initialDraft.nodes as CanvasNode[])
+            : []
+        }
+        initialEdges={
+          initialDraft?.mode === "create"
+            ? (initialDraft.edges as CanvasEdge[])
+            : []
+        }
+        workflowName={
+          initialDraft?.mode === "create"
+            ? initialDraft.name
+            : "Untitled Workflow"
+        }
+        workflowDescription={
+          initialDraft?.mode === "create"
+            ? initialDraft.description
+            : ""
+        }
+        onSave={handleSave}
+        onStateChange={(data) => {
+          saveWorkflowDraft({
+            mode: "create",
+            name: data.name,
+            description: data.description,
+            nodes: data.nodes,
+            edges: data.edges,
+          });
+        }}
+        onBack={() => router.push("/dashboard")}
+        saving={saving}
+        saveStatus={saveStatus}
+        token={token || undefined}
+      />
+    </PageContainer>
   );
 }

@@ -5,12 +5,12 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth-context";
+import { PageContainer, PageHeader, PageSection } from "@/components/layout";
 
 export default function StudioWorkflowsPage() {
   const { token, loading: authLoading } = useAuth();
   const router = useRouter();
-  const [workflowItems, setWorkflowItems] = useState<Array<{ id: string; name: string; status: string }>>([]);
-  const [templatesCount, setTemplatesCount] = useState(0);
+  const [workflows, setWorkflows] = useState<Array<{ id: string; name: string; description: string; status: string }>>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -24,12 +24,15 @@ export default function StudioWorkflowsPage() {
     const load = async () => {
       try {
         setError(null);
-        const [workflowsRes, templatesRes] = await Promise.all([
-          api.workflows.list(token, 1, 20),
-          api.templates.list(token),
-        ]);
-        setWorkflowItems(workflowsRes.data.map((item) => ({ id: item.id, name: item.name, status: item.status })));
-        setTemplatesCount(templatesRes.data.length);
+        const workflowsRes = await api.workflows.list(token, 1, 100);
+        setWorkflows(
+          workflowsRes.data.map((item) => ({
+            id: item.id,
+            name: item.name,
+            description: item.description || "No description",
+            status: item.status,
+          }))
+        );
       } catch (err) {
         setError(err instanceof Error ? err.message : "Failed to load workflows");
       } finally {
@@ -43,51 +46,91 @@ export default function StudioWorkflowsPage() {
   if (authLoading || !token) return null;
 
   return (
-    <section className="control-header">
-      <h1>Studio Workflows</h1>
-      <p>Open existing workflows, or start from one of the backend-published templates.</p>
-      {error ? <p className="control-error">{error}</p> : null}
+    <PageContainer>
+      <PageHeader
+        title="Workflows"
+        description="Create, edit, and manage workflow definitions"
+        action={
+          <Link 
+            href="/studio/workflows/new"
+            style={{ 
+              padding: "10px 20px", 
+              background: "#3b82f6", 
+              color: "#fff", 
+              borderRadius: "6px",
+              textDecoration: "none"
+            }}
+          >
+            + New Workflow
+          </Link>
+        }
+      />
 
-      {isLoading ? (
-        <div className="control-grid" aria-label="Loading studio workflow summaries">
-          <article className="control-card control-skeleton" />
-          <article className="control-card control-skeleton" />
-        </div>
-      ) : null}
+      {error && <p style={{ color: "#f87171" }}>{error}</p>}
 
-      {!isLoading ? <div className="control-grid">
-        <article className="control-card">
-          <h2>Saved Workflows</h2>
-          <p className="control-kpi">{workflowItems.length}</p>
-          <p>Workflow definitions currently available in your tenant.</p>
-        </article>
-        <article className="control-card">
-          <h2>Pre-built Templates</h2>
-          <p className="control-kpi">{templatesCount}</p>
-          <p>Template catalogue available for instant instantiation.</p>
-        </article>
-      </div> : null}
-
-      <article className="control-card">
-        <h3>Recent workflows</h3>
-        <ul className="control-list">
-          {!isLoading && workflowItems.length === 0 ? (
-            <li>
-              <span className="control-empty">No workflows found. Create one from the dashboard editor.</span>
-            </li>
-          ) : null}
-          {workflowItems.slice(0, 6).map((workflow) => (
-            <li key={workflow.id}>
-              <span>{workflow.name}</span>
-              <span className={workflow.status === "active" ? "control-badge" : "control-badge control-badge--warn"}>
-                {workflow.status}
-              </span>
-            </li>
-          ))}
-        </ul>
-        <p><Link className="control-link" href="/dashboard/workflows">Open workflow editor</Link></p>
-        <p><Link className="control-link" href="/studio/plugins">Browse enabled plugins</Link></p>
-      </article>
-    </section>
+      <PageSection>
+        {isLoading ? (
+          <div style={{ textAlign: "center", padding: "40px", color: "rgba(255,255,255,0.6)" }}>
+            Loading workflows...
+          </div>
+        ) : workflows.length === 0 ? (
+          <div style={{ textAlign: "center", padding: "40px", color: "rgba(255,255,255,0.6)" }}>
+            <p>No workflows created yet</p>
+            <p>
+              <Link href="/studio/workflows/new">Create your first workflow</Link>
+            </p>
+          </div>
+        ) : (
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: "16px" }}>
+            {workflows.map((workflow) => (
+              <Link
+                key={workflow.id}
+                href={`/studio/workflows/${workflow.id}`}
+                style={{
+                  display: "block",
+                  padding: "20px",
+                  background: "rgba(255,255,255,0.05)",
+                  border: "1px solid rgba(255,255,255,0.1)",
+                  borderRadius: "8px",
+                  cursor: "pointer",
+                  textDecoration: "none",
+                  color: "inherit",
+                  transition: "all 0.2s ease",
+                }}
+                onMouseEnter={(e) => {
+                  const el = e.currentTarget;
+                  el.style.background = "rgba(59, 130, 246, 0.1)";
+                  el.style.borderColor = "#3b82f6";
+                }}
+                onMouseLeave={(e) => {
+                  const el = e.currentTarget;
+                  el.style.background = "rgba(255,255,255,0.05)";
+                  el.style.borderColor = "rgba(255,255,255,0.1)";
+                }}
+              >
+                <h3 style={{ margin: "0 0 8px 0", color: "#fff" }}>{workflow.name}</h3>
+                <p style={{ margin: "0 0 12px 0", fontSize: "14px", color: "rgba(255,255,255,0.6)" }}>
+                  {workflow.description}
+                </p>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <span
+                    style={{
+                      padding: "4px 8px",
+                      background: workflow.status === "active" ? "#10b981" : "#f97316",
+                      color: "#fff",
+                      borderRadius: "4px",
+                      fontSize: "12px",
+                    }}
+                  >
+                    {workflow.status}
+                  </span>
+                  <span style={{ fontSize: "14px", color: "#3b82f6" }}>Open →</span>
+                </div>
+              </Link>
+            ))}
+          </div>
+        )}
+      </PageSection>
+    </PageContainer>
   );
 }

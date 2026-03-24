@@ -142,32 +142,20 @@ export default function AdminTenantDetailPage({ params }: TenantDetailProps) {
 
       {!isLoading && tenant ? (
         <article className="control-card">
-          <h2>Access Assignment</h2>
-          <p>Super admin controls which node types and templates are available to this tenant.</p>
+          <h3>Node Access</h3>
+          <p>Allowed node types for this tenant (comma-separated):</p>
           <div className="control-form-grid">
             <label>
-              Plan name
-              <input value={planName} onChange={(e) => setPlanName(e.target.value)} placeholder="starter" />
-            </label>
-            <label>
-              Allowed node types (comma-separated)
+              Node types
               <input
                 value={allowedNodeTypes}
                 onChange={(e) => setAllowedNodeTypes(e.target.value)}
                 placeholder="llm.generate, knowledge.query"
               />
             </label>
-            <label>
-              Allowed template ids (comma-separated)
-              <input
-                value={allowedTemplateIds}
-                onChange={(e) => setAllowedTemplateIds(e.target.value)}
-                placeholder="rag_research_assistant_v1"
-              />
-            </label>
           </div>
           <button className="control-link" type="button" onClick={() => void handleSavePlan()} disabled={planSaving}>
-            {planSaving ? "Saving…" : "Save Assignment"}
+            {planSaving ? "Saving…" : "Update"}
           </button>
         </article>
       ) : null}

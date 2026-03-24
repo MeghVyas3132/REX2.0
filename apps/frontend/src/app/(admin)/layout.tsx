@@ -2,10 +2,33 @@
 
 import { useEffect } from "react";
 import type { ReactNode } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { canAccessAdmin, getRoleLandingPath } from "@/lib/rbac";
+import { MainLayout } from "@/components/layout";
+
+const ADMIN_NAV_ITEMS = [
+  {
+    href: "/admin",
+    label: "Dashboard",
+    icon: "📊",
+  },
+  {
+    href: "/admin/tenants",
+    label: "Tenants",
+    icon: "🏢",
+  },
+  {
+    href: "/admin/plugins",
+    label: "Node Registry",
+    icon: "🔌",
+  },
+  {
+    href: "/admin/audit-log",
+    label: "Audit Log",
+    icon: "📝",
+  },
+];
 
 export default function AdminLayout({ children }: { children: ReactNode }) {
   const { user, token, loading } = useAuth();
@@ -27,22 +50,12 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
   }
 
   return (
-    <div className="control-shell">
-      <aside className="control-shell__sidebar">
-        <div>
-          <h2 className="control-shell__brand">REX Admin</h2>
-          <p className="control-shell__tag">Global control plane</p>
-        </div>
-        <nav className="control-shell__nav">
-          <Link href="/admin">Dashboard</Link>
-          <Link href="/admin/tenants">Tenants</Link>
-          <Link href="/admin/plugins">Node Registry</Link>
-          <Link href="/admin/audit-log">Audit Log</Link>
-          <Link href="/studio">Switch to Studio</Link>
-        </nav>
-        <div className="control-shell__footer">Guardrails, billing, and governance</div>
-      </aside>
-      <main className="control-main">{children}</main>
-    </div>
+    <MainLayout
+      sidebarItems={ADMIN_NAV_ITEMS}
+      sidebarTitle="System Admin"
+      sidebarSubtitle="Global management"
+    >
+      {children}
+    </MainLayout>
   );
 }

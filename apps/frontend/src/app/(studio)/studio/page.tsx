@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth-context";
+import { PageContainer, PageHeader, PageSection } from "@/components/layout";
 
 export default function StudioPage() {
   const { token, loading: authLoading } = useAuth();
@@ -46,49 +47,141 @@ export default function StudioPage() {
   if (authLoading || !token) return null;
 
   return (
-    <section className="control-header">
-      <h1>Studio Dashboard</h1>
-      <p>Design automation graphs, pressure-test trust posture, and ship certified workflows.</p>
-      {error ? <p className="control-error">{error}</p> : null}
+    <PageContainer>
+      <PageHeader
+        title="Studio Dashboard"
+        description="Design automation graphs, pressure-test trust posture, and ship certified workflows"
+      />
+
+      {error && <p style={{ color: "#f87171", marginBottom: "20px" }}>{error}</p>}
 
       {isLoading ? (
-        <div className="control-grid" aria-label="Loading studio dashboard metrics">
-          <article className="control-card control-skeleton" />
-          <article className="control-card control-skeleton" />
-          <article className="control-card control-skeleton" />
-        </div>
-      ) : null}
+        <PageSection>
+          <div style={{ textAlign: "center", padding: "40px", color: "rgba(255,255,255,0.6)" }}>
+            Loading dashboard...
+          </div>
+        </PageSection>
+      ) : (
+        <>
+          <PageSection title="Overview">
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: "20px" }}>
+              <div style={{ padding: "20px", background: "rgba(255,255,255,0.05)", borderRadius: "8px", border: "1px solid rgba(255,255,255,0.1)" }}>
+                <h3 style={{ margin: "0 0 8px 0", color: "#fff", fontSize: "14px", fontWeight: "500" }}>Workflows</h3>
+                <p style={{ margin: "0 0 8px 0", fontSize: "32px", fontWeight: "bold", color: "#3b82f6" }}>
+                  {workflowCount}
+                </p>
+                <p style={{ margin: "0", fontSize: "13px", color: "rgba(255,255,255,0.6)" }}>
+                  In-progress and production-ready definitions
+                </p>
+              </div>
+              <div style={{ padding: "20px", background: "rgba(255,255,255,0.05)", borderRadius: "8px", border: "1px solid rgba(255,255,255,0.1)" }}>
+                <h3 style={{ margin: "0 0 8px 0", color: "#fff", fontSize: "14px", fontWeight: "500" }}>Active Runs</h3>
+                <p style={{ margin: "0 0 8px 0", fontSize: "32px", fontWeight: "bold", color: "#10b981" }}>
+                  {activeCount}
+                </p>
+                <p style={{ margin: "0", fontSize: "13px", color: "rgba(255,255,255,0.6)" }}>
+                  Currently executing in this tenant
+                </p>
+              </div>
+              <div style={{ padding: "20px", background: "rgba(255,255,255,0.05)", borderRadius: "8px", border: "1px solid rgba(255,255,255,0.1)" }}>
+                <h3 style={{ margin: "0 0 8px 0", color: "#fff", fontSize: "14px", fontWeight: "500" }}>Templates</h3>
+                <p style={{ margin: "0 0 8px 0", fontSize: "32px", fontWeight: "bold", color: "#f59e0b" }}>
+                  {templateCount}
+                </p>
+                <p style={{ margin: "0", fontSize: "13px", color: "rgba(255,255,255,0.6)" }}>
+                  Pre-built templates for rapid creation
+                </p>
+              </div>
+            </div>
+          </PageSection>
 
-      {!isLoading ? <div className="control-grid">
-        <article className="control-card">
-          <h2>Workflows</h2>
-          <p className="control-kpi">{workflowCount}</p>
-          <p>In-progress and production-ready workflow definitions.</p>
-        </article>
-        <article className="control-card">
-          <h2>Active Runs</h2>
-          <p className="control-kpi">{activeCount}</p>
-          <p>Currently running workflows in this tenant.</p>
-        </article>
-        <article className="control-card">
-          <h2>Pre-built Templates</h2>
-          <p className="control-kpi">{templateCount}</p>
-          <p>Template catalogue available for rapid workflow creation.</p>
-        </article>
-      </div> : null}
-      <article className="control-card">
-        <h3>Quick actions</h3>
-        <ul className="control-list">
-          <li>
-            <span>Open advanced workflow editor</span>
-            <Link className="control-link" href="/dashboard/workflows">Open</Link>
-          </li>
-          <li>
-            <span>Instantiate a pre-built template</span>
-            <Link className="control-link" href="/dashboard/templates">Browse</Link>
-          </li>
-        </ul>
-      </article>
-    </section>
+          <PageSection title="Quick Actions">
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "12px" }}>
+              <Link
+                href="/dashboard/workflows"
+                style={{
+                  padding: "16px",
+                  background: "rgba(59, 130, 246, 0.1)",
+                  border: "1px solid #3b82f6",
+                  borderRadius: "6px",
+                  cursor: "pointer",
+                  textDecoration: "none",
+                  color: "#3b82f6",
+                  textAlign: "center",
+                  fontWeight: "500",
+                  transition: "all 0.2s ease",
+                }}
+                onMouseEnter={(e) => {
+                  const el = e.currentTarget;
+                  el.style.background = "#3b82f6";
+                  el.style.color = "#fff";
+                }}
+                onMouseLeave={(e) => {
+                  const el = e.currentTarget;
+                  el.style.background = "rgba(59, 130, 246, 0.1)";
+                  el.style.color = "#3b82f6";
+                }}
+              >
+                Open Editor
+              </Link>
+              <Link
+                href="/studio/workflows"
+                style={{
+                  padding: "16px",
+                  background: "rgba(59, 130, 246, 0.1)",
+                  border: "1px solid #3b82f6",
+                  borderRadius: "6px",
+                  cursor: "pointer",
+                  textDecoration: "none",
+                  color: "#3b82f6",
+                  textAlign: "center",
+                  fontWeight: "500",
+                  transition: "all 0.2s ease",
+                }}
+                onMouseEnter={(e) => {
+                  const el = e.currentTarget;
+                  el.style.background = "#3b82f6";
+                  el.style.color = "#fff";
+                }}
+                onMouseLeave={(e) => {
+                  const el = e.currentTarget;
+                  el.style.background = "rgba(59, 130, 246, 0.1)";
+                  el.style.color = "#3b82f6";
+                }}
+              >
+                View Workflows
+              </Link>
+              <Link
+                href="/studio/templates"
+                style={{
+                  padding: "16px",
+                  background: "rgba(59, 130, 246, 0.1)",
+                  border: "1px solid #3b82f6",
+                  borderRadius: "6px",
+                  cursor: "pointer",
+                  textDecoration: "none",
+                  color: "#3b82f6",
+                  textAlign: "center",
+                  fontWeight: "500",
+                  transition: "all 0.2s ease",
+                }}
+                onMouseEnter={(e) => {
+                  const el = e.currentTarget;
+                  el.style.background = "#3b82f6";
+                  el.style.color = "#fff";
+                }}
+                onMouseLeave={(e) => {
+                  const el = e.currentTarget;
+                  el.style.background = "rgba(59, 130, 246, 0.1)";
+                  el.style.color = "#3b82f6";
+                }}
+              >
+                Browse Templates
+              </Link>
+            </div>
+          </PageSection>
+        </>
+      )}
+    </PageContainer>
   );
 }

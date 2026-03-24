@@ -95,6 +95,7 @@ export interface WorkflowEditorProps {
   token?: string;
   saving?: boolean;
   saveStatus?: "idle" | "saving" | "saved" | "error";
+  isReadOnly?: boolean;
   onSave: (data: {
     name: string;
     description: string;
@@ -138,6 +139,7 @@ export function WorkflowEditor({
   token,
   saving = false,
   saveStatus = "idle",
+  isReadOnly = false,
   onSave,
   onStateChange,
   onExecute,
@@ -229,6 +231,7 @@ export function WorkflowEditor({
 
   const handleCanvasDrop = useCallback(
     (e: React.DragEvent) => {
+      if (isReadOnly) return;
       e.preventDefault();
       const raw = e.dataTransfer.getData("application/rex-node-type");
       if (!raw) return;
@@ -250,13 +253,14 @@ export function WorkflowEditor({
         dispatch({ type: "NODE_DROPPED", nodeSlug: def.type });
       }
     },
-    [screenToCanvas, dispatch]
+    [screenToCanvas, isReadOnly, dispatch]
   );
 
   // ── Node drag ─────────────────────────────────
 
   const handleNodeMouseDown = useCallback(
     (e: React.MouseEvent, nodeId: string) => {
+      if (isReadOnly) return;
       const node = nodes.find((n) => n.id === nodeId);
       if (!node) return;
       setDraggingNodeId(nodeId);
@@ -267,7 +271,7 @@ export function WorkflowEditor({
         ny: node.position.y,
       };
     },
-    [nodes]
+    [nodes, isReadOnly]
   );
 
   const handleNodeClick = useCallback((_e: React.MouseEvent, nodeId: string) => {
@@ -303,6 +307,7 @@ export function WorkflowEditor({
 
   const handlePortMouseDown = useCallback(
     (e: React.MouseEvent, nodeId: string, portType: "in" | "out") => {
+      if (isReadOnly) return;
       e.stopPropagation();
       if (portType === "out") {
         setConnectionDrag({
@@ -312,7 +317,7 @@ export function WorkflowEditor({
         });
       }
     },
-    []
+    [isReadOnly]
   );
 
   const handlePortMouseUp = useCallback(
@@ -503,8 +508,9 @@ export function WorkflowEditor({
   // ── Edge delete (click on edge) ───────────────
 
   const handleEdgeClick = useCallback((edgeId: string) => {
+    if (isReadOnly) return;
     setEdges((prev) => prev.filter((e) => e.id !== edgeId));
-  }, []);
+  }, [isReadOnly]);
 
   // ── Save ──────────────────────────────────────
 
@@ -973,13 +979,14 @@ export function WorkflowEditor({
         <button
           className="wf-btn-primary"
           onClick={handleSave}
-          disabled={saving || !name.trim()}
+          disabled={saving || !name.trim() || isReadOnly}
           aria-label="Save workflow"
+          style={{ display: isReadOnly ? "none" : "inline-block" }}
         >
           {saving ? "Saving..." : "Save"}
         </button>
 
-        {!showExecute && (
+        {!showExecute && !isReadOnly && (
           <span className="wf-toolbar-note">
             Save to enable execution
           </span>
@@ -996,8 +1003,8 @@ export function WorkflowEditor({
 
       {/* Body */}
       <div className="wf-body">
-        {/* Palette */}
-        <NodePalette onDragStart={handlePaletteDragStart} />
+        {/* Palette - hidden in read-only mode */}
+        {!isReadOnly && <NodePalette onDragStart={handlePaletteDragStart} />}
 
         {/* Canvas */}
         <div

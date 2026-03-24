@@ -2,10 +2,10 @@
 
 import { useEffect } from "react";
 import type { ReactNode } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { canAccessBusiness, canManageCompany, getRoleLandingPath } from "@/lib/rbac";
+import { MainLayout } from "@/components/layout";
 
 export default function BusinessLayout({ children }: { children: ReactNode }) {
   const { user, token, loading } = useAuth();
@@ -28,24 +28,40 @@ export default function BusinessLayout({ children }: { children: ReactNode }) {
 
   const isCompanyAdmin = canManageCompany(user);
 
+  const businessNavItems = [
+    {
+      href: "/business",
+      label: "Dashboard",
+      icon: "📊",
+    },
+    {
+      href: "/business/workflows",
+      label: "Workflows",
+      icon: "⚙️",
+    },
+    {
+      href: "/business/executions",
+      label: "Executions",
+      icon: "▶️",
+    },
+    ...(isCompanyAdmin
+      ? [
+          {
+            href: "/business/company-admin",
+            label: "Company Admin",
+            icon: "👥",
+          },
+        ]
+      : []),
+  ];
+
   return (
-    <div className="control-shell">
-      <aside className="control-shell__sidebar">
-        <div>
-          <h2 className="control-shell__brand">REX Business</h2>
-          <p className="control-shell__tag">Operate certified workflows</p>
-        </div>
-        <nav className="control-shell__nav">
-          <Link href="/business">Dashboard</Link>
-          <Link href="/business/workflows">Workflows</Link>
-          <Link href="/business/history">History</Link>
-          {isCompanyAdmin ? <Link href="/business/company-admin">Company Admin</Link> : null}
-        </nav>
-        <div className="control-shell__footer">
-          {isCompanyAdmin ? "Company operations, RBAC, and access control" : "Execution-only mode for business operators"}
-        </div>
-      </aside>
-      <main className="control-main">{children}</main>
-    </div>
+    <MainLayout
+      sidebarItems={businessNavItems}
+      sidebarTitle="REX Business"
+      sidebarSubtitle={isCompanyAdmin ? "Operations & Admin" : "Operations"}
+    >
+      {children}
+    </MainLayout>
   );
 }
