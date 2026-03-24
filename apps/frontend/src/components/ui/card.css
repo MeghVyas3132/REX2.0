@@ -1,37 +1,66 @@
 /* ──────────────────────────────────────────────
-   Card Component
-   Consistent border-based containment
+   Card Component — Premium Edition
+   Enhanced with layered shadows, gradients, and depth
    ────────────────────────────────────────────── */
 
 .card {
-  background-color: var(--color-bg-surface);
+  background: linear-gradient(135deg, 
+    var(--color-bg-surface) 0%,
+    rgba(228, 228, 231, 0.3) 100%);
   border: 1px solid var(--color-border);
+  border-top: 1px solid rgba(255, 255, 255, 0.4);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
   border-radius: var(--radius-lg);
   padding: var(--space-4);
   transition: all var(--duration-fast) var(--ease-smooth);
+  position: relative;
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
 
   @media (prefers-reduced-motion: reduce) {
     transition: none;
   }
 }
 
+.card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, 
+    rgba(59, 130, 246, 0.02) 0%, 
+    transparent 100%);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity var(--duration-fast) var(--ease-smooth);
+}
+
 .card--hover:hover {
-  border-color: var(--color-border-strong);
-  box-shadow: var(--shadow-md);
-  transform: translateY(-1px);
+  border-color: rgba(59, 130, 246, 0.3);
+  border-top: 1px solid rgba(255, 255, 255, 0.6);
+  box-shadow: var(--shadow-card), var(--glow-blue-soft);
+  transform: translateY(-4px);
+}
+
+.card--hover:hover::before {
+  opacity: 1;
 }
 
 .card--interactive {
   cursor: pointer;
 
   &:hover {
-    border-color: var(--color-border-strong);
-    box-shadow: var(--shadow-md);
-    transform: translateY(-1px);
+    border-color: rgba(59, 130, 246, 0.3);
+    border-top: 1px solid rgba(255, 255, 255, 0.6);
+    box-shadow: var(--shadow-card), var(--glow-blue-soft);
+    transform: translateY(-4px);
+  }
+
+  &:hover::before {
+    opacity: 1;
   }
 
   &:active {
-    transform: translateY(0);
+    transform: translateY(-2px);
   }
 }
 
@@ -71,15 +100,24 @@
 /* ── DARK MODE ── */
 .dark {
   .card {
-    background-color: var(--color-bg-surface);
-    border-color: var(--color-border);
+    background: linear-gradient(135deg, 
+      var(--color-bg-surface) 0%,
+      rgba(20, 20, 24, 0.5) 100%);
+    border-color: rgba(255, 255, 255, 0.06);
+    border-top: 1px solid rgba(255, 255, 255, 0.10);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.30);
+    box-shadow: var(--shadow-sm);
   }
 
   .card--hover:hover {
-    border-color: var(--color-border-strong);
+    border-color: rgba(59, 130, 246, 0.4);
+    border-top: 1px solid rgba(255, 255, 255, 0.15);
+    box-shadow: var(--shadow-card), var(--glow-blue-soft);
   }
 
   .card--interactive:hover {
-    border-color: var(--color-border-strong);
+    border-color: rgba(59, 130, 246, 0.4);
+    border-top: 1px solid rgba(255, 255, 255, 0.15);
+    box-shadow: var(--shadow-card), var(--glow-blue-soft);
   }
 }

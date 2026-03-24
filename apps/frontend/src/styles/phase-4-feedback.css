@@ -1,0 +1,363 @@
+/* ──────────────────────────────────────────────
+   PHASE 4: Confirmation & User Feedback
+   Production-Grade Validation & Success States
+   ────────────────────────────────────────────── */
+
+/* ── VALIDATION STATE BASE CLASSES ── */
+.field-success {
+  border-color: var(--color-green-500);
+  background: linear-gradient(135deg, rgba(34, 197, 94, 0.04) 0%, transparent 100%);
+}
+
+.field-success::after {
+  content: "✓";
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--color-green-500);
+  font-weight: 700;
+  font-size: 18px;
+  animation: checkmark-draw 0.4s var(--ease-out-expo);
+}
+
+.field-error {
+  border-color: var(--color-red-500);
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.04) 0%, transparent 100%);
+  animation: error-shake 0.3s var(--ease-sharp);
+}
+
+.field-warning {
+  border-color: var(--color-amber-500);
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.04) 0%, transparent 100%);
+  animation: warning-pulse 2s ease-in-out infinite;
+}
+
+/* ── FIELD ERROR MESSAGE ── */
+.field-error-msg {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  margin-top: 6px;
+  font-size: 13px;
+  color: var(--color-red-text);
+  background: var(--color-red-bg);
+  border: 1px solid var(--color-red-border);
+  border-radius: var(--radius-md);
+  animation: fade-up 0.25s var(--ease-smooth);
+}
+
+.field-error-msg::before {
+  content: "⚠";
+  flex-shrink: 0;
+  font-weight: 700;
+}
+
+/* ── FIELD SUCCESS MESSAGE ── */
+.field-success-msg {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  margin-top: 6px;
+  font-size: 13px;
+  color: var(--color-green-text);
+  background: var(--color-green-bg);
+  border: 1px solid var(--color-green-border);
+  border-radius: var(--radius-md);
+  animation: fade-up 0.25s var(--ease-smooth);
+}
+
+.field-success-msg::before {
+  content: "✓";
+  flex-shrink: 0;
+  font-weight: 700;
+}
+
+/* ── FIELD WARNING MESSAGE ── */
+.field-warning-msg {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  margin-top: 6px;
+  font-size: 13px;
+  color: var(--color-amber-text);
+  background: var(--color-amber-bg);
+  border: 1px solid var(--color-amber-border);
+  border-radius: var(--radius-md);
+  animation: fade-up 0.25s var(--ease-smooth);
+}
+
+.field-warning-msg::before {
+  content: "!";
+  flex-shrink: 0;
+  font-weight: 700;
+}
+
+/* ── INPUT FOCUS WITH VALIDATION ── */
+input:focus.field-success,
+textarea:focus.field-success,
+select:focus.field-success {
+  box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.1), 0 0 16px rgba(34, 197, 94, 0.15);
+}
+
+input:focus.field-error,
+textarea:focus.field-error,
+select:focus.field-error {
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1), 0 0 16px rgba(239, 68, 68, 0.15);
+}
+
+input:focus.field-warning,
+textarea:focus.field-warning,
+select:focus.field-warning {
+  box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.08), 0 0 16px rgba(245, 158, 11, 0.1);
+}
+
+/* ── LOADING STATE ── */
+.loading {
+  position: relative;
+  pointer-events: none;
+  opacity: 0.6;
+}
+
+.loader {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(0, 0, 0, 0.1);
+  border-top-color: var(--color-blue-500);
+  border-radius: 50%;
+  animation: loader-spin 0.8s linear infinite;
+}
+
+.loader-sm {
+  width: 12px;
+  height: 12px;
+  border-width: 1.5px;
+}
+
+.loader-lg {
+  width: 20px;
+  height: 20px;
+  border-width: 2.5px;
+}
+
+/* ── LOADING BUTTON STATE ── */
+button.loading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+button.loading::after {
+  content: "";
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: #ffffff;
+  border-radius: 50%;
+  animation: loader-spin 0.8s linear infinite;
+}
+
+/* ── PROGRESS INDICATOR ── */
+.progress-bar {
+  width: 100%;
+  height: 4px;
+  background: var(--color-bg-muted);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+}
+
+.progress-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--color-blue-500), var(--color-blue-400));
+  border-radius: var(--radius-full);
+  transition: width 0.3s var(--ease-smooth);
+}
+
+.progress-bar-fill.indeterminate {
+  animation: shimmer-pulse 1.5s linear infinite;
+}
+
+/* ── SUCCESS ANIMATION ── */
+.success-indicator {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  background: var(--color-green-500);
+  border-radius: 50%;
+  color: white;
+  font-weight: 700;
+  animation: success-bounce 0.4s var(--ease-spring);
+}
+
+.success-indicator::before {
+  content: "✓";
+}
+
+/* ── ERROR INDICATOR ── */
+.error-indicator {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  background: var(--color-red-500);
+  border-radius: 50%;
+  color: white;
+  font-weight: 700;
+  animation: error-shake 0.3s var(--ease-sharp);
+}
+
+.error-indicator::before {
+  content: "✕";
+}
+
+/* ── FORM SUBMISSION FEEDBACK ── */
+.form-submitting {
+  opacity: 0.7;
+  pointer-events: none;
+}
+
+.form-success-state {
+  border-color: var(--color-green-500);
+  background: linear-gradient(135deg, rgba(34, 197, 94, 0.04) 0%, transparent 100%);
+  box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.1);
+}
+
+.form-success-state::after {
+  content: "";
+  position: absolute;
+  top: -2px;
+  left: 0;
+  width: 100%;
+  height: 3px;
+  background: linear-gradient(90deg, transparent, var(--color-green-500), transparent);
+  animation: slide-in 0.5s var(--ease-out-expo);
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+}
+
+.form-error-state {
+  border-color: var(--color-red-500);
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.04) 0%, transparent 100%);
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
+  animation: error-shake 0.3s var(--ease-sharp);
+}
+
+/* ── INLINE VALIDATION (Real-time feedback) ── */
+.validation-inline {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  padding: 4px 0;
+  min-height: 20px;
+}
+
+.validation-inline.valid {
+  color: var(--color-green-text);
+}
+
+.validation-inline.invalid {
+  color: var(--color-red-text);
+}
+
+.validation-inline.pending {
+  color: var(--color-amber-text);
+}
+
+/* ── TOOLTIP FEEDBACK ── */
+.tooltip-feedback {
+  position: relative;
+  display: inline-block;
+}
+
+.tooltip-feedback::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%) translateY(-6px);
+  padding: 6px 10px;
+  background: var(--color-text-primary);
+  color: white;
+  font-size: 12px;
+  border-radius: var(--radius-sm);
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--duration-fast) ease;
+  z-index: var(--z-tooltip);
+}
+
+.tooltip-feedback:hover::after {
+  opacity: 1;
+}
+
+/* ── BADGE FOR FIELD HINT ── */
+.field-hint-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  background: var(--color-bg-subtle);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  font-size: 11px;
+  color: var(--color-text-tertiary);
+  margin-left: 4px;
+  font-weight: 500;
+}
+
+.field-hint-badge.required {
+  background: rgba(239, 68, 68, 0.1);
+  border-color: rgba(239, 68, 68, 0.2);
+  color: var(--color-red-text);
+}
+
+.field-hint-badge.optional {
+  background: rgba(0, 0, 0, 0.04);
+  border-color: var(--color-border);
+  color: var(--color-text-tertiary);
+}
+
+/* ── FORM SECTION FEEDBACK ── */
+.form-section-invalid {
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.02) 0%, transparent 100%);
+  border: 1px solid rgba(239, 68, 68, 0.1);
+  border-radius: var(--radius-lg);
+  padding: 16px;
+}
+
+.form-section-warning {
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.02) 0%, transparent 100%);
+  border: 1px solid rgba(245, 158, 11, 0.1);
+  border-radius: var(--radius-lg);
+  padding: 16px;
+}
+
+/* ── RESPECTS PREFERS-REDUCED-MOTION ── */
+@media (prefers-reduced-motion: reduce) {
+  .field-success-msg,
+  .field-error-msg,
+  .field-warning-msg,
+  .success-indicator,
+  .error-indicator,
+  .form-success-state,
+  .form-error-state,
+  .loader,
+  .progress-bar-fill {
+    animation: none;
+  }
+
+  .field-error {
+    animation: none;
+  }
+
+  .field-warning {
+    animation: none;
+  }
+}

@@ -405,3 +405,132 @@
   color: #666;
   cursor: not-allowed;
 }
+
+/* ──────────────────────────────────────────────
+   PHASE 2: Enhanced Motion & Interaction
+   Refined animations for chat panel and messages
+   ────────────────────────────────────────────── */
+
+/* ── IMPROVED PANEL SLIDE ANIMATION ── */
+@keyframes rex-chat-slide-in {
+  from {
+    opacity: 0;
+    transform: translateX(24px) translateY(24px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0) translateY(0) scale(1);
+  }
+}
+
+.rex-chat-panel {
+  animation: rex-chat-slide-in 0.3s var(--ease-out-expo);
+  backdrop-filter: blur(4px);
+}
+
+/* ── MESSAGE ENTRY ANIMATIONS ── */
+.rex-chat-msg {
+  animation: rex-chat-msg-fade-in 0.25s var(--ease-smooth);
+}
+
+@keyframes rex-chat-msg-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ── SUGGESTION HOVER ENHANCEMENT ── */
+.rex-chat-suggestion:hover {
+  background: linear-gradient(135deg, #1e1e1e 0%, #252525 100%);
+  border-color: #444;
+  color: #e5e5e5;
+  transform: translateX(2px);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.1);
+  transition: all 0.2s ease-out;
+}
+
+/* ── SEND BUTTON INTERACTION ── */
+.rex-chat-send:hover {
+  background: #3b82f6;
+  transform: scale(1.05);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+  transition: all 0.15s ease;
+}
+
+.rex-chat-send:active {
+  transform: scale(0.98);
+}
+
+/* ── TYPING INDICATOR ENHANCEMENT ── */
+@keyframes rex-chat-bounce-enhanced {
+  0%, 80%, 100% {
+    opacity: 0.5;
+    transform: translateY(0);
+  }
+  40% {
+    opacity: 1;
+    transform: translateY(-8px);
+  }
+}
+
+.rex-chat-typing span {
+  animation: rex-chat-bounce-enhanced 1.4s infinite ease-in-out;
+}
+
+/* ── MESSAGE BUBBLE HOVER EFFECT ── */
+.rex-chat-msg.assistant .rex-chat-msg-bubble:hover {
+  background: #222;
+  border-color: #444;
+  transform: translateX(2px);
+  transition: all 0.2s ease;
+}
+
+.rex-chat-msg.user .rex-chat-msg-bubble:hover {
+  background: #3b82f6;
+  transform: translateX(-2px);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+  transition: all 0.2s ease;
+}
+
+/* ── TOGGLE BUTTON PULSE ON NEW MESSAGE ── */
+@keyframes rex-chat-toggle-pulse {
+  0%, 100% {
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+  }
+  50% {
+    box-shadow: 0 4px 28px rgba(59, 130, 246, 0.2);
+  }
+}
+
+.rex-chat-toggle.has-new-message {
+  animation: rex-chat-toggle-pulse 1.5s ease-in-out infinite;
+}
+
+/* ── INPUT FIELD FOCUS ANIMATION ── */
+.rex-chat-input:focus {
+  border-color: #3b82f6;
+  background: rgba(59, 130, 246, 0.05);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  transition: all 0.2s ease;
+}
+
+/* ── PANEL EXIT ANIMATION (if needed) ── */
+@keyframes rex-chat-slide-out {
+  from {
+    opacity: 1;
+    transform: translateX(0) translateY(0) scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: translateX(24px) translateY(24px) scale(0.95);
+  }
+}
+
+.rex-chat-panel.closing {
+  animation: rex-chat-slide-out 0.3s var(--ease-smooth) both;
+}

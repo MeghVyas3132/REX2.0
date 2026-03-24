@@ -47,7 +47,7 @@ export default function DocsPage() {
             </article>
           </div>
           <div className="lp-hero__actions">
-            <Link href="/login" className="rex-link-reset">
+            <Link href="/get-started" className="rex-link-reset">
               <Button variant="primary" size="lg">Start Building</Button>
             </Link>
             <Link href="/" className="rex-link-reset">

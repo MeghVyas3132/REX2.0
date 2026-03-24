@@ -12,19 +12,7 @@ import { createAuthService } from "./services/auth.service.js";
 import { createApiKeyService } from "./services/apikey.service.js";
 import { createWorkflowService } from "./services/workflow.service.js";
 import { createExecutionService } from "./services/execution.service.js";
-import { registerAuthRoutes } from "./routes/auth.routes.js";
-import { registerApiKeyRoutes } from "./routes/apikey.routes.js";
-import { registerWorkflowRoutes } from "./routes/workflow.routes.js";
-import { registerWebhookRoutes } from "./routes/webhook.routes.js";
-import { registerChatRoutes } from "./routes/chat.routes.js";
-import { registerFileUploadRoutes } from "./routes/file-upload.routes.js";
-import { registerKnowledgeRoutes } from "./routes/knowledge.routes.js";
-import { registerTemplateRoutes } from "./routes/template.routes.js";
-import { registerGovernanceRoutes } from "./routes/governance.routes.js";
-import { registerAdminRoutes } from "./routes/admin.routes.js";
-import { registerTenantRoutes } from "./routes/tenant.routes.js";
-import { registerPublicationRoutes } from "./routes/publication.routes.js";
-import { registerRexRoutes } from "./routes/rex.routes.js";
+import { registerAppRoutes } from "./routes/index.js";
 import { startScheduler } from "./services/scheduler.service.js";
 import { createKnowledgeService } from "./services/knowledge.service.js";
 import { createTemplateService } from "./services/template.service.js";
@@ -112,31 +100,27 @@ async function bootstrap(): Promise<void> {
   });
 
   // Routes
-  registerAuthRoutes(app, authService);
-  registerApiKeyRoutes(app, apiKeyService, iamService);
-  registerWorkflowRoutes(app, workflowService, executionService, iamService);
-  registerWebhookRoutes(app, db, executionService);
-  registerChatRoutes(app, apiKeyService);
-  registerFileUploadRoutes(app);
-  registerKnowledgeRoutes(app, knowledgeService, iamService);
-  registerTemplateRoutes(app, templateService, iamService);
-  registerGovernanceRoutes(
-    app,
+  registerAppRoutes(app, {
+    db,
+    authService,
+    apiKeyService,
+    workflowService,
+    executionService,
+    iamService,
+    knowledgeService,
+    templateService,
     modelRegistryService,
     domainConfigService,
     kpiService,
     gdprService,
-    iamService,
     workspaceService,
     policyService,
     hyperparameterService,
     alertingService,
-    complianceService
-  );
-  registerAdminRoutes(app, db);
-  registerTenantRoutes(app, db);
-  registerPublicationRoutes(app, publicationService, executionService, iamService);
-  registerRexRoutes(app, rexAutofixService, iamService);
+    complianceService,
+    publicationService,
+    rexAutofixService,
+  });
 
   // Start scheduler for cron/interval workflows
   startScheduler(db, executionService);

@@ -1200,21 +1200,43 @@
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
+  width: min(420px, calc(100% - 32px));
+  padding: 14px;
+  border: 1px solid color-mix(in srgb, var(--accent-500) 26%, var(--border-muted));
+  border-radius: 14px;
+  background: linear-gradient(165deg, color-mix(in srgb, var(--accent-500) 8%, var(--surface-1)), var(--surface-1));
+  box-shadow: 0 10px 28px rgba(2, 8, 22, 0.32);
+  display: grid;
+  gap: 10px;
   text-align: center;
   pointer-events: none;
   z-index: 1;
 }
 
+.wf-editor .wf-empty--editor .wf-empty__illustration {
+  width: 100%;
+  height: auto;
+  margin: 0 auto;
+  opacity: 0.94;
+}
+
+.wf-editor .wf-empty--editor .wf-entry-visual--editor {
+  width: 100%;
+  min-height: 192px;
+}
+
 .wf-editor .wf-empty-title {
   font-size: 16px;
-  font-weight: 500;
-  color: #444;
-  margin-bottom: 6px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 2px;
+  letter-spacing: -0.01em;
 }
 
 .wf-editor .wf-empty-desc {
   font-size: 13px;
-  color: #333;
+  color: var(--text-secondary);
+  line-height: 1.45;
 }
 
 /* ── Save indicator ─────────────────────────── */
@@ -1735,4 +1757,415 @@
   color: #555;
   padding: 8px 0;
   margin-top: 4px;
+}
+
+/* ──────────────────────────────────────────────
+   PHASE 2: Motion & Interaction Polish
+   Panel transitions, staggered entries, advanced hover feedback
+   ────────────────────────────────────────────── */
+
+/* ── PANEL SLIDE-IN ANIMATION ── */
+@keyframes wf-panel-slide-in {
+  from {
+    opacity: 0;
+    transform: translateX(24px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.wf-panel {
+  animation: wf-panel-slide-in var(--duration-base) var(--ease-out-expo);
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+/* ── STAGGERED NODE ENTRY ANIMATION ── */
+@keyframes wf-node-cascade {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.wf-node-stack.cascade-enter .wf-node {
+  animation: wf-node-cascade var(--duration-base) var(--ease-out-expo);
+  animation-delay: calc(var(--cascade-index, 0) * 40ms);
+}
+
+/* ── ADVANCED HOVER STATE: Smart Feedback ── */
+.wf-node:hover {
+  border-color: color-mix(in srgb, var(--wf-node-color, var(--accent-500)) 70%, var(--border-strong));
+  transform: translateY(-6px) scale(1.02);
+  box-shadow: 
+    0 12px 28px rgba(0, 0, 0, 0.5), 
+    0 0 24px color-mix(in srgb, var(--wf-node-color, var(--accent-500)) 35%, transparent),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+.wf-node:active {
+  transform: translateY(-2px) scale(1.01);
+}
+
+/* Palette hover feedback */
+.wf-palette-item:hover {
+  background: linear-gradient(90deg, 
+    rgba(59, 130, 246, 0.1) 0%, 
+    transparent 100%);
+  border-color: rgba(59, 130, 246, 0.3);
+  transform: translateX(4px);
+  transition: all 0.15s ease-out;
+}
+
+/* Port connection hover feedback */
+.wf-port-in:hover,
+.wf-port-out:hover {
+  background: var(--accent-500);
+  border-color: var(--accent-500);
+  transform: translateY(-50%) scale(1.4);
+  box-shadow: 0 0 12px var(--accent-500);
+}
+
+/* Panel field focus animations */
+.wf-panel-input:focus,
+.wf-panel-textarea:focus,
+.wf-panel-select:focus {
+  border-color: var(--accent-500);
+  background: rgba(59, 130, 246, 0.08);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  transition: all 0.2s ease;
+}
+
+/* Inline details smooth expand */
+.wf-inline-details.expanded {
+  animation: wf-inline-expand 0.3s var(--ease-out-expo) both;
+}
+
+@keyframes wf-inline-expand {
+  from {
+    opacity: 0;
+    transform: scale(0.98) translateY(-8px);
+    max-height: 0;
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+    max-height: 520px;
+  }
+}
+
+/* Toolbar button micro-interactions */
+.wf-btn-primary:hover,
+.wf-btn-secondary:hover,
+.wf-btn-run:hover,
+.wf-btn-stop:hover {
+  transform: translateY(-2px);
+  transition: all 0.15s ease-out;
+}
+
+.wf-btn-primary:active,
+.wf-btn-secondary:active,
+.wf-btn-run:active,
+.wf-btn-stop:active {
+  transform: translateY(0);
+}
+
+/* Node close button subtle feedback */
+.wf-panel-close:hover {
+  background: rgba(59, 130, 246, 0.1);
+  color: var(--accent-500);
+  transform: scale(1.1);
+  transition: all 0.15s ease;
+}
+
+/* Smooth panel transitions on content change */
+.wf-panel-body {
+  animation: wf-panel-content-fade-in 0.25s ease-out;
+}
+
+@keyframes wf-panel-content-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* ──────────────────────────────────────────────
+   PHASE 3: Color Strategy & Visual Hierarchy
+   Category-based node styling for instant recognition
+   ────────────────────────────────────────────── */
+
+/* TRIGGER NODES - Green (#22c55e): Workflow entry points */
+.wf-node.cat-trigger {
+  background: linear-gradient(135deg, rgba(17, 45, 34, 0.9) 0%, rgba(10, 30, 20, 0.85) 100%);
+  border: 1.5px solid #22c55e;
+}
+
+.wf-node.cat-trigger:hover {
+  background: linear-gradient(135deg, rgba(25, 55, 40, 0.95) 0%, rgba(15, 40, 28, 0.92) 100%);
+  box-shadow: 
+    0 8px 24px rgba(34, 197, 94, 0.15), 
+    0 0 24px rgba(34, 197, 94, 0.2),
+    inset 0 1px 0 rgba(34, 197, 94, 0.1);
+  border-color: #4ade80;
+}
+
+.wf-node.cat-trigger.selected {
+  background: linear-gradient(135deg, rgba(25, 55, 40, 0.95) 0%, rgba(15, 40, 28, 0.92) 100%);
+  border-color: #4ade80;
+  box-shadow: 
+    0 12px 32px rgba(34, 197, 94, 0.25), 
+    0 0 32px rgba(34, 197, 94, 0.3),
+    inset 0 1px 0 rgba(34, 197, 94, 0.15);
+}
+
+.wf-node.cat-trigger::before {
+  background: linear-gradient(180deg, #22c55e 0%, #16a34a 100%);
+  border-radius: 4px 0 0 4px;
+  opacity: 1;
+}
+
+.wf-node.cat-trigger .wf-node-icon {
+  background: rgba(34, 197, 94, 0.15);
+  color: #4ade80;
+}
+
+.wf-node.cat-trigger:hover .wf-node-icon {
+  background: rgba(34, 197, 94, 0.25);
+  color: #86efac;
+  box-shadow: 0 0 16px rgba(34, 197, 94, 0.3);
+}
+
+/* ACTION NODES - Blue (#3b82f6): Process/LLM nodes */
+.wf-node.cat-action {
+  background: linear-gradient(135deg, rgba(15, 30, 55, 0.9) 0%, rgba(10, 20, 40, 0.85) 100%);
+  border: 1.5px solid #3b82f6;
+}
+
+.wf-node.cat-action:hover {
+  background: linear-gradient(135deg, rgba(20, 40, 70, 0.95) 0%, rgba(12, 28, 50, 0.92) 100%);
+  box-shadow: 
+    0 8px 24px rgba(59, 130, 246, 0.15), 
+    0 0 24px rgba(59, 130, 246, 0.25),
+    inset 0 1px 0 rgba(59, 130, 246, 0.1);
+  border-color: #60a5fa;
+}
+
+.wf-node.cat-action.selected {
+  background: linear-gradient(135deg, rgba(20, 40, 70, 0.95) 0%, rgba(12, 28, 50, 0.92) 100%);
+  border-color: #60a5fa;
+  box-shadow: 
+    0 12px 32px rgba(59, 130, 246, 0.25), 
+    0 0 32px rgba(59, 130, 246, 0.35),
+    inset 0 1px 0 rgba(59, 130, 246, 0.15);
+}
+
+.wf-node.cat-action::before {
+  background: linear-gradient(180deg, #3b82f6 0%, #2563eb 100%);
+  border-radius: 4px 0 0 4px;
+  opacity: 1;
+}
+
+.wf-node.cat-action .wf-node-icon {
+  background: rgba(59, 130, 246, 0.15);
+  color: #60a5fa;
+}
+
+.wf-node.cat-action:hover .wf-node-icon {
+  background: rgba(59, 130, 246, 0.25);
+  color: #93c5fd;
+  box-shadow: 0 0 16px rgba(59, 130, 246, 0.4);
+}
+
+/* LOGIC NODES - Yellow (#eab308): Conditional/branching */
+.wf-node.cat-logic {
+  background: linear-gradient(135deg, rgba(50, 45, 15, 0.9) 0%, rgba(35, 30, 5, 0.85) 100%);
+  border: 1.5px solid #eab308;
+}
+
+.wf-node.cat-logic:hover {
+  background: linear-gradient(135deg, rgba(65, 55, 20, 0.95) 0%, rgba(45, 40, 10, 0.92) 100%);
+  box-shadow: 
+    0 8px 24px rgba(234, 179, 8, 0.12), 
+    0 0 24px rgba(234, 179, 8, 0.18),
+    inset 0 1px 0 rgba(234, 179, 8, 0.08);
+  border-color: #f0d000;
+}
+
+.wf-node.cat-logic.selected {
+  background: linear-gradient(135deg, rgba(65, 55, 20, 0.95) 0%, rgba(45, 40, 10, 0.92) 100%);
+  border-color: #f0d000;
+  box-shadow: 
+    0 12px 32px rgba(234, 179, 8, 0.2), 
+    0 0 32px rgba(234, 179, 8, 0.25),
+    inset 0 1px 0 rgba(234, 179, 8, 0.1);
+}
+
+.wf-node.cat-logic::before {
+  background: linear-gradient(180deg, #eab308 0%, #ca8a04 100%);
+  border-radius: 4px 0 0 4px;
+  opacity: 1;
+}
+
+.wf-node.cat-logic .wf-node-icon {
+  background: rgba(234, 179, 8, 0.12);
+  color: #f0d000;
+}
+
+.wf-node.cat-logic:hover .wf-node-icon {
+  background: rgba(234, 179, 8, 0.2);
+  color: #fde047;
+  box-shadow: 0 0 16px rgba(234, 179, 8, 0.25);
+}
+
+/* OUTPUT NODES - Purple (#a855f7): Data export/output */
+.wf-node.cat-output {
+  background: linear-gradient(135deg, rgba(35, 20, 50, 0.9) 0%, rgba(25, 12, 40, 0.85) 100%);
+  border: 1.5px solid #a855f7;
+}
+
+.wf-node.cat-output:hover {
+  background: linear-gradient(135deg, rgba(45, 25, 65, 0.95) 0%, rgba(32, 15, 50, 0.92) 100%);
+  box-shadow: 
+    0 8px 24px rgba(168, 85, 247, 0.15), 
+    0 0 24px rgba(168, 85, 247, 0.2),
+    inset 0 1px 0 rgba(168, 85, 247, 0.1);
+  border-color: #c084fc;
+}
+
+.wf-node.cat-output.selected {
+  background: linear-gradient(135deg, rgba(45, 25, 65, 0.95) 0%, rgba(32, 15, 50, 0.92) 100%);
+  border-color: #c084fc;
+  box-shadow: 
+    0 12px 32px rgba(168, 85, 247, 0.25), 
+    0 0 32px rgba(168, 85, 247, 0.3),
+    inset 0 1px 0 rgba(168, 85, 247, 0.15);
+}
+
+.wf-node.cat-output::before {
+  background: linear-gradient(180deg, #a855f7 0%, #7e22ce 100%);
+  border-radius: 4px 0 0 4px;
+  opacity: 1;
+}
+
+.wf-node.cat-output .wf-node-icon {
+  background: rgba(168, 85, 247, 0.15);
+  color: #c084fc;
+}
+
+.wf-node.cat-output:hover .wf-node-icon {
+  background: rgba(168, 85, 247, 0.25);
+  color: #e9d5ff;
+  box-shadow: 0 0 16px rgba(168, 85, 247, 0.3);
+}
+
+/* Enhanced execution state animations with category colors */
+.wf-node.cat-trigger.exec-running {
+  animation: cat-trigger-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes cat-trigger-pulse {
+  0%, 100% {
+    box-shadow: 
+      0 8px 20px rgba(34, 197, 94, 0.1),
+      0 0 20px rgba(34, 197, 94, 0.15);
+  }
+  50% {
+    box-shadow: 
+      0 8px 30px rgba(34, 197, 94, 0.2),
+      0 0 36px rgba(34, 197, 94, 0.25);
+  }
+}
+
+.wf-node.cat-action.exec-running {
+  animation: cat-action-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes cat-action-pulse {
+  0%, 100% {
+    box-shadow: 
+      0 8px 20px rgba(59, 130, 246, 0.12),
+      0 0 20px rgba(59, 130, 246, 0.18);
+  }
+  50% {
+    box-shadow: 
+      0 8px 30px rgba(59, 130, 246, 0.2),
+      0 0 40px rgba(59, 130, 246, 0.3);
+  }
+}
+
+.wf-node.cat-logic.exec-running {
+  animation: cat-logic-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes cat-logic-pulse {
+  0%, 100% {
+    box-shadow: 
+      0 8px 20px rgba(234, 179, 8, 0.08),
+      0 0 20px rgba(234, 179, 8, 0.12);
+  }
+  50% {
+    box-shadow: 
+      0 8px 30px rgba(234, 179, 8, 0.15),
+      0 0 36px rgba(234, 179, 8, 0.2);
+  }
+}
+
+.wf-node.cat-output.exec-running {
+  animation: cat-output-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes cat-output-pulse {
+  0%, 100% {
+    box-shadow: 
+      0 8px 20px rgba(168, 85, 247, 0.12),
+      0 0 20px rgba(168, 85, 247, 0.18);
+  }
+  50% {
+    box-shadow: 
+      0 8px 30px rgba(168, 85, 247, 0.2),
+      0 0 36px rgba(168, 85, 247, 0.28);
+  }
+}
+
+/* Status indicator hierarchy - enhanced visual feedback */
+.wf-node.exec-completed {
+  border-color: #22c55e;
+  box-shadow: inset 0 1px 0 rgba(34, 197, 94, 0.2);
+}
+
+.wf-node.exec-failed {
+  border-color: #ef4444;
+  box-shadow: inset 0 1px 0 rgba(239, 68, 68, 0.2);
+}
+
+.wf-node.exec-skipped {
+  opacity: 0.55;
+  border-color: rgba(100, 116, 139, 0.4);
+  box-shadow: inset 0 1px 0 rgba(71, 85, 105, 0.1);
+}
+
+/* Category-specific header highlights */
+.wf-node.cat-trigger .wf-node-header {
+  border-bottom: 1px solid rgba(34, 197, 94, 0.2);
+}
+
+.wf-node.cat-action .wf-node-header {
+  border-bottom: 1px solid rgba(59, 130, 246, 0.2);
+}
+
+.wf-node.cat-logic .wf-node-header {
+  border-bottom: 1px solid rgba(234, 179, 8, 0.15);
+}
+
+.wf-node.cat-output .wf-node-header {
+  border-bottom: 1px solid rgba(168, 85, 247, 0.2);
 }

@@ -2,26 +2,20 @@
 
 import { createContext, useContext, useState, useEffect, useCallback } from "react";
 import type { ReactNode } from "react";
-
-interface User {
-  id: string;
-  email: string;
-  name: string;
-  role?: "admin" | "editor" | "viewer";
-}
+import type { AuthUserClient } from "@/lib/api";
 
 interface AuthContextType {
-  user: User | null;
+  user: AuthUserClient | null;
   token: string | null;
   loading: boolean;
-  login: (token: string, user: User) => void;
+  login: (token: string, user: AuthUserClient) => void;
   logout: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<AuthUserClient | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -31,7 +25,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (storedToken && storedUser) {
       setToken(storedToken);
       try {
-        setUser(JSON.parse(storedUser) as User);
+        setUser(JSON.parse(storedUser) as AuthUserClient);
       } catch {
         localStorage.removeItem("rex_token");
         localStorage.removeItem("rex_user");
@@ -40,7 +34,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setLoading(false);
   }, []);
 
-  const login = useCallback((newToken: string, newUser: User) => {
+  const login = useCallback((newToken: string, newUser: AuthUserClient) => {
     setToken(newToken);
     setUser(newUser);
     localStorage.setItem("rex_token", newToken);

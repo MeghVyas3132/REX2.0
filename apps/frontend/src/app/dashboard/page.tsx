@@ -9,6 +9,7 @@ import Link from "next/link";
 import { loadWorkflowDraft, clearWorkflowDraft } from "@/lib/workflow-draft";
 import { AppShell, getDashboardNavItems } from "@/components/layout";
 import { Badge, Button, StateBlock } from "@/components/ui";
+import { WorkflowEntryVisual } from "@/components/workflow-visual/WorkflowEntryVisual";
 
 export default function DashboardPage() {
   const { user, token, loading: authLoading, logout } = useAuth();
@@ -194,7 +195,7 @@ function EmptyState() {
   return (
     <div className="wf-empty stagger-in w-full min-h-[360px] max-h-[480px] p-6 flex flex-col items-center justify-center text-center" style={{ "--stagger-delay": "80ms" } as React.CSSProperties}>
       <div className="wf-empty__illustration" aria-hidden="true">
-        <EmptyIllustration />
+        <WorkflowEntryVisual className="wf-entry-visual--dashboard" />
       </div>
       <div className="wf-empty__body flex flex-col items-center space-y-4 text-center">
         <p className="wf-empty__kicker">Workflow Studio</p>
@@ -332,43 +333,6 @@ function CanvasDots() {
         </mask>
       </defs>
       <rect width="100%" height="100%" fill="url(#wf-dot-pattern)" mask="url(#wf-dot-mask)" />
-    </svg>
-  );
-}
-
-function EmptyIllustration() {
-  return (
-    <svg viewBox="0 0 320 180" width="320" height="180" fill="none" xmlns="http://www.w3.org/2000/svg">
-      {/* Central glow */}
-      <ellipse cx="160" cy="90" rx="100" ry="60" fill="rgba(79,120,255,0.07)" />
-      {/* Connector lines */}
-      <line x1="72" y1="90" x2="120" y2="70" stroke="rgba(79,120,255,0.28)" strokeWidth="1.5" strokeDasharray="4 4" />
-      <line x1="72" y1="90" x2="120" y2="110" stroke="rgba(79,120,255,0.28)" strokeWidth="1.5" strokeDasharray="4 4" />
-      <line x1="200" y1="70" x2="248" y2="56" stroke="rgba(79,120,255,0.28)" strokeWidth="1.5" strokeDasharray="4 4" />
-      <line x1="200" y1="110" x2="248" y2="124" stroke="rgba(79,120,255,0.28)" strokeWidth="1.5" strokeDasharray="4 4" />
-      {/* Input node */}
-      <rect x="28" y="74" width="44" height="32" rx="8" fill="rgba(15,22,38,0.9)" stroke="rgba(79,120,255,0.45)" strokeWidth="1.5" />
-      <text x="50" y="93" textAnchor="middle" fontSize="9" fill="rgba(183,194,219,0.8)" fontFamily="monospace">Input</text>
-      {/* Central LLM node */}
-      <rect x="120" y="54" width="80" height="72" rx="10" fill="rgba(15,22,38,0.95)" stroke="rgba(79,120,255,0.7)" strokeWidth="1.5" />
-      <rect x="120" y="54" width="80" height="72" rx="10" fill="url(#nodeGlow)" />
-      <text x="160" y="85" textAnchor="middle" fontSize="9" fill="rgba(183,194,219,0.6)" fontFamily="monospace">LLM</text>
-      <text x="160" y="100" textAnchor="middle" fontSize="11" fill="rgba(238,242,255,0.9)" fontFamily="monospace" fontWeight="600">Node</text>
-      {/* Output nodes */}
-      <rect x="200" y="44" width="48" height="28" rx="7" fill="rgba(15,22,38,0.9)" stroke="rgba(52,211,153,0.45)" strokeWidth="1.2" />
-      <text x="224" y="62" textAnchor="middle" fontSize="9" fill="rgba(183,194,219,0.8)" fontFamily="monospace">Output A</text>
-      <rect x="200" y="98" width="48" height="28" rx="7" fill="rgba(15,22,38,0.9)" stroke="rgba(52,211,153,0.45)" strokeWidth="1.2" />
-      <text x="224" y="116" textAnchor="middle" fontSize="9" fill="rgba(183,194,219,0.8)" fontFamily="monospace">Output B</text>
-      {/* Dots */}
-      <circle cx="72" cy="90" r="3.5" fill="rgba(79,120,255,0.7)" />
-      <circle cx="248" cy="56" r="3" fill="rgba(52,211,153,0.7)" />
-      <circle cx="248" cy="124" r="3" fill="rgba(52,211,153,0.7)" />
-      <defs>
-        <radialGradient id="nodeGlow" cx="50%" cy="0%" r="80%">
-          <stop offset="0%" stopColor="rgba(79,120,255,0.14)" />
-          <stop offset="100%" stopColor="rgba(79,120,255,0)" />
-        </radialGradient>
-      </defs>
     </svg>
   );
 }

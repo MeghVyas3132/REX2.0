@@ -4,7 +4,17 @@
 // ──────────────────────────────────────────────
 
 import { getDatabase, closeConnection } from "./connection";
-import { users, workflows } from "./schema";
+import { and, eq } from "drizzle-orm";
+import {
+  adminAuditLog,
+  pluginCatalogue,
+  tenantPlans,
+  tenantPlugins,
+  tenants,
+  tenantUsers,
+  users,
+  workflows,
+} from "./schema";
 
 const DEFAULT_TENANT_ID = "00000000-0000-0000-0000-000000000001";
 
@@ -23,23 +33,230 @@ async function seed() {
   const bcryptHash =
     "$2b$10$4pqHG6k2KK22UYQUwNUSKObvQnoMJ0vAz4Sn4Et7DoCSNaMsVKv/S";
 
-  const [demoUser] = await db
-    .insert(users)
+  await db
+    .insert(tenants)
     .values({
+      id: DEFAULT_TENANT_ID,
+      name: "Default Tenant",
+      slug: "default",
+      planTier: "enterprise",
+      settings: {},
+      isActive: true,
+    })
+    .onConflictDoNothing();
+
+  const seededUsers = [
+    {
+      email: "admin@rex.dev",
+      name: "REX Super Admin",
+      role: "admin",
+      globalRole: "super_admin",
+      tenantRole: "org_admin",
+      interfaceAccess: "both",
+    },
+    {
+      email: "studio@rex.dev",
+      name: "Studio Builder",
+      role: "editor",
+      globalRole: "user",
+      tenantRole: "org_editor",
+      interfaceAccess: "studio",
+    },
+    {
+      email: "business@rex.dev",
+      name: "Business Operator",
+      role: "viewer",
+      globalRole: "user",
+      tenantRole: "org_viewer",
+      interfaceAccess: "business",
+    },
+    {
       email: "demo@rex.dev",
       name: "Demo User",
-      passwordHash: bcryptHash,
-    })
-    .onConflictDoNothing()
-    .returning();
+      role: "editor",
+      globalRole: "user",
+      tenantRole: "org_editor",
+      interfaceAccess: "both",
+    },
+  ] as const;
 
-  if (!demoUser) {
-    console.log("[seed] demo user already exists, skipping...");
-    await closeConnection();
-    return;
+  const userByEmail = new Map<string, { id: string }>();
+  for (const seedUser of seededUsers) {
+    const [insertedUser] = await db
+      .insert(users)
+      .values({
+        email: seedUser.email,
+        name: seedUser.name,
+        passwordHash: bcryptHash,
+        role: seedUser.role,
+        globalRole: seedUser.globalRole,
+      })
+      .onConflictDoNothing()
+      .returning({ id: users.id });
+
+    const userRecord =
+      insertedUser ??
+      (await db
+        .select({ id: users.id })
+        .from(users)
+        .where(eq(users.email, seedUser.email))
+        .limit(1))[0];
+
+    if (!userRecord) {
+      throw new Error(`Failed to resolve user ${seedUser.email}`);
+    }
+
+    userByEmail.set(seedUser.email, userRecord);
   }
 
-  const userId = demoUser.id;
+  const adminUserId = userByEmail.get("admin@rex.dev")?.id;
+  if (!adminUserId) {
+    throw new Error("Failed to resolve super admin user");
+  }
+
+  for (const seedUser of seededUsers) {
+    const userId = userByEmail.get(seedUser.email)?.id;
+    if (!userId) continue;
+
+    await db
+      .insert(tenantUsers)
+      .values({
+        tenantId: DEFAULT_TENANT_ID,
+        userId,
+        tenantRole: seedUser.tenantRole,
+        interfaceAccess: seedUser.interfaceAccess,
+        abacAttributes: {},
+        isActive: true,
+        invitedBy: userId === adminUserId ? null : adminUserId,
+      })
+      .onConflictDoUpdate({
+        target: [tenantUsers.tenantId, tenantUsers.userId],
+        set: {
+          tenantRole: seedUser.tenantRole,
+          interfaceAccess: seedUser.interfaceAccess,
+          isActive: true,
+        },
+      });
+  }
+
+  await db
+    .insert(tenantPlans)
+    .values({
+      tenantId: DEFAULT_TENANT_ID,
+      planName: "enterprise",
+      allowedNodeTypes: [],
+      allowedPluginSlugs: ["http", "slack", "salesforce"],
+      maxWorkflows: 200,
+      maxExecutionsPerMonth: 200000,
+      maxKnowledgeCorpora: 100,
+      maxUsers: 200,
+      maxApiKeys: 100,
+      customLimits: {},
+    })
+    .onConflictDoUpdate({
+      target: tenantPlans.tenantId,
+      set: {
+        planName: "enterprise",
+        allowedPluginSlugs: ["http", "slack", "salesforce"],
+        maxWorkflows: 200,
+        maxExecutionsPerMonth: 200000,
+        maxKnowledgeCorpora: 100,
+        maxUsers: 200,
+        maxApiKeys: 100,
+      },
+    });
+
+  const catalogueSeed = [
+    {
+      slug: "http",
+      name: "HTTP Node",
+      description: "Generic HTTP request node",
+      category: "developer",
+      version: "1.0.0",
+      isPublic: true,
+      isBuiltin: true,
+      manifest: { type: "developer", actions: ["request"] },
+    },
+    {
+      slug: "slack",
+      name: "Slack",
+      description: "Send Slack notifications",
+      category: "communication",
+      version: "1.0.0",
+      isPublic: true,
+      isBuiltin: true,
+      manifest: { type: "communication", actions: ["send_message"] },
+    },
+    {
+      slug: "salesforce",
+      name: "Salesforce",
+      description: "Sync CRM records",
+      category: "business_crm",
+      version: "1.0.0",
+      isPublic: false,
+      isBuiltin: false,
+      manifest: { type: "business_crm", actions: ["upsert_contact"] },
+    },
+  ] as const;
+
+  for (const plugin of catalogueSeed) {
+    await db
+      .insert(pluginCatalogue)
+      .values({
+        slug: plugin.slug,
+        name: plugin.name,
+        description: plugin.description,
+        category: plugin.category,
+        version: plugin.version,
+        manifest: plugin.manifest,
+        isPublic: plugin.isPublic,
+        isBuiltin: plugin.isBuiltin,
+        isActive: true,
+      })
+      .onConflictDoUpdate({
+        target: pluginCatalogue.slug,
+        set: {
+          name: plugin.name,
+          description: plugin.description,
+          category: plugin.category,
+          version: plugin.version,
+          manifest: plugin.manifest,
+          isPublic: plugin.isPublic,
+          isBuiltin: plugin.isBuiltin,
+          isActive: true,
+          updatedAt: new Date(),
+        },
+      });
+
+    await db
+      .insert(tenantPlugins)
+      .values({
+        tenantId: DEFAULT_TENANT_ID,
+        pluginSlug: plugin.slug,
+        isEnabled: true,
+        byokConfig: {},
+        configOverrides: {},
+        enabledBy: adminUserId,
+      })
+      .onConflictDoUpdate({
+        target: [tenantPlugins.tenantId, tenantPlugins.pluginSlug],
+        set: { isEnabled: true },
+      });
+  }
+
+  await db.insert(adminAuditLog).values({
+    actorId: adminUserId,
+    action: "seed.completed",
+    targetType: "tenant",
+    targetId: DEFAULT_TENANT_ID,
+    oldValue: null,
+    newValue: { seededUsers: seededUsers.map((u) => u.email) },
+  });
+
+  const workflowOwnerId = userByEmail.get("studio@rex.dev")?.id ?? userByEmail.get("demo@rex.dev")?.id;
+  if (!workflowOwnerId) {
+    throw new Error("Failed to resolve workflow owner user");
+  }
 
   // ─── Workflow Definitions ──────────────────────────
 
@@ -227,9 +444,26 @@ async function seed() {
   ];
 
   for (const wf of workflowDefs) {
+    const [existing] = await db
+      .select({ id: workflows.id })
+      .from(workflows)
+      .where(
+        and(
+          eq(workflows.tenantId, DEFAULT_TENANT_ID),
+          eq(workflows.userId, workflowOwnerId),
+          eq(workflows.name, wf.name)
+        )
+      )
+      .limit(1);
+
+    if (existing) {
+      console.log(`[seed] workflow already exists: ${wf.name}`);
+      continue;
+    }
+
     await db.insert(workflows).values({
       tenantId: DEFAULT_TENANT_ID,
-      userId,
+      userId: workflowOwnerId,
       name: wf.name,
       description: wf.description,
       status: "active",
@@ -240,7 +474,11 @@ async function seed() {
     console.log(`[seed] created workflow: ${wf.name}`);
   }
 
-  console.log("[seed] done. 10 workflows seeded for demo@rex.dev");
+  console.log("[seed] done. Seeded role users with password demo1234:");
+  console.log("[seed] - admin@rex.dev (super_admin)");
+  console.log("[seed] - studio@rex.dev (org_editor / studio)");
+  console.log("[seed] - business@rex.dev (org_viewer / business)");
+  console.log("[seed] - demo@rex.dev (org_editor / both)");
   await closeConnection();
   process.exit(0);
 }

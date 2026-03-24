@@ -587,6 +587,85 @@ export const api = {
         { token }
       ),
   },
+
+  admin: {
+    listTenants: (token: string) =>
+      apiCall<{ success: boolean; data: AdminTenantClient[] }>("/admin/tenants", { token }),
+    getTenant: (token: string, tenantId: string) =>
+      apiCall<{ success: boolean; data: AdminTenantClient | null }>(`/admin/tenants/${tenantId}`, { token }),
+    updateTenant: (token: string, tenantId: string, payload: Partial<AdminTenantUpdatePayload>) =>
+      apiCall<{ success: boolean; data: AdminTenantClient | null }>(`/admin/tenants/${tenantId}`, {
+        method: "PATCH",
+        body: payload,
+        token,
+      }),
+    getTenantMetrics: (token: string, tenantId: string) =>
+      apiCall<{ success: boolean; data: AdminTenantMetricsClient }>(`/admin/tenants/${tenantId}/metrics`, { token }),
+    getTenantPlan: (token: string, tenantId: string) =>
+      apiCall<{ success: boolean; data: TenantPlanClient | null }>(`/admin/tenants/${tenantId}/plan`, { token }),
+    setTenantPlan: (token: string, tenantId: string, payload: TenantPlanUpdatePayload) =>
+      apiCall<{ success: boolean; data: TenantPlanClient }>(`/admin/tenants/${tenantId}/plan`, {
+        method: "POST",
+        body: payload,
+        token,
+      }),
+    listPlugins: (token: string) =>
+      apiCall<{ success: boolean; data: PluginCatalogueClient[] }>("/admin/plugins", { token }),
+    createPlugin: (token: string, payload: AdminPluginCreatePayload) =>
+      apiCall<{ success: boolean; data: PluginCatalogueClient }>("/admin/plugins", {
+        method: "POST",
+        body: payload,
+        token,
+      }),
+    updatePlugin: (token: string, slug: string, payload: Partial<AdminPluginUpdatePayload>) =>
+      apiCall<{ success: boolean; data: PluginCatalogueClient }>(`/admin/plugins/${slug}`, {
+        method: "PATCH",
+        body: payload,
+        token,
+      }),
+    getAuditLog: (token: string) =>
+      apiCall<{ success: boolean; data: AdminAuditEventClient[] }>("/admin/audit-log", { token }),
+  },
+
+  tenant: {
+    get: (token: string) =>
+      apiCall<{ success: boolean; data: TenantClient | null }>("/api/tenant", { token }),
+    update: (token: string, payload: Partial<TenantUpdatePayload>) =>
+      apiCall<{ success: boolean; data: TenantClient | null }>("/api/tenant", {
+        method: "PATCH",
+        body: payload,
+        token,
+      }),
+    listUsers: (token: string) =>
+      apiCall<{ success: boolean; data: TenantUserMembershipClient[] }>("/api/tenant/users", { token }),
+    inviteUser: (token: string, payload: TenantInvitePayload) =>
+      apiCall<{ success: boolean; data: TenantUserMembershipClient }>("/api/tenant/users/invite", {
+        method: "POST",
+        body: payload,
+        token,
+      }),
+    listPlugins: (token: string) =>
+      apiCall<{ success: boolean; data: TenantPluginClient[] }>("/api/tenant/plugins", { token }),
+    updatePluginByok: (token: string, slug: string, byokConfig: Record<string, unknown>) =>
+      apiCall<{ success: boolean; data: TenantPluginByokResultClient }>(`/api/tenant/plugins/${slug}/byok`, {
+        method: "PATCH",
+        body: { byokConfig },
+        token,
+      }),
+    getPlan: (token: string) =>
+      apiCall<{ success: boolean; data: TenantPlanClient | null }>("/api/tenant/plan", { token }),
+    getUsage: (token: string) =>
+      apiCall<{ success: boolean; data: TenantUsageClient }>("/api/tenant/usage", { token }),
+  },
+
+  plugins: {
+    list: (token: string) =>
+      apiCall<{ success: boolean; data: PluginCatalogueClient[] }>("/api/plugins", { token }),
+    get: (token: string, slug: string) =>
+      apiCall<{ success: boolean; data: PluginCatalogueClient }>(`/api/plugins/${slug}`, { token }),
+    categories: (token: string) =>
+      apiCall<{ success: boolean; data: PluginCategoryClient[] }>("/api/plugins/categories", { token }),
+  },
 };
 
 // Client-side types
@@ -595,6 +674,183 @@ export interface AuthUserClient {
   email: string;
   name: string;
   role: "admin" | "editor" | "viewer";
+  globalRole: "super_admin" | "user";
+  tenantId: string;
+  tenantRole: "org_admin" | "org_editor" | "org_viewer";
+  interfaceAccess: "business" | "studio" | "both";
+  abacAttributes: Record<string, unknown>;
+}
+
+export type PluginCategoryClient =
+  | "ai_llm"
+  | "data_storage"
+  | "communication"
+  | "business_crm"
+  | "logic_control"
+  | "trigger"
+  | "compliance_rex"
+  | "developer";
+
+export interface AdminTenantClient {
+  id: string;
+  name: string;
+  slug: string;
+  planTier: "starter" | "pro" | "enterprise" | "custom";
+  isActive: boolean;
+  settings: Record<string, unknown>;
+  dataResidencyCountry: string | null;
+  dataResidencyRegion: string | null;
+  gdprDpaContact: string | null;
+  dpdpDataFiduciaryName: string | null;
+  createdBy: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AdminTenantUpdatePayload {
+  name: string;
+  isActive: boolean;
+  settings: Record<string, unknown>;
+  planTier: "starter" | "pro" | "enterprise" | "custom";
+}
+
+export interface AdminTenantMetricsClient {
+  users: number;
+  workflows: number;
+  executions: number;
+}
+
+export interface TenantPlanClient {
+  id: string;
+  tenantId: string;
+  planName: string;
+  allowedNodeTypes: string[];
+  allowedPluginSlugs: string[];
+  maxWorkflows: number;
+  maxExecutionsPerMonth: number;
+  maxKnowledgeCorpora: number;
+  maxUsers: number;
+  maxApiKeys: number;
+  customLimits: Record<string, unknown>;
+  validFrom: string;
+  validUntil: string | null;
+  createdAt: string;
+}
+
+export interface TenantPlanUpdatePayload {
+  planName: string;
+  allowedNodeTypes?: string[];
+  allowedPluginSlugs?: string[];
+  maxWorkflows?: number;
+  maxExecutionsPerMonth?: number;
+  maxKnowledgeCorpora?: number;
+  maxUsers?: number;
+  maxApiKeys?: number;
+}
+
+export interface PluginCatalogueClient {
+  id: string;
+  slug: string;
+  name: string;
+  description: string | null;
+  category: PluginCategoryClient;
+  version: string;
+  manifest: Record<string, unknown>;
+  isPublic: boolean;
+  isBuiltin: boolean;
+  isActive: boolean;
+  rexHints: Record<string, unknown>;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AdminPluginCreatePayload {
+  slug: string;
+  name: string;
+  description?: string;
+  category: PluginCategoryClient;
+  version?: string;
+  manifest: Record<string, unknown>;
+}
+
+export interface AdminPluginUpdatePayload {
+  name: string;
+  description: string;
+  category: PluginCategoryClient;
+  version: string;
+  manifest: Record<string, unknown>;
+  isActive: boolean;
+  isPublic: boolean;
+}
+
+export interface AdminAuditEventClient {
+  id: string;
+  actorId: string | null;
+  action: string;
+  targetType: string;
+  targetId: string | null;
+  oldValue: Record<string, unknown> | null;
+  newValue: Record<string, unknown> | null;
+  ipAddress: string | null;
+  userAgent: string | null;
+  createdAt: string;
+}
+
+export interface TenantClient {
+  id: string;
+  name: string;
+  slug: string;
+  planTier: "starter" | "pro" | "enterprise" | "custom";
+  isActive: boolean;
+  settings: Record<string, unknown>;
+  dataResidencyCountry: string | null;
+  dataResidencyRegion: string | null;
+  gdprDpaContact: string | null;
+  dpdpDataFiduciaryName: string | null;
+  createdBy: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface TenantUpdatePayload {
+  name: string;
+  settings: Record<string, unknown>;
+  dataResidencyCountry: string;
+  dataResidencyRegion: string;
+}
+
+export interface TenantUserMembershipClient {
+  userId: string;
+  tenantRole: "org_admin" | "org_editor" | "org_viewer";
+  interfaceAccess: "business" | "studio" | "both";
+  isActive: boolean;
+}
+
+export interface TenantInvitePayload {
+  userId: string;
+  tenantRole?: "org_admin" | "org_editor" | "org_viewer";
+  interfaceAccess?: "business" | "studio" | "both";
+}
+
+export interface TenantPluginClient {
+  id: string;
+  tenantId: string;
+  pluginSlug: string;
+  isEnabled: boolean;
+  byokConfig: Record<string, unknown>;
+  configOverrides: Record<string, unknown>;
+  enabledBy: string | null;
+  createdAt: string;
+}
+
+export interface TenantPluginByokResultClient {
+  configured: boolean;
+  lastVerified: string;
+}
+
+export interface TenantUsageClient {
+  workflows: number;
+  executionsThisMonth: number;
 }
 
 export interface WorkflowListItem {

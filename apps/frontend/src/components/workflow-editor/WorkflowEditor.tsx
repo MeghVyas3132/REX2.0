@@ -11,6 +11,7 @@ import { CanvasNodeComponent } from "./CanvasNode";
 import { NodeConfigPanel } from "./NodeConfigPanel";
 import { ChatPanel } from "./ChatPanel";
 import { useTour } from "@/components/tour";
+import { WorkflowEntryVisual } from "@/components/workflow-visual/WorkflowEntryVisual";
 import "./workflow-editor.css";
 import "./chat-panel.css";
 
@@ -1008,10 +1009,13 @@ export function WorkflowEditor({
           onDrop={handleCanvasDrop}
         >
           {nodes.length === 0 && (
-            <div className="wf-empty">
+            <div className="wf-empty wf-empty--editor">
+              <div className="wf-empty__illustration" aria-hidden="true">
+                <WorkflowEntryVisual compact className="wf-entry-visual--editor" />
+              </div>
               <div className="wf-empty-title">Drag nodes from the left panel</div>
               <div className="wf-empty-desc">
-                Drop them here to build your workflow
+                Connect triggers, policy gates, and outputs to compose your execution graph.
               </div>
             </div>
           )}
