@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { api, type WorkflowTemplateClient } from "@/lib/api";
 import { useAuth } from "@/lib/auth-context";
+import { canManageCompany } from "@/lib/rbac";
 
 function labelForBusiness(template: WorkflowTemplateClient): string {
   const joined = template.tags.join(" ").toLowerCase();
@@ -15,7 +16,7 @@ function labelForBusiness(template: WorkflowTemplateClient): string {
 }
 
 export default function BusinessPage() {
-  const { token, loading: authLoading } = useAuth();
+  const { token, user, loading: authLoading } = useAuth();
   const router = useRouter();
   const [templates, setTemplates] = useState<WorkflowTemplateClient[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -127,6 +128,12 @@ export default function BusinessPage() {
             <span>Track execution history</span>
             <Link className="control-link" href="/business/history">View log</Link>
           </li>
+          {canManageCompany(user) ? (
+            <li>
+              <span>Manage company users and RBAC</span>
+              <Link className="control-link" href="/business/company-admin">Open console</Link>
+            </li>
+          ) : null}
         </ul>
       </article>
     </section>

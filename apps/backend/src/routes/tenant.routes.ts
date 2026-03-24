@@ -8,6 +8,7 @@ import {
   tenantPlugins,
   tenants,
   tenantUsers,
+  users,
   workflows,
 } from "@rex/database";
 
@@ -45,11 +46,14 @@ export function registerTenantRoutes(app: FastifyInstance, db: Database): void {
       const rows = await db
         .select({
           userId: tenantUsers.userId,
+          email: users.email,
+          name: users.name,
           tenantRole: tenantUsers.tenantRole,
           interfaceAccess: tenantUsers.interfaceAccess,
           isActive: tenantUsers.isActive,
         })
         .from(tenantUsers)
+        .innerJoin(users, eq(users.id, tenantUsers.userId))
         .where(eq(tenantUsers.tenantId, request.ctx.tenantId));
       return reply.send({ success: true, data: rows });
     });

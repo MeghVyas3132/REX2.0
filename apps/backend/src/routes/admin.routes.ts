@@ -9,6 +9,7 @@ import {
   tenantPlugins,
   tenants,
   tenantUsers,
+  users,
   workflows,
 } from "@rex/database";
 
@@ -65,6 +66,26 @@ export function registerAdminRoutes(app: FastifyInstance, db: Database): void {
         return reply.status(404).send({ success: false, error: { code: "NOT_FOUND", message: "Tenant not found" } });
       }
       return reply.send({ success: true, data: tenant });
+    });
+
+    scoped.get("/admin/tenants/:id/users", async (request, reply) => {
+      const { id } = request.params as { id: string };
+      const rows = await db
+        .select({
+          userId: tenantUsers.userId,
+          email: users.email,
+          name: users.name,
+          tenantRole: tenantUsers.tenantRole,
+          interfaceAccess: tenantUsers.interfaceAccess,
+          isActive: tenantUsers.isActive,
+          createdAt: tenantUsers.createdAt,
+        })
+        .from(tenantUsers)
+        .innerJoin(users, eq(users.id, tenantUsers.userId))
+        .where(eq(tenantUsers.tenantId, id))
+        .orderBy(desc(tenantUsers.createdAt));
+
+      return reply.send({ success: true, data: rows });
     });
 
     scoped.patch("/admin/tenants/:id", async (request, reply) => {
@@ -171,12 +192,30 @@ export function registerAdminRoutes(app: FastifyInstance, db: Database): void {
         planName: string;
         allowedNodeTypes?: string[];
         allowedPluginSlugs?: string[];
+        allowedTemplateIds?: string[];
         maxWorkflows?: number;
         maxExecutionsPerMonth?: number;
         maxKnowledgeCorpora?: number;
         maxUsers?: number;
         maxApiKeys?: number;
       };
+
+      const [existingPlan] = await db
+        .select({ customLimits: tenantPlans.customLimits })
+        .from(tenantPlans)
+        .where(eq(tenantPlans.tenantId, id))
+        .limit(1);
+
+      const existingCustomLimits =
+        (existingPlan?.customLimits as Record<string, unknown> | undefined) ?? {};
+
+      const nextCustomLimits: Record<string, unknown> = {
+        ...existingCustomLimits,
+      };
+
+      if (Array.isArray(body.allowedTemplateIds)) {
+        nextCustomLimits["allowedTemplateIds"] = body.allowedTemplateIds;
+      }
 
       const [plan] = await db
         .insert(tenantPlans)
@@ -190,6 +229,7 @@ export function registerAdminRoutes(app: FastifyInstance, db: Database): void {
           maxKnowledgeCorpora: body.maxKnowledgeCorpora ?? 5,
           maxUsers: body.maxUsers ?? 10,
           maxApiKeys: body.maxApiKeys ?? 5,
+          customLimits: nextCustomLimits,
         })
         .onConflictDoUpdate({
           target: tenantPlans.tenantId,
@@ -202,6 +242,7 @@ export function registerAdminRoutes(app: FastifyInstance, db: Database): void {
             maxKnowledgeCorpora: body.maxKnowledgeCorpora ?? 5,
             maxUsers: body.maxUsers ?? 10,
             maxApiKeys: body.maxApiKeys ?? 5,
+            customLimits: nextCustomLimits,
           },
         })
         .returning();

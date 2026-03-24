@@ -85,9 +85,7 @@ function BusinessWorkflowsContent() {
           <p>
             You chose <strong>{selectedTemplateLabel}</strong>. Create or reuse a workflow with business-safe defaults.
           </p>
-          <p>
-            <Link className="control-link" href={`/dashboard/templates/${selectedTemplate}`}>Open template details</Link>
-          </p>
+          <p className="control-empty">Template details are available in Studio for manager roles.</p>
         </article>
       ) : null}
 

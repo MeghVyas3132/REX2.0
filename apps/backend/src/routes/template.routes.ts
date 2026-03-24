@@ -3,32 +3,62 @@
 // ──────────────────────────────────────────────
 
 import type { FastifyInstance, FastifyRequest, FastifyReply } from "fastify";
+import { eq } from "drizzle-orm";
+import type { Database } from "@rex/database";
+import { tenantPlans } from "@rex/database";
 import {
   instantiateWorkflowTemplateSchema,
 } from "../validation/schemas.js";
 import type { createTemplateService } from "../services/template.service.js";
-import type { IAMService } from "../services/iam.service.js";
-import { IAMError } from "../services/iam.service.js";
+import { canEditWorkflows } from "../services/rbac.service.js";
 
 type TemplateService = ReturnType<typeof createTemplateService>;
 
 export function registerTemplateRoutes(
   app: FastifyInstance,
   templateService: TemplateService,
-  iamService: IAMService
+  db: Database
 ): void {
+  async function getAllowedTemplateIds(tenantId: string): Promise<string[] | null> {
+    const [plan] = await db
+      .select({ customLimits: tenantPlans.customLimits })
+      .from(tenantPlans)
+      .where(eq(tenantPlans.tenantId, tenantId))
+      .limit(1);
+
+    const limits = (plan?.customLimits as Record<string, unknown> | undefined) ?? {};
+    const raw = limits["allowedTemplateIds"];
+    if (!Array.isArray(raw)) return null;
+    const ids = raw.filter((item): item is string => typeof item === "string" && item.trim().length > 0);
+    return ids.length > 0 ? ids : null;
+  }
+
   app.register(async function scopedRoutes(scoped: FastifyInstance) {
     scoped.addHook("onRequest", app.authenticate);
 
-    scoped.get("/api/workflow-templates", async (_request: FastifyRequest, reply: FastifyReply) => {
+    scoped.get("/api/workflow-templates", async (request: FastifyRequest, reply: FastifyReply) => {
+      const allowedTemplateIds = await getAllowedTemplateIds(request.ctx.tenantId);
+      const allTemplates = templateService.list();
+      const data = allowedTemplateIds
+        ? allTemplates.filter((template) => allowedTemplateIds.includes(template.id))
+        : allTemplates;
+
       return reply.send({
         success: true,
-        data: templateService.list(),
+        data,
       });
     });
 
     scoped.get("/api/workflow-templates/:templateId", async (request: FastifyRequest, reply: FastifyReply) => {
       const { templateId } = request.params as { templateId: string };
+      const allowedTemplateIds = await getAllowedTemplateIds(request.ctx.tenantId);
+      if (allowedTemplateIds && !allowedTemplateIds.includes(templateId)) {
+        return reply.status(404).send({
+          success: false,
+          error: { code: "NOT_FOUND", message: "Workflow template not found" },
+        });
+      }
+
       const template = templateService.getById(templateId);
       if (!template) {
         return reply.status(404).send({
@@ -58,18 +88,21 @@ export function registerTemplateRoutes(
 
       const userId = (request.user as { sub: string }).sub;
       const tenantId = (request.user as { tenantId?: string }).tenantId ?? "00000000-0000-0000-0000-000000000001";
-      try {
-        await iamService.assertRole(userId, ["admin", "editor"]);
-      } catch (err) {
-        if (err instanceof IAMError) {
-          return reply.status(err.statusCode).send({
-            success: false,
-            error: { code: err.code, message: err.message },
-          });
-        }
-        throw err;
+      if (!canEditWorkflows(request.ctx)) {
+        return reply.status(403).send({
+          success: false,
+          error: { code: "FORBIDDEN", message: "Manager or company admin role required" },
+        });
       }
+
       const { templateId } = request.params as { templateId: string };
+      const allowedTemplateIds = await getAllowedTemplateIds(request.ctx.tenantId);
+      if (allowedTemplateIds && !allowedTemplateIds.includes(templateId)) {
+        return reply.status(404).send({
+          success: false,
+          error: { code: "NOT_FOUND", message: "Workflow template not found" },
+        });
+      }
 
       try {
         const workflow = await templateService.instantiate(
@@ -117,6 +150,14 @@ export function registerTemplateRoutes(
       }
 
       const { templateId } = request.params as { templateId: string };
+      const allowedTemplateIds = await getAllowedTemplateIds(request.ctx.tenantId);
+      if (allowedTemplateIds && !allowedTemplateIds.includes(templateId)) {
+        return reply.status(404).send({
+          success: false,
+          error: { code: "NOT_FOUND", message: "Workflow template not found" },
+        });
+      }
+
       try {
         const preview = templateService.preview(templateId, parsed.data);
         return reply.send({

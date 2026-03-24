@@ -553,6 +553,44 @@ select,
   color: var(--color-blue-600);
 }
 
+.control-form-grid {
+  margin-top: 12px;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.control-form-grid label {
+  display: grid;
+  gap: 6px;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--color-text-secondary);
+}
+
+.control-form-grid input,
+.control-form-grid select,
+.control-list select {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-subtle);
+  color: var(--color-text-primary);
+  padding: 8px 10px;
+}
+
+.control-list button.control-link {
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  padding: 0;
+}
+
+.control-list button.control-link:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 .rx-flow-select {
   min-height: 100vh;
   position: relative;

@@ -601,6 +601,8 @@ export const api = {
       }),
     getTenantMetrics: (token: string, tenantId: string) =>
       apiCall<{ success: boolean; data: AdminTenantMetricsClient }>(`/admin/tenants/${tenantId}/metrics`, { token }),
+    listTenantUsers: (token: string, tenantId: string) =>
+      apiCall<{ success: boolean; data: TenantUserMembershipClient[] }>(`/admin/tenants/${tenantId}/users`, { token }),
     getTenantPlan: (token: string, tenantId: string) =>
       apiCall<{ success: boolean; data: TenantPlanClient | null }>(`/admin/tenants/${tenantId}/plan`, { token }),
     setTenantPlan: (token: string, tenantId: string, payload: TenantPlanUpdatePayload) =>
@@ -642,6 +644,17 @@ export const api = {
       apiCall<{ success: boolean; data: TenantUserMembershipClient }>("/api/tenant/users/invite", {
         method: "POST",
         body: payload,
+        token,
+      }),
+    updateUser: (token: string, userId: string, payload: Partial<TenantInvitePayload & { isActive: boolean }>) =>
+      apiCall<{ success: boolean; data: TenantUserMembershipClient | null }>(`/api/tenant/users/${userId}`, {
+        method: "PATCH",
+        body: payload,
+        token,
+      }),
+    removeUser: (token: string, userId: string) =>
+      apiCall<{ success: boolean; data: { removed: true } }>(`/api/tenant/users/${userId}`, {
+        method: "DELETE",
         token,
       }),
     listPlugins: (token: string) =>
@@ -741,6 +754,7 @@ export interface TenantPlanUpdatePayload {
   planName: string;
   allowedNodeTypes?: string[];
   allowedPluginSlugs?: string[];
+  allowedTemplateIds?: string[];
   maxWorkflows?: number;
   maxExecutionsPerMonth?: number;
   maxKnowledgeCorpora?: number;
@@ -821,9 +835,12 @@ export interface TenantUpdatePayload {
 
 export interface TenantUserMembershipClient {
   userId: string;
+  email?: string;
+  name?: string;
   tenantRole: "org_admin" | "org_editor" | "org_viewer";
   interfaceAccess: "business" | "studio" | "both";
   isActive: boolean;
+  createdAt?: string;
 }
 
 export interface TenantInvitePayload {

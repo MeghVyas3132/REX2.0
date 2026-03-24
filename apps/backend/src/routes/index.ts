@@ -67,7 +67,7 @@ export function registerAppRoutes(app: FastifyInstance, deps: RouteDependencies)
   registerChatRoutes(app, deps.apiKeyService);
   registerFileUploadRoutes(app);
   registerKnowledgeRoutes(app, deps.knowledgeService, deps.iamService);
-  registerTemplateRoutes(app, deps.templateService, deps.iamService);
+  registerTemplateRoutes(app, deps.templateService, deps.db);
   registerGovernanceRoutes(
     app,
     deps.modelRegistryService,

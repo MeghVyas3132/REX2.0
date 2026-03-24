@@ -5,6 +5,7 @@ import { useAuth } from "@/lib/auth-context";
 import { api } from "@/lib/api";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { getRoleLandingPath } from "@/lib/rbac";
 
 export default function LoginPage() {
   const [mode, setMode] = useState<"login" | "register">("login");
@@ -44,11 +45,12 @@ export default function LoginPage() {
       if (mode === "register") {
         const res = await api.auth.register(email, name, password);
         login(res.data.token, res.data.user);
+        router.push(getRoleLandingPath(res.data.user));
       } else {
         const res = await api.auth.login(email, password);
         login(res.data.token, res.data.user);
+        router.push(getRoleLandingPath(res.data.user));
       }
-      router.push("/dashboard");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong");
     } finally {

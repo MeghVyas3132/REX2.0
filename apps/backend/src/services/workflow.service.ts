@@ -20,20 +20,32 @@ export interface WorkflowService {
     edges: WorkflowEdge[],
     sourceTemplate?: WorkflowTemplateSourceInput
   ): Promise<WorkflowRecord>;
-  getById(tenantId: string, userId: string, workflowId: string): Promise<WorkflowRecord | null>;
+  getById(
+    tenantId: string,
+    userId: string,
+    tenantRole: "org_admin" | "org_editor" | "org_viewer",
+    workflowId: string
+  ): Promise<WorkflowRecord | null>;
   list(
     tenantId: string,
     userId: string,
+    tenantRole: "org_admin" | "org_editor" | "org_viewer",
     page: number,
     limit: number
   ): Promise<{ data: WorkflowRecord[]; total: number }>;
   update(
     tenantId: string,
     userId: string,
+    tenantRole: "org_admin" | "org_editor" | "org_viewer",
     workflowId: string,
     data: Partial<WorkflowUpdateInput>
   ): Promise<WorkflowRecord>;
-  delete(tenantId: string, userId: string, workflowId: string): Promise<void>;
+  delete(
+    tenantId: string,
+    userId: string,
+    tenantRole: "org_admin" | "org_editor" | "org_viewer",
+    workflowId: string
+  ): Promise<void>;
 }
 
 export interface WorkflowRecord {
@@ -96,37 +108,45 @@ export function createWorkflowService(db: Database): WorkflowService {
       return workflow as WorkflowRecord;
     },
 
-    async getById(tenantId, userId, workflowId) {
+    async getById(tenantId, _userId, tenantRole, workflowId) {
+      const isManagerLike = tenantRole === "org_admin" || tenantRole === "org_editor";
+
       const [workflow] = await db
         .select()
         .from(workflows)
         .where(
-          and(
-            eq(workflows.id, workflowId),
-            eq(workflows.userId, userId),
-            eq(workflows.tenantId, tenantId)
-          )
+          isManagerLike
+            ? and(eq(workflows.id, workflowId), eq(workflows.tenantId, tenantId))
+            : and(
+                eq(workflows.id, workflowId),
+                eq(workflows.tenantId, tenantId),
+                eq(workflows.status, "active")
+              )
         )
         .limit(1);
 
       return (workflow as WorkflowRecord) ?? null;
     },
 
-    async list(tenantId, userId, page, limit) {
+    async list(tenantId, _userId, tenantRole, page, limit) {
       const offset = (page - 1) * limit;
+      const isManagerLike = tenantRole === "org_admin" || tenantRole === "org_editor";
+      const whereClause = isManagerLike
+        ? and(eq(workflows.tenantId, tenantId))
+        : and(eq(workflows.tenantId, tenantId), eq(workflows.status, "active"));
 
       const [data, totalResult] = await Promise.all([
         db
           .select()
           .from(workflows)
-          .where(and(eq(workflows.userId, userId), eq(workflows.tenantId, tenantId)))
+          .where(whereClause)
           .orderBy(desc(workflows.updatedAt))
           .limit(limit)
           .offset(offset),
         db
           .select({ total: count() })
           .from(workflows)
-          .where(and(eq(workflows.userId, userId), eq(workflows.tenantId, tenantId))),
+          .where(whereClause),
       ]);
 
       const total = totalResult[0]?.total ?? 0;
@@ -137,7 +157,11 @@ export function createWorkflowService(db: Database): WorkflowService {
       };
     },
 
-    async update(tenantId, userId, workflowId, data) {
+    async update(tenantId, _userId, tenantRole, workflowId, data) {
+      if (tenantRole === "org_viewer") {
+        throw new Error("Workflow update is not allowed for viewer role");
+      }
+
       const updateData: Record<string, unknown> = {
         updatedAt: new Date(),
       };
@@ -157,11 +181,7 @@ export function createWorkflowService(db: Database): WorkflowService {
         .update(workflows)
         .set(updateData)
         .where(
-          and(
-            eq(workflows.id, workflowId),
-            eq(workflows.userId, userId),
-            eq(workflows.tenantId, tenantId)
-          )
+          and(eq(workflows.id, workflowId), eq(workflows.tenantId, tenantId))
         )
         .returning();
 
@@ -173,15 +193,15 @@ export function createWorkflowService(db: Database): WorkflowService {
       return workflow as WorkflowRecord;
     },
 
-    async delete(tenantId, userId, workflowId) {
+    async delete(tenantId, _userId, tenantRole, workflowId) {
+      if (tenantRole === "org_viewer") {
+        throw new Error("Workflow delete is not allowed for viewer role");
+      }
+
       const result = await db
         .delete(workflows)
         .where(
-          and(
-            eq(workflows.id, workflowId),
-            eq(workflows.userId, userId),
-            eq(workflows.tenantId, tenantId)
-          )
+          and(eq(workflows.id, workflowId), eq(workflows.tenantId, tenantId))
         )
         .returning({ id: workflows.id });
 

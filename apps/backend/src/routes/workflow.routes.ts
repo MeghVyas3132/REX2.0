@@ -16,6 +16,7 @@ import type { WorkflowService } from "../services/workflow.service.js";
 import type { ExecutionService } from "../services/execution.service.js";
 import type { IAMService } from "../services/iam.service.js";
 import { IAMError } from "../services/iam.service.js";
+import { canEditWorkflows } from "../services/rbac.service.js";
 
 export function registerWorkflowRoutes(
   app: FastifyInstance,
@@ -39,17 +40,13 @@ export function registerWorkflowRoutes(
 
       const userId = (request.user as { sub: string }).sub;
       const tenantId = (request.user as { tenantId?: string }).tenantId ?? "00000000-0000-0000-0000-000000000001";
-      try {
-        await iamService.assertRole(userId, ["admin", "editor"]);
-      } catch (err) {
-        if (err instanceof IAMError) {
-          return reply.status(err.statusCode).send({
-            success: false,
-            error: { code: err.code, message: err.message },
-          });
-        }
-        throw err;
+      if (!canEditWorkflows(request.ctx)) {
+        return reply.status(403).send({
+          success: false,
+          error: { code: "FORBIDDEN", message: "Manager or company admin role required" },
+        });
       }
+
       const workflow = await workflowService.create(
         tenantId,
         userId,
@@ -68,7 +65,13 @@ export function registerWorkflowRoutes(
       const tenantId = (request.user as { tenantId?: string }).tenantId ?? "00000000-0000-0000-0000-000000000001";
       const pagination = paginationSchema.parse(request.query);
 
-      const result = await workflowService.list(tenantId, userId, pagination.page, pagination.limit);
+      const result = await workflowService.list(
+        tenantId,
+        userId,
+        request.ctx.tenantRole,
+        pagination.page,
+        pagination.limit
+      );
 
       return reply.send({
         success: true,
@@ -111,7 +114,7 @@ export function registerWorkflowRoutes(
       const tenantId = (request.user as { tenantId?: string }).tenantId ?? "00000000-0000-0000-0000-000000000001";
       const { workflowId } = request.params as { workflowId: string };
 
-      const workflow = await workflowService.getById(tenantId, userId, workflowId);
+      const workflow = await workflowService.getById(tenantId, userId, request.ctx.tenantRole, workflowId);
       if (!workflow) {
         return reply.status(404).send({
           success: false,
@@ -135,20 +138,21 @@ export function registerWorkflowRoutes(
       const userId = (request.user as { sub: string }).sub;
       const tenantId = (request.user as { tenantId?: string }).tenantId ?? "00000000-0000-0000-0000-000000000001";
       const { workflowId } = request.params as { workflowId: string };
-      try {
-        await iamService.assertWorkflowAction(userId, workflowId, "edit");
-      } catch (err) {
-        if (err instanceof IAMError) {
-          return reply.status(err.statusCode).send({
-            success: false,
-            error: { code: err.code, message: err.message },
-          });
-        }
-        throw err;
+      if (!canEditWorkflows(request.ctx)) {
+        return reply.status(403).send({
+          success: false,
+          error: { code: "FORBIDDEN", message: "Manager or company admin role required" },
+        });
       }
 
       try {
-        const workflow = await workflowService.update(tenantId, userId, workflowId, parsed.data);
+        const workflow = await workflowService.update(
+          tenantId,
+          userId,
+          request.ctx.tenantRole,
+          workflowId,
+          parsed.data
+        );
         return reply.send({ success: true, data: workflow });
       } catch {
         return reply.status(404).send({
@@ -163,20 +167,15 @@ export function registerWorkflowRoutes(
       const userId = (request.user as { sub: string }).sub;
       const tenantId = (request.user as { tenantId?: string }).tenantId ?? "00000000-0000-0000-0000-000000000001";
       const { workflowId } = request.params as { workflowId: string };
-      try {
-        await iamService.assertWorkflowAction(userId, workflowId, "delete");
-      } catch (err) {
-        if (err instanceof IAMError) {
-          return reply.status(err.statusCode).send({
-            success: false,
-            error: { code: err.code, message: err.message },
-          });
-        }
-        throw err;
+      if (!canEditWorkflows(request.ctx)) {
+        return reply.status(403).send({
+          success: false,
+          error: { code: "FORBIDDEN", message: "Manager or company admin role required" },
+        });
       }
 
       try {
-        await workflowService.delete(tenantId, userId, workflowId);
+        await workflowService.delete(tenantId, userId, request.ctx.tenantRole, workflowId);
         return reply.send({ success: true, data: { deleted: true } });
       } catch {
         return reply.status(404).send({
@@ -197,17 +196,15 @@ export function registerWorkflowRoutes(
       }
 
       const userId = (request.user as { sub: string }).sub;
+      const tenantId = request.ctx.tenantId;
       const { workflowId } = request.params as { workflowId: string };
-      try {
-        await iamService.assertWorkflowAction(userId, workflowId, "execute");
-      } catch (err) {
-        if (err instanceof IAMError) {
-          return reply.status(err.statusCode).send({
-            success: false,
-            error: { code: err.code, message: err.message },
-          });
-        }
-        throw err;
+
+      const workflow = await workflowService.getById(tenantId, userId, request.ctx.tenantRole, workflowId);
+      if (!workflow) {
+        return reply.status(404).send({
+          success: false,
+          error: { code: "NOT_FOUND", message: "Workflow not found" },
+        });
       }
 
       const result = await executionService.trigger(userId, workflowId, parsed.data.payload);

@@ -85,8 +85,8 @@ export default function StudioWorkflowsPage() {
             </li>
           ))}
         </ul>
-        <p><Link className="control-link" href="/dashboard/workflows">Open dashboard workflow editor</Link></p>
-        <p><Link className="control-link" href="/dashboard/templates">Browse pre-built templates</Link></p>
+        <p><Link className="control-link" href="/dashboard/workflows">Open workflow editor</Link></p>
+        <p><Link className="control-link" href="/studio/plugins">Browse enabled plugins</Link></p>
       </article>
     </section>
   );
