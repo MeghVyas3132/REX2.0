@@ -32,24 +32,24 @@ export default function BusinessLayout({ children }: { children: ReactNode }) {
     {
       href: "/business",
       label: "Dashboard",
-      icon: "📊",
+      icon: "dashboard" as const,
     },
     {
       href: "/business/workflows",
       label: "Workflows",
-      icon: "⚙️",
+      icon: "workflows" as const,
     },
     {
       href: "/business/executions",
       label: "Executions",
-      icon: "▶️",
+      icon: "executions" as const,
     },
     ...(isCompanyAdmin
       ? [
           {
             href: "/business/company-admin",
             label: "Company Admin",
-            icon: "👥",
+            icon: "company" as const,
           },
         ]
       : []),

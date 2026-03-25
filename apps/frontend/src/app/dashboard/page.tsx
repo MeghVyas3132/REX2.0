@@ -5,10 +5,11 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { api, type WorkflowListItem } from "@/lib/api";
 import { useAuth } from "@/lib/auth-context";
-import { PageContainer, PageHeader, PageSection } from "@/components/layout";
+import { AppShell } from "@/components/layout/AppShell";
+import { getDashboardNavItems } from "@/components/layout/dashboard-nav";
 
 export default function DashboardPage() {
-  const { token, loading: authLoading } = useAuth();
+  const { user, token, loading: authLoading } = useAuth();
   const router = useRouter();
   const [workflows, setWorkflows] = useState<WorkflowListItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -52,62 +53,61 @@ export default function DashboardPage() {
   if (authLoading || !token) return null;
 
   return (
-    <PageContainer>
-      <PageHeader
-        title="Workflows"
-        description="Design, build, and run intelligent orchestration graphs"
-        action={
-          <Link href="/dashboard/workflows/new" className="control-link">
-            + New Workflow
-          </Link>
-        }
-      />
-
+    <AppShell
+      title="Workflows"
+      subtitle="Design, build, and run intelligent orchestration graphs"
+      navItems={getDashboardNavItems("dashboard")}
+      userName={user?.name}
+      onSignOut={() => router.push("/login")}
+      action={
+        <Link href="/dashboard/workflows/new" className="control-link">
+          + New Workflow
+        </Link>
+      }
+    >
       {error ? <p className="control-error">{error}</p> : null}
 
-      <PageSection title="Workflows">
-        {isLoading ? <p className="control-empty">Loading workflows...</p> : null}
+      {isLoading ? <p className="control-empty">Loading workflows...</p> : null}
 
-        {!isLoading && workflows.length === 0 ? (
-          <div>
-            <p className="control-empty">No workflows yet.</p>
-            <p>
-              <Link href="/dashboard/workflows/new" className="control-link">
-                Create your first workflow
-              </Link>
-            </p>
-          </div>
-        ) : null}
+      {!isLoading && workflows.length === 0 ? (
+        <div>
+          <p className="control-empty">No workflows yet.</p>
+          <p>
+            <Link href="/dashboard/workflows/new" className="control-link">
+              Create your first workflow
+            </Link>
+          </p>
+        </div>
+      ) : null}
 
-        {!isLoading && workflows.length > 0 ? (
-          <ul className="control-list">
-            {workflows.map((workflow) => (
-              <li key={workflow.id}>
-                <span>
-                  <strong>{workflow.name}</strong>
-                  <span style={{ marginLeft: "8px", opacity: 0.7 }}>v{workflow.version}</span>
+      {!isLoading && workflows.length > 0 ? (
+        <ul className="control-list">
+          {workflows.map((workflow) => (
+            <li key={workflow.id}>
+              <span>
+                <strong>{workflow.name}</strong>
+                <span style={{ marginLeft: "8px", opacity: 0.7 }}>v{workflow.version}</span>
+              </span>
+              <span>
+                <span className={workflow.status === "active" ? "control-badge" : "control-badge control-badge--warn"}>
+                  {workflow.status}
                 </span>
-                <span>
-                  <span className={workflow.status === "active" ? "control-badge" : "control-badge control-badge--warn"}>
-                    {workflow.status}
-                  </span>
-                  <Link href={`/dashboard/workflows/${workflow.id}`} className="control-link" style={{ marginLeft: "8px" }}>
-                    Edit
-                  </Link>
-                  <button
-                    type="button"
-                    className="control-link"
-                    style={{ marginLeft: "8px" }}
-                    onClick={() => handleDelete(workflow.id, workflow.name)}
-                  >
-                    Delete
-                  </button>
-                </span>
-              </li>
-            ))}
-          </ul>
-        ) : null}
-      </PageSection>
-    </PageContainer>
+                <Link href={`/dashboard/workflows/${workflow.id}`} className="control-link" style={{ marginLeft: "8px" }}>
+                  Edit
+                </Link>
+                <button
+                  type="button"
+                  className="control-link"
+                  style={{ marginLeft: "8px" }}
+                  onClick={() => void handleDelete(workflow.id, workflow.name)}
+                >
+                  Delete
+                </button>
+              </span>
+            </li>
+          ))}
+        </ul>
+      ) : null}
+    </AppShell>
   );
 }

@@ -4,9 +4,11 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { api, type AdminAuditEventClient } from "@/lib/api";
 import { useAuth } from "@/lib/auth-context";
+import { AppShell } from "@/components/layout/AppShell";
+import { getAdminNavItems } from "@/components/layout/admin-nav";
 
 export default function AdminAuditLogPage() {
-  const { token, loading: authLoading } = useAuth();
+  const { user, token, loading: authLoading } = useAuth();
   const router = useRouter();
   const [events, setEvents] = useState<AdminAuditEventClient[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -39,9 +41,14 @@ export default function AdminAuditLogPage() {
   if (authLoading || !token) return null;
 
   return (
-    <section className="control-header">
-      <h1>Audit Log</h1>
-      <p>Immutable record of administrative actions, approvals, and rollback events.</p>
+    <AppShell
+      brand="REX Admin"
+      title="Audit Log"
+      subtitle="Immutable record of administrative actions, approvals, and rollback events"
+      navItems={getAdminNavItems("audit-log")}
+      userName={user?.name}
+      onSignOut={() => router.push("/login")}
+    >
       {error ? <p className="control-error">{error}</p> : null}
 
       {isLoading ? <article className="control-card control-skeleton" /> : null}
@@ -67,6 +74,6 @@ export default function AdminAuditLogPage() {
           ))}
         </ul>
       </article>
-    </section>
+    </AppShell>
   );
 }

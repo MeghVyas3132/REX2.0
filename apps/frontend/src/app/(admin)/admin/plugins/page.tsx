@@ -4,9 +4,11 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { api, type PluginCatalogueClient } from "@/lib/api";
 import { useAuth } from "@/lib/auth-context";
+import { AppShell } from "@/components/layout/AppShell";
+import { getAdminNavItems } from "@/components/layout/admin-nav";
 
 export default function AdminPluginsPage() {
-  const { token, loading: authLoading } = useAuth();
+  const { user, token, loading: authLoading } = useAuth();
   const router = useRouter();
   const [plugins, setPlugins] = useState<PluginCatalogueClient[]>([]);
   const [slug, setSlug] = useState("");
@@ -87,9 +89,14 @@ export default function AdminPluginsPage() {
   if (authLoading || !token) return null;
 
   return (
-    <section className="control-header">
-      <h1>Node Registry</h1>
-      <p>Generate and retire global node definitions that can be assigned to tenant plans.</p>
+    <AppShell
+      brand="REX Admin"
+      title="Node Registry"
+      subtitle="Generate and retire global node definitions that can be assigned to tenant plans"
+      navItems={getAdminNavItems("plugins")}
+      userName={user?.name}
+      onSignOut={() => router.push("/login")}
+    >
       {error ? <p className="control-error">{error}</p> : null}
 
       <article className="control-card">
@@ -170,6 +177,6 @@ export default function AdminPluginsPage() {
           </ul>
         </article>
       ) : null}
-    </section>
+    </AppShell>
   );
 }

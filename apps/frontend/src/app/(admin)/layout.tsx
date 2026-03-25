@@ -11,22 +11,22 @@ const ADMIN_NAV_ITEMS = [
   {
     href: "/admin",
     label: "Dashboard",
-    icon: "📊",
+    icon: "dashboard" as const,
   },
   {
     href: "/admin/tenants",
     label: "Tenants",
-    icon: "🏢",
+    icon: "tenants" as const,
   },
   {
     href: "/admin/plugins",
     label: "Node Registry",
-    icon: "🔌",
+    icon: "plugins" as const,
   },
   {
     href: "/admin/audit-log",
     label: "Audit Log",
-    icon: "📝",
+    icon: "audit" as const,
   },
 ];
 

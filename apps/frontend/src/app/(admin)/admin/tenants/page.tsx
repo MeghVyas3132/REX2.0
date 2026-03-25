@@ -5,9 +5,11 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { api, type AdminTenantClient } from "@/lib/api";
 import { useAuth } from "@/lib/auth-context";
+import { AppShell } from "@/components/layout/AppShell";
+import { getAdminNavItems } from "@/components/layout/admin-nav";
 
 export default function AdminTenantsPage() {
-  const { token, loading: authLoading } = useAuth();
+  const { user, token, loading: authLoading } = useAuth();
   const router = useRouter();
   const [tenants, setTenants] = useState<AdminTenantClient[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -38,9 +40,14 @@ export default function AdminTenantsPage() {
   if (authLoading || !token) return null;
 
   return (
-    <section className="control-header">
-      <h1>Tenants</h1>
-      <p>Inspect plan, trust status, and route into detailed governance controls.</p>
+    <AppShell
+      brand="REX Admin"
+      title="Tenants"
+      subtitle="Inspect plan, trust status, and route into detailed governance controls"
+      navItems={getAdminNavItems("tenants")}
+      userName={user?.name}
+      onSignOut={() => router.push("/login")}
+    >
       {error ? <p className="control-error">{error}</p> : null}
 
       {isLoading ? <article className="control-card control-skeleton" /> : null}
@@ -74,6 +81,6 @@ export default function AdminTenantsPage() {
           </tbody>
         </table>
       </div>
-    </section>
+    </AppShell>
   );
 }

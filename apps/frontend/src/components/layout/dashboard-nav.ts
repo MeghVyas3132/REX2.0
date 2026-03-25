@@ -1,4 +1,5 @@
 type DashboardSection =
+  | "dashboard"
   | "workflows"
   | "active-workflows"
   | "current-workflow"
@@ -15,7 +16,8 @@ type DashboardNavItem = {
 };
 
 const BASE_NAV: Array<{ section: DashboardSection; label: string; href: string }> = [
-  { section: "workflows", label: "Workflows", href: "/dashboard" },
+  { section: "dashboard", label: "Dashboard", href: "/dashboard" },
+  { section: "workflows", label: "Workflows", href: "/dashboard/workflows" },
   {
     section: "active-workflows",
     label: "Active Workflows",
@@ -28,7 +30,7 @@ const BASE_NAV: Array<{ section: DashboardSection; label: string; href: string }
   },
   { section: "corpora", label: "Corpora", href: "/dashboard/corpora" },
   { section: "kpi", label: "KPI", href: "/dashboard/kpi" },
-  { section: "templates", label: "Templates", href: "/dashboard/templates" },
+  { section: "templates", label: "Templates", href: "/templates" },
   { section: "settings", label: "Settings", href: "/dashboard/settings" },
 ];
 

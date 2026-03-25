@@ -70,7 +70,7 @@ export default function TemplatesPage() {
               style={{ ...cardButtonStyle, animationDelay: `${Math.min(index * 36, 280)}ms` }}
               aria-label={`Open template ${template.name}`}
               aria-describedby={`template-desc-${template.id}`}
-              onClick={() => router.push(`/dashboard/templates/${template.id}`)}
+              onClick={() => router.push(`/templates/${template.id}`)}
               data-template-card
             >
               <div style={cardHeaderStyle}>

@@ -11,22 +11,22 @@ const STUDIO_NAV_ITEMS = [
   {
     href: "/studio",
     label: "Dashboard",
-    icon: "📊",
+    icon: "dashboard" as const,
   },
   {
     href: "/studio/workflows",
     label: "Workflows",
-    icon: "⚙️",
+    icon: "workflows" as const,
   },
   {
     href: "/studio/plugins",
     label: "Plugins",
-    icon: "🔌",
+    icon: "plugins" as const,
   },
   {
     href: "/studio/templates",
     label: "Templates",
-    icon: "📋",
+    icon: "templates" as const,
   },
 ];
 

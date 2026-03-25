@@ -16,7 +16,6 @@ import {
   clearWorkflowDraft,
 } from "@/lib/workflow-draft";
 import { convertTriggersToBackend } from "@/lib/trigger-converter";
-import { PageContainer } from "@/components/layout";
 
 export default function NewWorkflowPage() {
   const { token, loading: authLoading } = useAuth();
@@ -69,7 +68,7 @@ export default function NewWorkflowPage() {
   if (authLoading || !token) return null;
 
   return (
-    <PageContainer maxWidth="full">
+    <div style={{ width: "100%", height: "100%" }}>
       <WorkflowEditor
         key={`new-${initialDraft?.updatedAt ?? "empty"}`}
         initialNodes={
@@ -107,6 +106,6 @@ export default function NewWorkflowPage() {
         saveStatus={saveStatus}
         token={token || undefined}
       />
-    </PageContainer>
+    </div>
   );
 }

@@ -11,6 +11,7 @@ import type {
   TemplatePreviewResult,
   WorkflowTemplateClient,
 } from "@/lib/api";
+import { AppShell, getDashboardNavItems } from "@/components/layout";
 import { WorkflowEditor } from "@/components/workflow-editor";
 import type { CanvasEdge, CanvasNode } from "@/components/workflow-editor";
 import { clearWorkflowDraft, saveWorkflowDraft } from "@/lib/workflow-draft";
@@ -41,7 +42,7 @@ const DEFAULT_FORM: TemplateFormState = {
 };
 
 export default function TemplateConfigurePage() {
-  const { token, loading: authLoading } = useAuth();
+  const { user, token, loading: authLoading, logout } = useAuth();
   const params = useParams();
   const router = useRouter();
 
@@ -65,7 +66,7 @@ export default function TemplateConfigurePage() {
       return;
     }
     if (!templateId) {
-      router.push("/dashboard/templates");
+      router.push("/templates");
       return;
     }
     void loadData(token, templateId);
@@ -263,38 +264,26 @@ export default function TemplateConfigurePage() {
             edges: data.edges,
           });
         }}
-        onBack={() => router.push("/dashboard/templates")}
+        onBack={() => router.push("/templates")}
         showExecute={false}
       />
     );
   }
 
   return (
-    <div style={styles.layout}>
-      <nav style={styles.sidebar}>
-        <div style={styles.brand}>REX</div>
-        <div style={styles.navLinks}>
-          <Link href="/dashboard" style={styles.navLink}>Workflows</Link>
-          <Link href="/dashboard/active-workflows" style={styles.navLink}>Active Workflows</Link>
-          <Link href="/dashboard/current-workflow" style={styles.navLink}>Current Workflow</Link>
-          <Link href="/dashboard/corpora" style={styles.navLink}>Corpora</Link>
-          <Link href="/dashboard/kpi" style={styles.navLink}>KPI</Link>
-          <Link href="/dashboard/templates" style={styles.navLinkActive}>Templates</Link>
-          <Link href="/dashboard/settings" style={styles.navLink}>Settings</Link>
-        </div>
-      </nav>
-
-      <main style={styles.main}>
+    <AppShell
+      title="Template Configuration"
+      subtitle="Configure runtime parameters first. The pipeline workspace stays locked until configuration is applied."
+      navItems={getDashboardNavItems("templates")}
+      userName={user?.name}
+      onSignOut={logout}
+    >
+      <div style={styles.pageBody}>
         <div style={styles.breadcrumb}>
-          <Link href="/dashboard/templates" style={styles.breadcrumbLink}>Templates</Link>
+          <Link href="/templates" style={styles.breadcrumbLink}>Templates</Link>
           <span style={styles.sep}>/</span>
           <span style={styles.breadcrumbCurrent}>{template?.name ?? templateId}</span>
         </div>
-
-        <h1 style={styles.heading}>Template Configuration</h1>
-        <p style={styles.subheading}>
-          Configure runtime parameters first. The pipeline workspace stays locked until configuration is applied.
-        </p>
 
         {error ? <p style={styles.errorText}>{error}</p> : null}
 
@@ -404,7 +393,7 @@ export default function TemplateConfigurePage() {
               <button
                 type="button"
                 style={styles.secondaryBtn}
-                onClick={() => router.push("/dashboard/templates")}
+                onClick={() => router.push("/templates")}
               >
                 Cancel
               </button>
@@ -419,57 +408,15 @@ export default function TemplateConfigurePage() {
             </div>
           </section>
         )}
-      </main>
-    </div>
+      </div>
+    </AppShell>
   );
 }
 
 const styles: Record<string, React.CSSProperties> = {
-  layout: {
-    display: "flex",
-    minHeight: "100vh",
-    backgroundColor: "#0a0a0a",
-  },
-  sidebar: {
-    width: "220px",
-    backgroundColor: "#111111",
-    borderRight: "1px solid #2a2a2a",
-    display: "flex",
-    flexDirection: "column",
-    padding: "20px 16px",
-  },
-  brand: {
-    fontSize: "20px",
-    fontWeight: 700,
-    color: "#e5e5e5",
-    letterSpacing: "3px",
-    marginBottom: "32px",
-  },
-  navLinks: {
-    display: "flex",
-    flexDirection: "column",
-    gap: "4px",
-    flex: 1,
-  },
-  navLink: {
-    padding: "10px 12px",
-    borderRadius: "6px",
-    color: "#999999",
-    fontSize: "14px",
-    textDecoration: "none",
-  },
-  navLinkActive: {
-    padding: "10px 12px",
-    borderRadius: "6px",
-    backgroundColor: "#1a1a1a",
-    color: "#e5e5e5",
-    fontSize: "14px",
-    textDecoration: "none",
-    fontWeight: 500,
-  },
-  main: {
-    flex: 1,
-    padding: "32px 40px",
+  pageBody: {
+    width: "100%",
+    maxWidth: 1100,
   },
   breadcrumb: {
     marginBottom: "16px",

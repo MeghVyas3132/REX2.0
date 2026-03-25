@@ -4,9 +4,11 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { api, type TenantClient, type TenantPlanClient, type TenantUsageClient } from "@/lib/api";
 import { useAuth } from "@/lib/auth-context";
+import { AppShell } from "@/components/layout/AppShell";
+import { getStudioNavItems } from "@/components/layout/studio-nav";
 
 export default function StudioSettingsPage() {
-  const { token, loading: authLoading } = useAuth();
+  const { user, token, loading: authLoading } = useAuth();
   const router = useRouter();
   const [tenantName, setTenantName] = useState("Tenant");
   const [planName, setPlanName] = useState("starter");
@@ -51,9 +53,14 @@ export default function StudioSettingsPage() {
   if (authLoading || !token) return null;
 
   return (
-    <section className="control-header">
-      <h1>{tenantName} Settings</h1>
-      <p>Manage team access, compliance modes, spending limits, and BYOK providers.</p>
+    <AppShell
+      brand="REX Studio"
+      title={`${tenantName} Settings`}
+      subtitle="Manage team access, compliance modes, spending limits, and BYOK providers"
+      navItems={getStudioNavItems("settings")}
+      userName={user?.name}
+      onSignOut={() => router.push("/login")}
+    >
       {error ? <p className="control-error">{error}</p> : null}
 
       {isLoading ? (
@@ -81,6 +88,6 @@ export default function StudioSettingsPage() {
           <p>Tenant-enabled plugin nodes and integrations.</p>
         </article>
       </div> : null}
-    </section>
+    </AppShell>
   );
 }

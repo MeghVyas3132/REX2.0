@@ -14,7 +14,6 @@ import type { CanvasNode, CanvasEdge } from "@/components/workflow-editor";
 import type { ExecutionPollResult } from "@/components/workflow-editor/WorkflowEditor";
 import { saveWorkflowDraft, clearWorkflowDraft } from "@/lib/workflow-draft";
 import { convertTriggersToBackend, convertTriggersFromBackend } from "@/lib/trigger-converter";
-import { PageContainer } from "@/components/layout";
 
 export default function WorkflowDetailPage() {
   const { token, loading: authLoading } = useAuth();
@@ -129,11 +128,11 @@ export default function WorkflowDetailPage() {
 
   if (authLoading || loading || !workflow)
     return (
-      <PageContainer maxWidth="full">
+      <div style={{ width: "100%", height: "100%" }}>
         <div style={{ textAlign: "center", padding: "40px", color: "rgba(255,255,255,0.6)" }}>
           Loading...
         </div>
-      </PageContainer>
+      </div>
     );
 
   const initialNodes = convertTriggersFromBackend(
@@ -147,7 +146,7 @@ export default function WorkflowDetailPage() {
   );
 
   return (
-    <PageContainer maxWidth="full">
+    <div style={{ width: "100%", height: "100%" }}>
       <WorkflowEditor
         initialNodes={initialNodes}
         initialEdges={workflow.edges.map((e) => ({
@@ -179,6 +178,6 @@ export default function WorkflowDetailPage() {
         onBack={() => router.push("/dashboard")}
         showExecute
       />
-    </PageContainer>
+    </div>
   );
 }

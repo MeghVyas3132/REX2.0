@@ -1,11 +1,12 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth-context";
 import { PageContainer, PageHeader, PageSection } from "@/components/layout";
+import { MetricTile } from "@/components/dashboard/MetricTile";
+import { ActionTile } from "@/components/dashboard/ActionTile";
 
 export default function StudioPage() {
   const { token, loading: authLoading } = useAuth();
@@ -53,131 +54,48 @@ export default function StudioPage() {
         description="Design automation graphs, pressure-test trust posture, and ship certified workflows"
       />
 
-      {error && <p style={{ color: "#f87171", marginBottom: "20px" }}>{error}</p>}
+      {error ? (
+        <p style={{ marginBottom: "16px", borderRadius: "10px", border: "1px solid rgba(239, 68, 68, 0.3)", background: "rgba(239, 68, 68, 0.1)", padding: "12px 16px", fontSize: "14px", color: "#fca5a5" }}>
+          {error}
+        </p>
+      ) : null}
 
       {isLoading ? (
         <PageSection>
-          <div style={{ textAlign: "center", padding: "40px", color: "rgba(255,255,255,0.6)" }}>
+          <div style={{ borderRadius: "10px", border: "1px solid var(--border-muted)", background: "var(--surface-1)", padding: "64px 24px", textAlign: "center", fontSize: "14px", color: "var(--text-secondary)" }}>
             Loading dashboard...
           </div>
         </PageSection>
       ) : (
         <>
           <PageSection title="Overview">
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: "20px" }}>
-              <div style={{ padding: "20px", background: "rgba(255,255,255,0.05)", borderRadius: "8px", border: "1px solid rgba(255,255,255,0.1)" }}>
-                <h3 style={{ margin: "0 0 8px 0", color: "#fff", fontSize: "14px", fontWeight: "500" }}>Workflows</h3>
-                <p style={{ margin: "0 0 8px 0", fontSize: "32px", fontWeight: "bold", color: "#3b82f6" }}>
-                  {workflowCount}
-                </p>
-                <p style={{ margin: "0", fontSize: "13px", color: "rgba(255,255,255,0.6)" }}>
-                  In-progress and production-ready definitions
-                </p>
-              </div>
-              <div style={{ padding: "20px", background: "rgba(255,255,255,0.05)", borderRadius: "8px", border: "1px solid rgba(255,255,255,0.1)" }}>
-                <h3 style={{ margin: "0 0 8px 0", color: "#fff", fontSize: "14px", fontWeight: "500" }}>Active Runs</h3>
-                <p style={{ margin: "0 0 8px 0", fontSize: "32px", fontWeight: "bold", color: "#10b981" }}>
-                  {activeCount}
-                </p>
-                <p style={{ margin: "0", fontSize: "13px", color: "rgba(255,255,255,0.6)" }}>
-                  Currently executing in this tenant
-                </p>
-              </div>
-              <div style={{ padding: "20px", background: "rgba(255,255,255,0.05)", borderRadius: "8px", border: "1px solid rgba(255,255,255,0.1)" }}>
-                <h3 style={{ margin: "0 0 8px 0", color: "#fff", fontSize: "14px", fontWeight: "500" }}>Templates</h3>
-                <p style={{ margin: "0 0 8px 0", fontSize: "32px", fontWeight: "bold", color: "#f59e0b" }}>
-                  {templateCount}
-                </p>
-                <p style={{ margin: "0", fontSize: "13px", color: "rgba(255,255,255,0.6)" }}>
-                  Pre-built templates for rapid creation
-                </p>
-              </div>
+            <div style={{ display: "grid", gap: "20px", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))" }}>
+              <MetricTile
+                label="Workflows"
+                value={workflowCount}
+                hint="In-progress and production-ready definitions"
+                tone="blue"
+              />
+              <MetricTile
+                label="Active Runs"
+                value={activeCount}
+                hint="Currently executing in this tenant"
+                tone="green"
+              />
+              <MetricTile
+                label="Templates"
+                value={templateCount}
+                hint="Pre-built templates for rapid creation"
+                tone="amber"
+              />
             </div>
           </PageSection>
 
           <PageSection title="Quick Actions">
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "12px" }}>
-              <Link
-                href="/dashboard/workflows"
-                style={{
-                  padding: "16px",
-                  background: "rgba(59, 130, 246, 0.1)",
-                  border: "1px solid #3b82f6",
-                  borderRadius: "6px",
-                  cursor: "pointer",
-                  textDecoration: "none",
-                  color: "#3b82f6",
-                  textAlign: "center",
-                  fontWeight: "500",
-                  transition: "all 0.2s ease",
-                }}
-                onMouseEnter={(e) => {
-                  const el = e.currentTarget;
-                  el.style.background = "#3b82f6";
-                  el.style.color = "#fff";
-                }}
-                onMouseLeave={(e) => {
-                  const el = e.currentTarget;
-                  el.style.background = "rgba(59, 130, 246, 0.1)";
-                  el.style.color = "#3b82f6";
-                }}
-              >
-                Open Editor
-              </Link>
-              <Link
-                href="/studio/workflows"
-                style={{
-                  padding: "16px",
-                  background: "rgba(59, 130, 246, 0.1)",
-                  border: "1px solid #3b82f6",
-                  borderRadius: "6px",
-                  cursor: "pointer",
-                  textDecoration: "none",
-                  color: "#3b82f6",
-                  textAlign: "center",
-                  fontWeight: "500",
-                  transition: "all 0.2s ease",
-                }}
-                onMouseEnter={(e) => {
-                  const el = e.currentTarget;
-                  el.style.background = "#3b82f6";
-                  el.style.color = "#fff";
-                }}
-                onMouseLeave={(e) => {
-                  const el = e.currentTarget;
-                  el.style.background = "rgba(59, 130, 246, 0.1)";
-                  el.style.color = "#3b82f6";
-                }}
-              >
-                View Workflows
-              </Link>
-              <Link
-                href="/studio/templates"
-                style={{
-                  padding: "16px",
-                  background: "rgba(59, 130, 246, 0.1)",
-                  border: "1px solid #3b82f6",
-                  borderRadius: "6px",
-                  cursor: "pointer",
-                  textDecoration: "none",
-                  color: "#3b82f6",
-                  textAlign: "center",
-                  fontWeight: "500",
-                  transition: "all 0.2s ease",
-                }}
-                onMouseEnter={(e) => {
-                  const el = e.currentTarget;
-                  el.style.background = "#3b82f6";
-                  el.style.color = "#fff";
-                }}
-                onMouseLeave={(e) => {
-                  const el = e.currentTarget;
-                  el.style.background = "rgba(59, 130, 246, 0.1)";
-                  el.style.color = "#3b82f6";
-                }}
-              >
-                Browse Templates
-              </Link>
+            <div style={{ display: "grid", gap: "12px", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))" }}>
+              <ActionTile href="/dashboard/workflows" label="Open Editor" />
+              <ActionTile href="/studio/workflows" label="View Workflows" />
+              <ActionTile href="/studio/templates" label="Browse Templates" />
             </div>
           </PageSection>
         </>

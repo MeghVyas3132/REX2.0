@@ -12,13 +12,17 @@ export interface AppShellNavItem {
 }
 
 export type AppShellNavIcon =
+  | "dashboard"
   | "workflows"
   | "active-workflows"
   | "current-workflow"
   | "corpora"
   | "kpi"
   | "templates"
-  | "settings";
+  | "settings"
+  | "tenants"
+  | "plugins"
+  | "audit-log";
 
 interface AppShellProps {
   brand?: string;
@@ -115,6 +119,16 @@ function SignOutIcon() {
 
 function SidebarIcon({ name }: { name?: AppShellNavIcon }) {
   switch (name) {
+    case "dashboard":
+      return (
+        <svg viewBox="0 0 20 20" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+          <rect x="2.5" y="3" width="6" height="6" rx="1.2" />
+          <rect x="11.5" y="3" width="6" height="6" rx="1.2" />
+          <rect x="2.5" y="11" width="6" height="6" rx="1.2" />
+          <path d="M11.5 14h6" />
+          <path d="M14.5 11v6" />
+        </svg>
+      );
     case "workflows":
       return (
         <svg viewBox="0 0 20 20" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
@@ -187,6 +201,39 @@ function SidebarIcon({ name }: { name?: AppShellNavIcon }) {
           <path d="m13.9 13.9 1.4 1.4" />
           <path d="m15.3 4.7-1.4 1.4" />
           <path d="m6.1 13.9-1.4 1.4" />
+        </svg>
+      );
+    case "tenants":
+      return (
+        <svg viewBox="0 0 20 20" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M6 8a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Z" />
+          <path d="M14 8a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Z" />
+          <path d="M6 17c-2 0-3-1-3-2.5v-.5c0-1.5 1-2.5 3-2.5" />
+          <path d="M14 17c2 0 3-1 3-2.5v-.5c0-1.5-1-2.5-3-2.5" />
+          <path d="M10 11a2 2 0 1 0 0-4 2 2 0 0 0 0 4Z" />
+          <path d="M10 18.5c-1.5 0-2.5-1-2.5-2v-.5c0-1 .5-1.8 1.5-2" />
+        </svg>
+      );
+    case "plugins":
+      return (
+        <svg viewBox="0 0 20 20" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M13 3v4" />
+          <path d="M7 13v4" />
+          <path d="M13 7a2 2 0 1 1-4 0 2 2 0 0 1 4 0Z" />
+          <path d="M7 17a2 2 0 1 1-4 0 2 2 0 0 1 4 0Z" />
+          <path d="M10 10a2 2 0 1 1-4 0 2 2 0 0 1 4 0Z" />
+          <path d="M3 3c1.5 1.5 2.5 4 2.5 6" />
+          <path d="M17 17c-1.5-1.5-2.5-4-2.5-6" />
+        </svg>
+      );
+    case "audit-log":
+      return (
+        <svg viewBox="0 0 20 20" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M4 3.5h12v13H4Z" />
+          <path d="M6 6h8" />
+          <path d="M6 9h8" />
+          <path d="M6 12h4" />
+          <path d="M8 15h2" />
         </svg>
       );
     default:
