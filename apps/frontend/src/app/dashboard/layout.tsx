@@ -6,11 +6,11 @@ import { useAuth } from "@/lib/auth-context";
 import { getRoleLandingPath, getRolePersona } from "@/lib/rbac";
 import { MainLayout } from "@/components/layout";
 
-const dashboardNavItems = [
-  { label: "Dashboard", href: "/dashboard", title: "Dashboard" },
-  { label: "Create Workflow", href: "/dashboard/workflows/new", title: "New Workflow" },
-  { label: "Workflows", href: "/dashboard/workflows", title: "Workflows" },
-  { label: "Templates", href: "/dashboard/templates", title: "Templates" },
+const DASHBOARD_NAV_ITEMS = [
+  { href: "/dashboard", label: "Dashboard", icon: "📊" },
+  { href: "/dashboard/workflows/new", label: "Create Workflow", icon: "✨" },
+  { href: "/dashboard/workflows", label: "Workflows", icon: "🧩" },
+  { href: "/dashboard/templates", label: "Templates", icon: "📚" },
 ];
 
 export default function DashboardLayout({
@@ -38,7 +38,11 @@ export default function DashboardLayout({
   }
 
   return (
-    <MainLayout navItems={dashboardNavItems}>
+    <MainLayout
+      sidebarItems={DASHBOARD_NAV_ITEMS}
+      sidebarTitle="Workflow Studio"
+      sidebarSubtitle="Manager workspace"
+    >
       {children}
     </MainLayout>
   );

@@ -702,7 +702,8 @@ export type PluginCategoryClient =
   | "logic_control"
   | "trigger"
   | "compliance_rex"
-  | "developer";
+  | "developer"
+  | "india_stack";
 
 export interface AdminTenantClient {
   id: string;
@@ -858,6 +859,10 @@ export interface TenantPluginClient {
   configOverrides: Record<string, unknown>;
   enabledBy: string | null;
   createdAt: string;
+  pluginName?: string;
+  category?: PluginCategoryClient;
+  pluginDescription?: string | null;
+  rexHints?: Record<string, unknown>;
 }
 
 export interface TenantPluginByokResultClient {

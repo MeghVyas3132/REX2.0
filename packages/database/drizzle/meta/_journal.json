@@ -78,6 +78,13 @@
       "when": 1774297100000,
       "tag": "0010_data_subject_requests",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1774339000000,
+      "tag": "0011_plugin_category_india_stack",
+      "breakpoints": true
     }
   ]
 }

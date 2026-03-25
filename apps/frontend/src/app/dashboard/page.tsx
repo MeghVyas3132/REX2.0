@@ -3,10 +3,9 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { api } from "@/lib/api";
+import { api, type WorkflowListItem } from "@/lib/api";
 import { useAuth } from "@/lib/auth-context";
 import { PageContainer, PageHeader, PageSection } from "@/components/layout";
-import type { WorkflowListItem } from "@/lib/api";
 
 export default function DashboardPage() {
   const { token, loading: authLoading } = useAuth();
@@ -39,14 +38,12 @@ export default function DashboardPage() {
 
   const handleDelete = async (workflowId: string, workflowName: string) => {
     if (!token) return;
-    const confirmed = window.confirm(
-      `Delete workflow "${workflowName}"? This will also remove all related executions.`
-    );
+    const confirmed = window.confirm(`Delete workflow "${workflowName}"?`);
     if (!confirmed) return;
 
     try {
       await api.workflows.delete(token, workflowId);
-      setWorkflows((prev) => prev.filter((wf) => wf.id !== workflowId));
+      setWorkflows((prev) => prev.filter((item) => item.id !== workflowId));
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to delete workflow");
     }
@@ -60,197 +57,57 @@ export default function DashboardPage() {
         title="Workflows"
         description="Design, build, and run intelligent orchestration graphs"
         action={
-          <Link
-            href="/dashboard/workflows/new"
-            style={{
-              padding: "10px 20px",
-              background: "#3b82f6",
-              color: "#fff",
-              borderRadius: "6px",
-              textDecoration: "none",
-            }}
-          >
+          <Link href="/dashboard/workflows/new" className="control-link">
             + New Workflow
           </Link>
         }
       />
 
-      {error && <p style={{ color: "#f87171", marginBottom: "20px" }}>{error}</p>}
+      {error ? <p className="control-error">{error}</p> : null}
 
       <PageSection title="Workflows">
-        {isLoading ? (
-          <div style={{ textAlign: "center", padding: "40px", color: "rgba(255,255,255,0.6)" }}>
-            Loading workflows...
+        {isLoading ? <p className="control-empty">Loading workflows...</p> : null}
+
+        {!isLoading && workflows.length === 0 ? (
+          <div>
+            <p className="control-empty">No workflows yet.</p>
+            <p>
+              <Link href="/dashboard/workflows/new" className="control-link">
+                Create your first workflow
+              </Link>
+            </p>
           </div>
-        ) : workflows.length === 0 ? (
-          <div style={{ textAlign: "center", padding: "40px 20px", color: "rgba(255,255,255,0.6)" }}>
-            <p style={{ fontSize: "18px", marginBottom: "20px" }}>No workflows yet</p>
-            <p style={{ marginBottom: "20px" }}>Create your first workflow to get started</p>
-            <Link
-              href="/dashboard/workflows/new"
-              style={{
-                padding: "12px 24px",
-                background: "#3b82f6",
-                color: "#fff",
-                borderRadius: "6px",
-                textDecoration: "none",
-                display: "inline-block",
-              }}
-            >
-              Create Workflow
-            </Link>
-          </div>
-        ) : (
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: "16px" }}>
+        ) : null}
+
+        {!isLoading && workflows.length > 0 ? (
+          <ul className="control-list">
             {workflows.map((workflow) => (
-              <div
-                key={workflow.id}
-                style={{
-                  padding: "20px",
-                  background: "rgba(255,255,255,0.05)",
-                  border: "1px solid rgba(255,255,255,0.1)",
-                  borderRadius: "8px",
-                  transition: "all 0.2s ease",
-                }}
-                onMouseEnter={(e) => {
-                  const el = e.currentTarget;
-                  el.style.background = "rgba(59, 130, 246, 0.1)";
-                  el.style.borderColor = "#3b82f6";
-                }}
-                onMouseLeave={(e) => {
-                  const el = e.currentTarget;
-                  el.style.background = "rgba(255,255,255,0.05)";
-                  el.style.borderColor = "rgba(255,255,255,0.1)";
-                }}
-              >
-                <div style={{ marginBottom: "16px" }}>
-                  <h3 style={{ margin: "0 0 8px 0", color: "#fff" }}>{workflow.name}</h3>
-                  <p style={{ margin: "0 0 12px 0", fontSize: "14px", color: "rgba(255,255,255,0.6)" }}>
-                    {workflow.description || "No description"}
-                  </p>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                    <span
-                      style={{
-                        padding: "4px 8px",
-                        background: workflow.status === "active" ? "#10b981" : "#f97316",
-                        color: "#fff",
-                        borderRadius: "4px",
-                        fontSize: "12px",
-                      }}
-                    >
-                      {workflow.status}
-                    </span>
-                    <span style={{ fontSize: "12px", color: "rgba(255,255,255,0.5)" }}>
-                      v{workflow.version}
-                    </span>
-                  </div>
-                </div>
-                <div style={{ display: "flex", gap: "8px" }}>
-                  <Link
-                    href={`/dashboard/workflows/${workflow.id}`}
-                    style={{
-                      flex: 1,
-                      padding: "8px 12px",
-                      background: "#3b82f6",
-                      color: "#fff",
-                      borderRadius: "4px",
-                      textDecoration: "none",
-                      textAlign: "center",
-                      fontSize: "14px",
-                      fontWeight: "500",
-                    }}
-                  >
+              <li key={workflow.id}>
+                <span>
+                  <strong>{workflow.name}</strong>
+                  <span style={{ marginLeft: "8px", opacity: 0.7 }}>v{workflow.version}</span>
+                </span>
+                <span>
+                  <span className={workflow.status === "active" ? "control-badge" : "control-badge control-badge--warn"}>
+                    {workflow.status}
+                  </span>
+                  <Link href={`/dashboard/workflows/${workflow.id}`} className="control-link" style={{ marginLeft: "8px" }}>
                     Edit
                   </Link>
                   <button
+                    type="button"
+                    className="control-link"
+                    style={{ marginLeft: "8px" }}
                     onClick={() => handleDelete(workflow.id, workflow.name)}
-                    style={{
-                      flex: 1,
-                      padding: "8px 12px",
-                      background: "rgba(239, 68, 68, 0.2)",
-                      color: "#ef4444",
-                      border: "none",
-                      borderRadius: "4px",
-                      cursor: "pointer",
-                      fontSize: "14px",
-                      fontWeight: "500",
-                    }}
                   >
                     Delete
                   </button>
-                </div>
-              </div>
+                </span>
+              </li>
             ))}
-          </div>
-        )}
+          </ul>
+        ) : null}
       </PageSection>
     </PageContainer>
   );
 }
-                  borderRadius: "8px",
-                  transition: "all 0.2s ease",
-                }}
-                onMouseEnter={(e) => {
-                  const el = e.currentTarget;
-                  el.style.background = "rgba(59, 130, 246, 0.1)";
-                  el.style.borderColor = "#3b82f6";
-                }}
-                onMouseLeave={(e) => {
-                  const el = e.currentTarget;
-                  el.style.background = "rgba(255,255,255,0.05)";
-                  el.style.borderColor = "rgba(255,255,255,0.1)";
-                }}
-              >
-                <div style={{ marginBottom: "16px" }}>
-                  <h3 style={{ margin: "0 0 8px 0", color: "#fff" }}>{workflow.name}</h3>
-                  <p style={{ margin: "0 0 12px 0", fontSize: "14px", color: "rgba(255,255,255,0.6)" }}>
-                    {workflow.description || "No description"}
-                  </p>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                    <span
-                      style={{
-                        padding: "4px 8px",
-                        background: workflow.status === "active" ? "#10b981" : "#f97316",
-                        color: "#fff",
-                        borderRadius: "4px",
-                        fontSize: "12px",
-                      }}
-                    >
-                      {workflow.status}
-                    </span>
-                    <span style={{ fontSize: "12px", color: "rgba(255,255,255,0.5)" }}>
-                      v{workflow.version}
-                    </span>
-                  </div>
-                </div>
-                <div style={{ display: "flex", gap: "8px" }}>
-                  <Link
-                    href={`/dashboard/workflows/${workflow.id}`}
-                    style={{
-                      flex: 1,
-                      padding: "8px 12px",
-                      background: "#3b82f6",
-                      color: "#fff",
-                      borderRadius: "4px",
-                      textDecoration: "none",
-                      textAlign: "center",
-                      fontSize: "14px",
-                      fontWeight: "500",
-                    }}
-                  >
-                    Edit
-                  </Link>
-                  <button
-                    onClick={() => handleDelete(workflow.id, workflow.name)}
-                    style={{
-                      flex: 1,
-                      padding: "8px 12px",
-                      background: "rgba(239, 68, 68, 0.2)",
-                      color: "#ef4444",
-                      border: "none",
-                      borderRadius: "4px",
-                      cursor: "pointer",
-                      fontSize: "14px",
-                      fontWeight: "500",
-                    }}
-                  >

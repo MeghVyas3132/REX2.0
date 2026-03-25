@@ -313,7 +313,7 @@ export function registerAdminRoutes(app: FastifyInstance, db: Database): void {
         slug: string;
         name: string;
         description?: string;
-        category: "ai_llm" | "data_storage" | "communication" | "business_crm" | "logic_control" | "trigger" | "compliance_rex" | "developer";
+        category: "ai_llm" | "data_storage" | "communication" | "business_crm" | "logic_control" | "trigger" | "compliance_rex" | "developer" | "india_stack";
         version?: string;
         manifest: Record<string, unknown>;
       };
@@ -347,7 +347,7 @@ export function registerAdminRoutes(app: FastifyInstance, db: Database): void {
       const body = request.body as Partial<{
         name: string;
         description: string;
-        category: "ai_llm" | "data_storage" | "communication" | "business_crm" | "logic_control" | "trigger" | "compliance_rex" | "developer";
+        category: "ai_llm" | "data_storage" | "communication" | "business_crm" | "logic_control" | "trigger" | "compliance_rex" | "developer" | "india_stack";
         version: string;
         manifest: Record<string, unknown>;
         isActive: boolean;

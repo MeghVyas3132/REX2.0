@@ -4,7 +4,7 @@
 // ──────────────────────────────────────────────
 
 import { getDatabase, closeConnection } from "./connection";
-import { and, eq } from "drizzle-orm";
+import { and, eq, notInArray } from "drizzle-orm";
 import {
   adminAuditLog,
   pluginCatalogue,
@@ -15,6 +15,10 @@ import {
   users,
   workflows,
 } from "./schema";
+import {
+  PLUGIN_REGISTRY_VERSION,
+  pluginRegistryCatalogue,
+} from "./plugin-registry";
 
 const DEFAULT_TENANT_ID = "00000000-0000-0000-0000-000000000001";
 
@@ -145,7 +149,7 @@ async function seed() {
       tenantId: DEFAULT_TENANT_ID,
       planName: "enterprise",
       allowedNodeTypes: [],
-      allowedPluginSlugs: ["http", "slack", "salesforce"],
+      allowedPluginSlugs: pluginRegistryCatalogue.map((plugin) => plugin.slug),
       maxWorkflows: 200,
       maxExecutionsPerMonth: 200000,
       maxKnowledgeCorpora: 100,
@@ -157,7 +161,7 @@ async function seed() {
       target: tenantPlans.tenantId,
       set: {
         planName: "enterprise",
-        allowedPluginSlugs: ["http", "slack", "salesforce"],
+        allowedPluginSlugs: pluginRegistryCatalogue.map((plugin) => plugin.slug),
         maxWorkflows: 200,
         maxExecutionsPerMonth: 200000,
         maxKnowledgeCorpora: 100,
@@ -166,40 +170,7 @@ async function seed() {
       },
     });
 
-  const catalogueSeed = [
-    {
-      slug: "http",
-      name: "HTTP Node",
-      description: "Generic HTTP request node",
-      category: "developer",
-      version: "1.0.0",
-      isPublic: true,
-      isBuiltin: true,
-      manifest: { type: "developer", actions: ["request"] },
-    },
-    {
-      slug: "slack",
-      name: "Slack",
-      description: "Send Slack notifications",
-      category: "communication",
-      version: "1.0.0",
-      isPublic: true,
-      isBuiltin: true,
-      manifest: { type: "communication", actions: ["send_message"] },
-    },
-    {
-      slug: "salesforce",
-      name: "Salesforce",
-      description: "Sync CRM records",
-      category: "business_crm",
-      version: "1.0.0",
-      isPublic: false,
-      isBuiltin: false,
-      manifest: { type: "business_crm", actions: ["upsert_contact"] },
-    },
-  ] as const;
-
-  for (const plugin of catalogueSeed) {
+  for (const plugin of pluginRegistryCatalogue) {
     await db
       .insert(pluginCatalogue)
       .values({
@@ -207,11 +178,24 @@ async function seed() {
         name: plugin.name,
         description: plugin.description,
         category: plugin.category,
-        version: plugin.version,
-        manifest: plugin.manifest,
+        version: "1.0.0",
+        manifest: {
+          kind: "node_registry",
+          provider: plugin.provider,
+          actions: plugin.actions,
+          tags: plugin.tags,
+        },
         isPublic: plugin.isPublic,
         isBuiltin: plugin.isBuiltin,
         isActive: true,
+        rexHints: {
+          byokTier: plugin.byokTier,
+          piiRisk: plugin.piiRisk,
+          crossBorder: plugin.crossBorder,
+          requiresConsentGate: plugin.requiresConsentGate,
+          registryVersion: PLUGIN_REGISTRY_VERSION,
+          tags: plugin.tags,
+        },
       })
       .onConflictDoUpdate({
         target: pluginCatalogue.slug,
@@ -219,11 +203,24 @@ async function seed() {
           name: plugin.name,
           description: plugin.description,
           category: plugin.category,
-          version: plugin.version,
-          manifest: plugin.manifest,
+          version: "1.0.0",
+          manifest: {
+            kind: "node_registry",
+            provider: plugin.provider,
+            actions: plugin.actions,
+            tags: plugin.tags,
+          },
           isPublic: plugin.isPublic,
           isBuiltin: plugin.isBuiltin,
           isActive: true,
+          rexHints: {
+            byokTier: plugin.byokTier,
+            piiRisk: plugin.piiRisk,
+            crossBorder: plugin.crossBorder,
+            requiresConsentGate: plugin.requiresConsentGate,
+            registryVersion: PLUGIN_REGISTRY_VERSION,
+            tags: plugin.tags,
+          },
           updatedAt: new Date(),
         },
       });
@@ -243,6 +240,14 @@ async function seed() {
         set: { isEnabled: true },
       });
   }
+
+  await db
+    .update(pluginCatalogue)
+    .set({
+      isActive: false,
+      updatedAt: new Date(),
+    })
+    .where(notInArray(pluginCatalogue.slug, pluginRegistryCatalogue.map((plugin) => plugin.slug)));
 
   await db.insert(adminAuditLog).values({
     actorId: adminUserId,

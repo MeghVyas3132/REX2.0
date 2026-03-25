@@ -124,10 +124,37 @@ export function registerTenantRoutes(app: FastifyInstance, db: Database): void {
     });
 
     scoped.get("/api/tenant/plugins", async (request, reply) => {
-      const rows = await db
-        .select()
-        .from(tenantPlugins)
-        .where(and(eq(tenantPlugins.tenantId, request.ctx.tenantId), eq(tenantPlugins.isEnabled, true)));
+      const [catalogueRows, tenantRows] = await Promise.all([
+        db
+          .select()
+          .from(pluginCatalogue)
+          .where(eq(pluginCatalogue.isActive, true)),
+        db
+          .select()
+          .from(tenantPlugins)
+          .where(eq(tenantPlugins.tenantId, request.ctx.tenantId)),
+      ]);
+
+      const tenantMap = new Map(tenantRows.map((row) => [row.pluginSlug, row]));
+
+      const rows = catalogueRows.map((plugin) => {
+        const tenantPlugin = tenantMap.get(plugin.slug);
+        return {
+          id: tenantPlugin?.id ?? `${request.ctx.tenantId}:${plugin.slug}`,
+          tenantId: request.ctx.tenantId,
+          pluginSlug: plugin.slug,
+          isEnabled: tenantPlugin?.isEnabled ?? true,
+          byokConfig: (tenantPlugin?.byokConfig as Record<string, unknown> | undefined) ?? {},
+          configOverrides: (tenantPlugin?.configOverrides as Record<string, unknown> | undefined) ?? {},
+          enabledBy: tenantPlugin?.enabledBy ?? null,
+          createdAt: tenantPlugin?.createdAt ?? plugin.createdAt,
+          pluginName: plugin.name,
+          category: plugin.category,
+          pluginDescription: plugin.description,
+          rexHints: plugin.rexHints,
+        };
+      });
+
       return reply.send({ success: true, data: rows });
     });
 
