@@ -1,46 +1,64 @@
-# REX Documentation
+# REX Technical Documentation
 
-REX stands for Responsible, Ethical and Explainable AI.
+This folder contains the canonical technical documentation for REX 2.0.
 
-This documentation set is written for engineering handover, onboarding, and production operations.
+Scope:
+- Engineering architecture and implementation details
+- Runtime operations, APIs, data model, and migration history
+- Frontend, backend, worker, engine, and package-level references
 
-Repository-level knowledge transfer document:
+Out of scope:
+- Business plans, commercial narratives, or non-technical collateral
 
-- `KT.md` (root)
+## Core Documents
 
-## Document Index
-
+- [Root README](../README.md)
+- [Knowledge Transfer (KT)](./KT.md)
+- [Feature List](./FEATURE_LIST.md)
 - [Product Requirements Document (PRD)](./prd.md)
 - [Technical Requirements Document (TRD)](./trd.md)
+- [High-Level Design (HLD)](./HLD.md)
+- [Low-Level Design (LLD)](./LLD.md)
+
+## Architecture and Runtime
+
 - [Backend Architecture](./backend.md)
+- [Frontend Architecture](./frontend.md)
 - [Worker Runtime](./worker.md)
 - [Execution Engine](./engine.md)
-- [DAG Validation and Scheduling](./dag.md)
-- [RAG Runtime and Templates](./rag.md)
-- [Frontend Architecture](./frontend.md)
+- [DAG Design](./dag.md)
+- [RAG Runtime](./rag.md)
+
+## Data and Contracts
+
 - [Database Model](./database.md)
 - [Migration History](./migrations.md)
 - [API Endpoints](./endpoints.md)
+- [API Endpoint Reference (Expanded)](./API_ENDPOINTS.md)
+- [Payload Registry](./PAYLOAD_REGISTRY.md)
 
-## How to Read This Set
+## Implementation and Quality
 
-1. Start with `prd.md` for product scope and non-functional requirements.
-2. Read `trd.md` for architecture constraints and implementation contracts.
-3. Read `engine.md`, `dag.md`, and `worker.md` to understand execution behavior.
-4. Read `rag.md` for knowledge ingestion, retrieval orchestration, and template behavior.
-5. Read `database.md` and `migrations.md` for persistence and schema evolution.
-6. Use `endpoints.md` as the API contract reference.
+- [Packages and Node Inventory](./packages.md)
+- [Production Implementation Notes](./PRODUCTION_IMPLEMENTATION.md)
+- [Smoke Tests](./SMOKE_TESTS.md)
+- [Frontend Design System](./FRONTEND_DESIGN_SYSTEM.md)
+- [Frontend Layout Audit](./FRONTEND_LAYOUT_AUDIT.md)
 
-## Current Platform Scope
+## Planning and Work Packages
 
-- Visual DAG workflow authoring and execution
-- BullMQ-based distributed worker runtime
-- Execution context snapshots, retrieval event logs, and step attempt tracking
-- Knowledge corpus ingestion and scoped retrieval
-- RAG workflow templates instantiated into editable DAGs
-- Multi-provider LLM abstraction (Gemini, Groq)
-- RBAC and ABAC-style governance checks in backend routes and services
-- Runtime domain configuration overlays applied before worker execution
-- Model registry API for provider/model capability discovery
-- KPI summary and time-series APIs with frontend KPI dashboard tab
-- Guardrail event telemetry and GDPR export/delete endpoints
+- [Implementation Work Packages](./IMPLEMENTATION_WORK_PACKAGES.md)
+- [Next.js Component Implementation Plan](./NEXTJS_COMPONENT_IMPLEMENTATION_PLAN.md)
+
+## Delivery Reports
+
+- [Delivery Report Index](./reports/README_PHASE_2.md)
+- [Architecture Diagrams](./reports/ARCHITECTURE_DIAGRAMS.md)
+- [Final Verification Sign-Off](./reports/FINAL_VERIFICATION_SIGN_OFF.md)
+
+## Reading Order
+
+1. Start with [README](../README.md), [PRD](./prd.md), and [TRD](./trd.md).
+2. Continue with [HLD](./HLD.md), [LLD](./LLD.md), [backend](./backend.md), [frontend](./frontend.md), and [worker](./worker.md).
+3. Use [database](./database.md), [migrations](./migrations.md), and [endpoints](./endpoints.md) for implementation and operations.
+4. Use [KT](./KT.md) and [packages](./packages.md) for onboarding and handover.

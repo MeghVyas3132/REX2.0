@@ -107,7 +107,7 @@ Default URLs:
 - High-level docs index: `docs/README.md`
 - Endpoint catalog: `docs/endpoints.md`
 - Technical requirements: `docs/trd.md`
-- Knowledge transfer handover: `KT.md`
+- Knowledge transfer handover: `docs/KT.md`
 
 ## License
 
