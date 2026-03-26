@@ -63,21 +63,6 @@ services:
       redis:
         condition: service_healthy
 
-  frontend:
-    build:
-      context: .
-      dockerfile: apps/frontend/Dockerfile
-    container_name: rex-frontend
-    restart: unless-stopped
-    ports:
-      - "${FRONTEND_PORT}:3000"
-    env_file:
-      - .env
-    environment:
-      - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
-    depends_on:
-      - backend
-
 volumes:
   postgres_data:
   redis_data:

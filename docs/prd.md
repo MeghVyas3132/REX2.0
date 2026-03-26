@@ -1,75 +1,107 @@
-# Product Requirements Document (PRD)
+# PRD - REX 2.0 (Code-Derived)
 
-## Product Name
+## 1. Product Purpose
+REX is a workflow automation platform for building, executing, and governing AI workflows modeled as DAGs. The implemented system provides:
+- API-driven workflow lifecycle management.
+- Asynchronous execution through queue-backed workers.
+- Knowledge ingestion/retrieval pipelines.
+- Governance controls (tenanting, IAM policies, compliance, alerting, KPIs, publication).
 
-REX: Responsible, Ethical and Explainable AI workflow automation platform.
+Source basis:
+- `apps/backend/src/server.ts`
+- `apps/backend/src/routes/*.ts`
+- `apps/backend/src/services/*.ts`
+- `apps/worker/src/*.ts`
+- `packages/engine/src/*.ts`
+- `packages/database/src/schema/*.ts`
 
-## Product Vision
+## 2. Primary User Personas (Inferred From Authorization Logic)
+1. Super Admin
+- Global platform administrator (`globalRole = super_admin`).
+- Manages tenants, plans, plugins, tenant users, and admin audit visibility.
+- Routes: `/admin/*` in `admin.routes.ts`.
 
-Enable teams to design, run, and operate deterministic AI workflows with auditable execution behavior and extensible knowledge-aware RAG capabilities.
+2. Tenant Org Admin / Editor / Viewer
+- Tenant-scoped users (`tenantRole` in JWT context + `tenant_users`).
+- Admin/editor can create/edit workflows and manage certain tenant resources.
+- Viewer is read-constrained for workflow mutation.
 
-## Product Objectives
+3. Workflow Builder / Operator
+- Manages workflows, templates, executions, knowledge corpora/documents, and publications.
 
-- Provide visual DAG-based workflow authoring.
-- Provide reliable asynchronous execution at production scale.
-- Provide traceable per-step execution telemetry.
-- Provide first-class RAG templates that instantiate into editable workflows.
-- Provide scoped knowledge ingestion and retrieval primitives.
-- Preserve deterministic execution guarantees while adding cognitive runtime capabilities.
+4. Governance/Compliance Operator
+- Manages policies, retention, legal basis, consents, DSAR responses, and compliance reports.
 
-## Primary Users
+## 3. Goals and Functional Scope
+### 3.1 Workflow Authoring and Runtime
+- Create/list/get/update/delete workflows.
+- Execute workflows from API and webhooks.
+- Stop active executions.
+- Inspect execution details, step attempts, retrieval events, and context snapshots.
 
-- Workflow builders and automation engineers
-- AI platform engineers
-- Operations teams monitoring execution outcomes
-- Product teams creating reusable workflow templates
+### 3.2 Knowledge/RAG
+- Create corpora with scope (`user`, `workflow`, `execution`).
+- Ingest documents asynchronously.
+- Query knowledge with scoped retrieval.
+- List corpora/documents/chunks.
 
-## Core Product Capabilities
+### 3.3 Templates
+- List templates, preview template graph, instantiate workflow from template.
 
-- Authenticated multi-user workflow workspace
-- Node-based visual editor
-- Workflow execution via queue-backed workers
-- API key management for LLM providers
-- Execution observability including step attempts and context snapshots
-- Knowledge ingestion and retrieval APIs
-- RAG template catalog and one-click instantiation
+### 3.4 Governance and Ops
+- Model registry and domain configuration overlays.
+- Workspaces and workflow sharing/permissions.
+- IAM policy management and action assertions.
+- Hyperparameter profiles and comparisons.
+- Alert rule/event management and metrics export.
+- KPI summary and timeseries.
 
-## Functional Requirements
+### 3.5 Compliance
+- Consent capture and listing.
+- Retention policy upsert + retention sweep.
+- Workflow legal basis management.
+- Data subject request create/list/respond.
+- Compliance reporting.
+- GDPR export and delete-me endpoints.
 
-1. Users can create and edit workflows as DAGs.
-2. Workflows can be executed on demand or by schedule/webhook.
-3. Execution status and per-step outputs are queryable.
-4. Provider keys are encrypted at rest and resolved only at runtime.
-5. Users can create corpora, ingest documents, and query scoped knowledge.
-6. RAG templates can be previewed and instantiated with runtime parameters.
-7. Instantiated templates remain editable as normal workflows.
-8. Runtime should support memory, retrieval orchestration, and evaluation-driven retry flows.
+### 3.6 Publication and REX Scoring
+- Publish workflows as catalog entries.
+- Execute published workflows.
+- Compute/list REX scores and preview/apply autofixes.
 
-## Non-Functional Requirements
+## 4. Key User Workflows (Implementation-Derived)
+1. Register/Login
+- `POST /api/auth/register` or `POST /api/auth/login`.
+- JWT issued with tenant + role claims.
 
-- Deterministic DAG execution guarantees
-- Observability with structured logs and persisted telemetry
-- Horizontal scalability through queue-based worker model
-- Input validation and auth enforcement on protected APIs
-- Backward compatibility for non-RAG workflows
+2. Create and Run Workflow
+- `POST /api/workflows` -> `POST /api/workflows/:workflowId/execute`.
+- Execution persisted as `pending` and enqueued via BullMQ.
+- Worker executes DAG and writes execution telemetry.
 
-## Out of Scope for Current Release
+3. Knowledge Ingestion
+- `POST /api/knowledge/corpora`.
+- `POST /api/knowledge/documents/ingest` creates document + enqueue job.
+- Worker chunks, embeds, writes chunks, updates statuses.
 
-- External vector database integration
-- Multi-region distributed deployment semantics
-- Full compliance certification implementation
-- Real-time push UI updates without polling
+4. Governance Enforcement
+- Route auth hook populates context.
+- Tenant middleware validates active tenant + plan/plugins.
+- IAM checks assert role/action before mutation routes.
 
-## Success Criteria
+5. Compliance Operations
+- Capture consent and legal basis.
+- Periodic/manual retention sweep removes stale resources by policy.
+- DSAR request lifecycle tracked in DB.
 
-- Workflow creation, execution, and status inspection work end-to-end.
-- RAG templates instantiate without manual graph correction.
-- Knowledge ingestion and retrieval succeed within expected latency bounds.
-- Execution telemetry is persisted and queryable for troubleshooting.
+## 5. Non-Goals (From Current Code)
+- No active frontend app present in workspace tree (`apps/frontend` missing), despite references in Docker/CI/scripts.
+- No explicit real cron scheduler library; schedule trigger uses interval polling + cron approximation.
+- No streaming endpoint support in backend routes.
 
-## Risks
-
-- Schema drift between services and migrations
-- Increased retrieval latency under large corpora
-- Runtime complexity from retries, branching, and adaptive retrieval
-- Configuration mismanagement in multi-environment deployments
+## 6. Success Signals (Operationally Visible in Code)
+- Health endpoint returns OK (`GET /api/health`).
+- Execution lifecycle transitions persist in DB (`pending` -> `running` -> terminal states).
+- Knowledge corpus/document statuses converge to `ready` or `failed`.
+- KPI endpoints surface latency/retrieval/guardrail metrics.
+- Alert metrics endpoint exports Prometheus text format.

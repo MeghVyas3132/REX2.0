@@ -1,83 +1,73 @@
-# Technical Requirements Document (TRD)
+# TRD - Technical Requirements Document
 
-## Purpose
+## 1. Tech Stack
+- Language: TypeScript (ESM modules).
+- Runtime: Node.js (CI uses Node 22; Docker images use Node 20-alpine).
+- Monorepo: pnpm workspace + Turborepo.
+- API Framework: Fastify.
+- Validation: Zod.
+- ORM/SQL: Drizzle ORM + postgres driver.
+- Queue: BullMQ + Redis.
+- Auth: JWT (`@fastify/jwt`).
+- Logging: Pino.
+- Testing: Vitest (backend), Node test runner (engine), Playwright script present.
 
-Define architecture contracts and implementation requirements for REX runtime, data model, and platform operations.
+## 2. Workspace Packages
+- `apps/backend`
+- `apps/worker`
+- `packages/database`
+- `packages/engine`
+- `packages/llm`
+- `packages/types`
+- `packages/utils`
 
-## System Topology
+Note: CI/Docker/scripts also reference `@rex/frontend` and `apps/frontend`, but this directory is not present in current workspace tree.
 
-- Frontend: Next.js client application
-- Backend: Fastify API control plane
-- Worker: BullMQ execution and ingestion runtime
-- Persistence: PostgreSQL
-- Queue: Redis + BullMQ
-- Shared packages: types, utils, database, engine, llm
+## 3. Environment Requirements
+Required env vars (enforced by `packages/utils/src/config.ts`):
+- Core: `NODE_ENV`, `LOG_LEVEL`
+- Postgres: `POSTGRES_HOST`, `POSTGRES_PORT`, `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB`, `DATABASE_URL`
+- Redis: `REDIS_HOST`, `REDIS_PORT`
+- Backend: `BACKEND_PORT`, `BACKEND_HOST`
+- JWT: `JWT_SECRET`, `JWT_EXPIRY`
+- Encryption: `ENCRYPTION_MASTER_KEY`
+- Worker: `WORKER_CONCURRENCY`, `QUEUE_NAME`
+- Rate limits: `RATE_LIMIT_MAX`, `RATE_LIMIT_WINDOW_MS`, `WEBHOOK_RATE_LIMIT_MAX`, `WEBHOOK_RATE_LIMIT_WINDOW_MS`
+- Optional retrieval limits: `RETRIEVAL_MAX_*`
 
-## Technical Principles
+## 4. Build and Run Commands
+From root `package.json`:
+- `pnpm install`
+- `pnpm db:migrate`
+- `pnpm build`
+- `pnpm dev`
+- `pnpm test`
+- `pnpm typecheck`
 
-- Single source of type contracts in `@rex/types`
-- Workflow execution logic isolated in `@rex/engine`
-- API layer remains orchestration and validation only
-- Queue decouples request latency from execution latency
-- Persisted telemetry over ephemeral logs for operational audit
+Service-focused:
+- Backend dev: `pnpm --filter @rex/backend dev`
+- Worker dev: `pnpm --filter @rex/worker dev`
+- DB migrate: `pnpm --filter @rex/database db:migrate`
 
-## Execution Requirements
+## 5. Infrastructure Dependencies
+- PostgreSQL with pgvector extension support (`pgvector/pgvector:pg16` in compose).
+- Redis 7 (`redis:7-alpine`).
+- Docker Compose for local orchestration.
 
-1. Validate every workflow graph as DAG before execution.
-2. Execute nodes in deterministic topological order.
-3. Support branch-condition based skip semantics.
-4. Persist per-step result rows.
-5. Persist retry attempt telemetry when available.
-6. Persist execution context snapshots with monotonic sequence.
-7. Support runtime retrieval and ingestion callbacks.
+## 6. CI/CD Validation
+GitHub Actions workflow:
+- Install deps (frozen lockfile).
+- Typecheck (`pnpm typecheck`).
+- Build (`pnpm build`).
+- Run backend and engine tests.
+- Run frontend build and e2e verify gates (currently inconsistent with missing frontend dir).
 
-## RAG Technical Requirements
-
-1. Knowledge model must support user/workflow/execution scoping.
-2. Ingestion must produce chunked content and embedding payload per chunk.
-3. Retrieval must support top-K and strategy-based branch orchestration.
-4. Retrieval events must persist attempt and strategy metadata.
-5. RAG templates must compile to standard DAG nodes and edges.
-6. Runtime memory must remain mutable across node boundaries in one run.
-
-## API Requirements
-
-- All protected routes require JWT verification.
-- All mutable payloads validated with Zod schemas.
-- Standardized success/error response envelopes.
-- Pagination metadata for list endpoints.
-
-## Database Requirements
-
-- Foreign key integrity with cascade where lifecycle-coupled.
-- Indexes for high-frequency query paths.
-- JSONB for flexible workflow and telemetry payloads.
-- Migration-driven schema evolution only.
-
-## Security Requirements
-
-- Encrypt provider keys at rest using configured master key.
-- Do not expose decrypted keys through API.
-- Enforce ownership checks on workflow and execution resources.
-- Enforce role checks (`admin`, `editor`, `viewer`) on mutating endpoints.
-- Enforce ABAC-style resource policy checks through centralized IAM service.
-- Apply global and webhook-specific rate limits.
-
-## Governance Requirements
-
-- Maintain a queryable model registry with provider/model capability metadata.
-- Support runtime domain config overlays with global, user, and workflow scopes.
-- Apply resolved domain config at execution enqueue/runtime.
-- Persist guardrail trigger events for input and output guard nodes.
-- Provide GDPR export and right-to-erasure APIs.
-
-## Observability Requirements
-
-- Provide KPI summary endpoint with latency, retrieval, guardrail, corpus health, and execution status metrics.
-- Provide KPI daily time-series endpoint for trend analysis.
-- Persist telemetry in relational tables to support dashboard and future alerting.
-
-## Performance and Reliability Requirements
+## 7. Operational Constraints and Defaults
+- Backend request body limit: 10 MB.
+- Global rate limit defaults: 100 req/min.
+- Webhook rate limit defaults: 30 req/min.
+- Queue jobs default attempts/backoff: 3 attempts, exponential backoff 2s.
+- Scheduler poll interval: 30s, simple cron approximation.
 
 - Worker concurrency configurable by environment.
 - BullMQ retry/backoff configured for transient failures.
@@ -95,3 +85,27 @@ Define architecture contracts and implementation requirements for REX runtime, d
 - Workspace build must pass for all packages/apps.
 - Engine test suite must pass for retry, control, and retrieval orchestration behavior.
 - Template preview and instantiation endpoints must return valid DAG graph payloads.
+
+## Frontend State Reconciliation Requirements
+
+Current observed state:
+- `apps/frontend` is deleted in the working tree (148 files marked deleted).
+- Frontend is still referenced by:
+	- `.github/workflows/ci.yml`
+	- `docker-compose.yml`
+	- root `package.json` scripts
+
+Required reconciliation options:
+1. Restore frontend option
+- Restore `apps/frontend` and ensure frontend package is discoverable by workspace tooling.
+- Keep CI frontend build/e2e gates enabled.
+
+2. Backend-only option
+- Remove or gate frontend references from CI and root scripts.
+- Remove or profile-gate compose frontend service.
+- Update verification criteria to backend/worker/packages only.
+
+Acceptance criteria for either option:
+- `pnpm build` and `pnpm typecheck` pass without missing-package failures.
+- CI pipeline does not include unreachable stages.
+- Compose startup does not reference absent build contexts.

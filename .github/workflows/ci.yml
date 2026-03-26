@@ -41,8 +41,5 @@ jobs:
       - name: Engine tests
         run: pnpm --filter @rex/engine test
 
-      - name: Frontend production build
-        run: pnpm --filter @rex/frontend build
-
       - name: End-to-end verification gate
         run: pnpm verify:e2e
