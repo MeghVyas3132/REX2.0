@@ -1,0 +1,76 @@
+"use client";
+
+import React, { useState, useCallback } from "react";
+import { SearchFilter } from "@/components/ui/SearchFilter";
+import { FilterBar } from "@/components/ui/FilterBar";
+import { Select } from "@/components/ui/Select";
+
+export type ExecutionFiltersProps = {
+  onSearchChange?: (query: string) => void;
+  onStatusChange?: (status: string) => void;
+  onReset?: () => void;
+  isLoading?: boolean;
+  className?: string;
+};
+
+export function ExecutionFilters({
+  onSearchChange,
+  onStatusChange,
+  onReset,
+  isLoading = false,
+}: ExecutionFiltersProps & { className?: string }) {
+  const [search, setSearch] = useState("");
+  const [status, setStatus] = useState("");
+
+  const handleSearch = useCallback(
+    (query: string) => {
+      setSearch(query);
+      onSearchChange?.(query);
+    },
+    [onSearchChange]
+  );
+
+  const handleStatusChange = useCallback(
+    (e: React.ChangeEvent<HTMLSelectElement>) => {
+      const value = e.target.value;
+      setStatus(value);
+      onStatusChange?.(value);
+    },
+    [onStatusChange]
+  );
+
+  const handleReset = useCallback(() => {
+    setSearch("");
+    setStatus("");
+    onReset?.();
+  }, [onReset]);
+
+  const hasFilters = !!search || !!status;
+
+  return (
+    <FilterBar
+      onReset={hasFilters ? handleReset : undefined}
+      showReset={hasFilters}
+    >
+      <SearchFilter
+        placeholder="Search executions..."
+        onSearch={handleSearch}
+        isLoading={isLoading}
+      />
+      <Select
+        onChange={handleStatusChange}
+        value={status}
+        disabled={isLoading}
+        options={[
+          { value: "", label: "All Status" },
+          { value: "pending", label: "Pending" },
+          { value: "running", label: "Running" },
+          { value: "completed", label: "Completed" },
+          { value: "failed", label: "Failed" },
+          { value: "stopped", label: "Stopped" },
+        ]}
+        style={{ minWidth: "150px" }}
+      />
+    </FilterBar>
+  );
+}

@@ -2,7 +2,7 @@
 // REX - Workflows Table Schema
 // ──────────────────────────────────────────────
 
-import { pgTable, uuid, varchar, integer, timestamp, jsonb, index } from "drizzle-orm/pg-core";
+import { pgTable, uuid, varchar, integer, timestamp, jsonb, index, boolean } from "drizzle-orm/pg-core";
 import { users } from "./users.js";
 import { workspaces } from "./workspaces.js";
 import { tenants } from "./tenants.js";
@@ -24,6 +24,8 @@ export const workflows = pgTable(
     nodes: jsonb("nodes").default([]).notNull(),
     edges: jsonb("edges").default([]).notNull(),
     version: integer("version").default(1).notNull(),
+    isAssigned: boolean("is_assigned").default(false).notNull(), // true if assigned by admin, false if user created
+    assignedBy: uuid("assigned_by").references(() => users.id, { onDelete: "set null" }),
     sourceTemplateId: varchar("source_template_id", { length: 100 }),
     sourceTemplateVersion: integer("source_template_version"),
     sourceTemplateParams: jsonb("source_template_params"),

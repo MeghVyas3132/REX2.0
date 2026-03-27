@@ -32,8 +32,20 @@ jobs:
       - name: Typecheck
         run: pnpm typecheck
 
+      - name: Frontend lint
+        run: pnpm --filter @rex/frontend lint
+
       - name: Build
         run: pnpm build
+
+      - name: Frontend bundle budget
+        run: pnpm --filter @rex/frontend perf:bundle:check
+
+      - name: Install Playwright browsers
+        run: pnpm --filter @rex/frontend exec playwright install --with-deps chromium
+
+      - name: Frontend unit/integration tests
+        run: pnpm --filter @rex/frontend test
 
       - name: Backend unit tests
         run: pnpm --filter @rex/backend test

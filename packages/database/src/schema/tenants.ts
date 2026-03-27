@@ -117,7 +117,10 @@ export const pluginCatalogue = pgTable(
     isPublic: boolean("is_public").default(true).notNull(),
     isBuiltin: boolean("is_builtin").default(false).notNull(),
     isActive: boolean("is_active").default(true).notNull(),
+    technicalLevel: varchar("technical_level", { length: 20 }).default("advanced").notNull(), // "basic" | "advanced"
     rexHints: jsonb("rex_hints").default({}).notNull(),
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
+    deleteScheduledFor: timestamp("delete_scheduled_for", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
   },
@@ -126,6 +129,8 @@ export const pluginCatalogue = pgTable(
     categoryIdx: index("plugin_catalogue_category_idx").on(table.category),
     isActiveIdx: index("plugin_catalogue_is_active_idx").on(table.isActive),
     isBuiltinIdx: index("plugin_catalogue_is_builtin_idx").on(table.isBuiltin),
+    technicalLevelIdx: index("plugin_catalogue_technical_level_idx").on(table.technicalLevel),
+    deletedAtIdx: index("plugin_catalogue_deleted_at_idx").on(table.deletedAt),
   })
 );
 

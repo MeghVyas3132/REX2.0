@@ -169,9 +169,16 @@ export interface PluginCatalogue {
   isBuiltin: boolean;
   isActive: boolean;
   rexHints: PluginRexHints;
+  technicalLevel?: "basic" | "advanced";
+  icon?: string;
+  deletedAt?: Date | null;
+  deleteScheduledFor?: Date | null;
   createdAt: Date;
   updatedAt: Date;
 }
+
+// Type alias for convenience
+export type Plugin = PluginCatalogue;
 
 export interface TenantPlugin {
   id: string;

@@ -10,13 +10,22 @@ import {
   workflowPermissions,
   workflows,
   workspaceMembers,
+  tenantUsers,
 } from "@rex/database";
-import type { UserRole } from "@rex/types";
+import type { UserRole, GlobalRole, TenantRole } from "@rex/types";
 
 export type WorkflowAction = "view" | "edit" | "delete" | "execute" | "manage";
 
+export interface UserRoles {
+  legacyRole: UserRole;
+  globalRole: GlobalRole;
+  tenantRole: TenantRole;
+  tenantId: string;
+}
+
 export interface IAMService {
-  getUserRole(userId: string): Promise<UserRole>;
+  getUserRoles(userId: string): Promise<UserRoles>;
+  getUserRole(userId: string): Promise<UserRole>; // Legacy compat
   assertRole(userId: string, allowedRoles: UserRole[]): Promise<UserRole>;
   canWorkflowAction(
     userId: string,
@@ -34,9 +43,12 @@ export interface IAMService {
 
 export function createIAMService(db: Database): IAMService {
   return {
-    async getUserRole(userId) {
+    async getUserRoles(userId) {
       const [user] = await db
-        .select({ role: users.role })
+        .select({ 
+          role: users.role,
+          globalRole: users.globalRole,
+        })
         .from(users)
         .where(eq(users.id, userId))
         .limit(1);
@@ -45,7 +57,35 @@ export function createIAMService(db: Database): IAMService {
         throw new IAMError("User not found", "NOT_FOUND", 404);
       }
 
-      return normalizeRole(user.role);
+      // Get tenant role from tenant_users (primary source)
+      const [membership] = await db
+        .select({
+          tenantRole: tenantUsers.tenantRole,
+          tenantId: tenantUsers.tenantId,
+        })
+        .from(tenantUsers)
+        .where(and(eq(tenantUsers.userId, userId), eq(tenantUsers.isActive, true)))
+        .limit(1);
+
+      return {
+        legacyRole: normalizeRole(user.role),
+        globalRole: user.globalRole as GlobalRole,
+        tenantRole: (membership?.tenantRole as TenantRole) || "org_viewer",
+        tenantId: membership?.tenantId || "00000000-0000-0000-0000-000000000001",
+      };
+    },
+
+    async getUserRole(userId) {
+      // Legacy method - returns effective role
+      const roles = await this.getUserRoles(userId);
+      
+      // Priority: globalRole > tenantRole > legacyRole
+      if (roles.globalRole === "super_admin") return "admin";
+      if (roles.tenantRole === "org_admin") return "admin";
+      if (roles.tenantRole === "org_editor") return "editor";
+      if (roles.tenantRole === "org_viewer") return "viewer";
+      
+      return roles.legacyRole;
     },
 
     async assertRole(userId, allowedRoles) {
@@ -61,8 +101,13 @@ export function createIAMService(db: Database): IAMService {
     },
 
     async canWorkflowAction(userId, workflowId, action, contextAttributes) {
-      const role = await this.getUserRole(userId);
-      if (role === "admin") return true;
+      const roles = await this.getUserRoles(userId);
+      
+      // Super admin has full access
+      if (roles.globalRole === "super_admin") return true;
+      
+      // Org admin has full access within tenant
+      if (roles.tenantRole === "org_admin") return true;
 
       const [workflow] = await db
         .select({
@@ -70,6 +115,8 @@ export function createIAMService(db: Database): IAMService {
           userId: workflows.userId,
           status: workflows.status,
           workspaceId: workflows.workspaceId,
+          tenantId: workflows.tenantId,
+          isAssigned: workflows.isAssigned,
         })
         .from(workflows)
         .where(eq(workflows.id, workflowId))
@@ -87,24 +134,52 @@ export function createIAMService(db: Database): IAMService {
           ownerUserId: workflow.userId,
           status: workflow.status,
           workspaceId: workflow.workspaceId,
+          tenantId: workflow.tenantId,
+          isAssigned: workflow.isAssigned,
         },
         requester: {
           userId,
-          role,
+          globalRole: roles.globalRole,
+          tenantRole: roles.tenantRole,
+          legacyRole: roles.legacyRole,
         },
         ...(contextAttributes ?? {}),
       };
 
-      // Owner logic
-      const isOwner = workflow.userId === userId;
-      if (isOwner && role !== "viewer") {
-        return evaluatePolicies(db, userId, workflowId, action, attributeContext, true);
-      }
-      if (isOwner && action === "view") {
-        return evaluatePolicies(db, userId, workflowId, action, attributeContext, true);
+      // Check tenant membership
+      if (workflow.tenantId && workflow.tenantId !== roles.tenantId) {
+        return false; // Cross-tenant access denied
       }
 
-      // Workspace membership logic
+      // Owner logic - user created this workflow
+      const isOwner = workflow.userId === userId;
+      if (isOwner && !workflow.isAssigned) {
+        // User owns this workflow (created it themselves)
+        if (roles.tenantRole === "org_editor") return true;
+        if (action === "view" || action === "execute") return true;
+      }
+
+      // Assigned workflow logic - admin assigned this to user
+      if (workflow.isAssigned) {
+        // Assigned workflows are read-only for non-admins
+        if (action === "view" || action === "execute") {
+          // Check if user has permission to view assigned workflow
+          return isOwner; // Only assigned user can view/execute
+        }
+        return false; // Can't edit/delete assigned workflows
+      }
+
+      // Org editor can edit workflows in their tenant
+      if (roles.tenantRole === "org_editor" && (action === "view" || action === "execute" || action === "edit")) {
+        return isOwner; // Only their own workflows
+      }
+
+      // Org viewer can only view and execute
+      if (roles.tenantRole === "org_viewer" && (action === "view" || action === "execute")) {
+        return isOwner;
+      }
+
+      // Workspace membership logic (legacy)
       if (workflow.workspaceId) {
         const [member] = await db
           .select({ role: workspaceMembers.role })
@@ -124,7 +199,7 @@ export function createIAMService(db: Database): IAMService {
         }
       }
 
-      // Explicit share permissions
+      // Explicit share permissions (legacy)
       const [permission] = await db
         .select({
           role: workflowPermissions.role,
@@ -153,8 +228,10 @@ export function createIAMService(db: Database): IAMService {
         const actionAllowedByAttribute = allowedActions ? allowedActions.includes(action) : true;
 
         if (allowedByShare && actionAllowedByAttribute) {
-          attributeContext.share = attributes;
-          return evaluatePolicies(db, userId, workflowId, action, attributeContext, true);
+          return evaluatePolicies(db, userId, workflowId, action, {
+            ...attributeContext,
+            share: attributes,
+          }, true);
         }
       }
 

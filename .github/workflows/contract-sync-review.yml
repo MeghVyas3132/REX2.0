@@ -1,0 +1,37 @@
+name: Contract Sync Review
+
+on:
+  schedule:
+    - cron: "0 9 * * 1"
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - "docs/API_ENDPOINTS.md"
+      - "docs/PAYLOAD_REGISTRY.md"
+      - "docs/FEATURE_LIST.md"
+      - "apps/backend/**"
+      - "packages/types/**"
+      - "apps/frontend/src/features/**"
+
+jobs:
+  report:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Generate contract sync report
+        run: node scripts/contract-sync-report.mjs
+
+      - name: Upload report artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: contract-sync-report
+          path: artifacts/contract-sync-report.json

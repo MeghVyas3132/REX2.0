@@ -1,0 +1,60 @@
+# Global fallback
+* @MeghVyas3132
+
+# 1) Platform team: shell/auth/api client/telemetry/RBAC primitives
+apps/frontend/src/app/layout.tsx @MeghVyas3132
+apps/frontend/src/app/providers.tsx @MeghVyas3132
+apps/frontend/src/components/app-shell/ @MeghVyas3132
+apps/frontend/src/components/navigation/ @MeghVyas3132
+apps/frontend/src/components/shared/ @MeghVyas3132
+apps/frontend/src/lib/api/ @MeghVyas3132
+apps/frontend/src/lib/auth/ @MeghVyas3132
+apps/frontend/src/lib/rbac/ @MeghVyas3132
+apps/frontend/src/lib/query/ @MeghVyas3132
+apps/frontend/src/lib/telemetry/ @MeghVyas3132
+apps/frontend/src/lib/validation/ @MeghVyas3132
+
+# 2) Core runtime team: workflows/executions/API keys
+apps/frontend/src/app/(app)/workflows/ @MeghVyas3132
+apps/frontend/src/app/(app)/executions/ @MeghVyas3132
+apps/frontend/src/app/(app)/tools/api-keys/ @MeghVyas3132
+apps/frontend/src/components/workflows/ @MeghVyas3132
+apps/frontend/src/components/executions/ @MeghVyas3132
+apps/frontend/src/features/workflows/ @MeghVyas3132
+apps/frontend/src/features/executions/ @MeghVyas3132
+apps/frontend/src/features/tools/ @MeghVyas3132
+packages/engine/ @MeghVyas3132
+apps/backend/src/routes/ @MeghVyas3132
+apps/backend/src/services/ @MeghVyas3132
+
+# 3) Knowledge/template team: knowledge/templates/publications/tools
+apps/frontend/src/app/(app)/knowledge/ @MeghVyas3132
+apps/frontend/src/app/(app)/templates/ @MeghVyas3132
+apps/frontend/src/app/(app)/publications/ @MeghVyas3132
+apps/frontend/src/app/(app)/tools/chat/ @MeghVyas3132
+apps/frontend/src/app/(app)/tools/file-parse/ @MeghVyas3132
+apps/frontend/src/components/knowledge/ @MeghVyas3132
+apps/frontend/src/components/templates/ @MeghVyas3132
+apps/frontend/src/components/tools/ @MeghVyas3132
+apps/frontend/src/features/knowledge/ @MeghVyas3132
+apps/frontend/src/features/templates/ @MeghVyas3132
+apps/frontend/src/features/publications/ @MeghVyas3132
+
+# 4) Governance/compliance team: governance/compliance/tenant/admin
+apps/frontend/src/app/(app)/governance/ @MeghVyas3132
+apps/frontend/src/app/(app)/compliance/ @MeghVyas3132
+apps/frontend/src/app/(app)/tenant/ @MeghVyas3132
+apps/frontend/src/app/(admin)/ @MeghVyas3132
+apps/frontend/src/components/governance/ @MeghVyas3132
+apps/frontend/src/components/compliance/ @MeghVyas3132
+apps/frontend/src/components/tenant/ @MeghVyas3132
+apps/frontend/src/components/admin/ @MeghVyas3132
+apps/frontend/src/features/governance/ @MeghVyas3132
+apps/frontend/src/features/compliance/ @MeghVyas3132
+apps/frontend/src/features/tenant/ @MeghVyas3132
+apps/frontend/src/features/admin/ @MeghVyas3132
+
+# Shared API contract sync docs
+docs/API_ENDPOINTS.md @MeghVyas3132
+docs/PAYLOAD_REGISTRY.md @MeghVyas3132
+docs/FEATURE_LIST.md @MeghVyas3132

@@ -1,0 +1,65 @@
+name: Work Package Task
+description: Plan and track implementation work in one of the section 11 work packages.
+title: "[Work Package] "
+labels:
+  - work-package
+body:
+  - type: dropdown
+    id: package
+    attributes:
+      label: Work package
+      options:
+        - Platform
+        - Core runtime
+        - Knowledge/template
+        - Governance/compliance
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem statement
+      description: What user or system problem are we solving?
+    validations:
+      required: true
+
+  - type: textarea
+    id: scope
+    attributes:
+      label: Scope
+      description: Files, modules, and domains in scope.
+    validations:
+      required: true
+
+  - type: textarea
+    id: contracts
+    attributes:
+      label: API contract dependencies
+      description: Reference docs/API_ENDPOINTS.md, docs/PAYLOAD_REGISTRY.md, docs/FEATURE_LIST.md links used.
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: ready
+    attributes:
+      label: Definition of ready
+      options:
+        - label: Acceptance criteria are explicit
+          required: true
+        - label: Test strategy is explicit (unit/integration/e2e as applicable)
+          required: true
+        - label: Ownership and reviewers are assigned
+          required: true
+
+  - type: checkboxes
+    id: done
+    attributes:
+      label: Definition of done
+      options:
+        - label: `pnpm verify:e2e` passes
+          required: true
+        - label: Contract docs updated if needed
+          required: true
+        - label: Rollout/risk notes documented
+          required: true
