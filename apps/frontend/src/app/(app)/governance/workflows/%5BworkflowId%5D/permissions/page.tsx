@@ -13,15 +13,20 @@ export default function WorkflowPermissionsPage({ params }: { params: Promise<{ 
   if (workflowQuery.isError || !workflowQuery.data) return <div className="page-state">Failed to load workflow.</div>;
 
   return (
-    <section>
-      <h1>Workflow Permissions</h1>
-      <p>Workflow: {workflowQuery.data.name}</p>
+    <section className="detail-page-shell governance-permissions-shell">
+      <header className="detail-page-header">
+        <p className="detail-page-eyebrow">Governance</p>
+        <h1>Workflow Permissions</h1>
+        <p className="detail-page-subtitle">Workflow: {workflowQuery.data.name}</p>
+      </header>
 
-      <Card title="Current Access Model">
-        <p>Owner role: org_admin</p>
-        <p>Editor role: org_editor</p>
-        <p>Viewer role: org_viewer</p>
-        <p>Execution allowed for: org_admin, org_editor</p>
+      <Card className="detail-card" title="Current Access Model">
+        <div className="detail-kv-list">
+          <p className="detail-kv-item">Owner role: org_admin</p>
+          <p className="detail-kv-item">Editor role: org_editor</p>
+          <p className="detail-kv-item">Viewer role: org_viewer</p>
+          <p className="detail-kv-item">Execution allowed for: org_admin, org_editor</p>
+        </div>
       </Card>
     </section>
   );

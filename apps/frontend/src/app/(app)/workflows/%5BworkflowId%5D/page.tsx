@@ -29,11 +29,14 @@ export default function WorkflowDetailPage({ params }: { params: Promise<{ workf
   const workflow = workflowQuery.data;
 
   return (
-    <section>
-      <h1>{workflow.name}</h1>
-      <p>Workflow ID: {workflow.id}</p>
+    <section className="detail-page-shell workflow-detail-shell">
+      <header className="detail-page-header">
+        <p className="detail-page-eyebrow">Workflow Detail</p>
+        <h1>{workflow.name}</h1>
+        <p className="detail-page-subtitle">Workflow ID: {workflow.id}</p>
+      </header>
 
-      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 12 }}>
+      <div className="detail-page-actions workflow-detail-actions" style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 12 }}>
         <Button variant="secondary" onClick={() => router.push(`/workflows/${encodeURIComponent(workflow.id)}/editor`)}>
           Open Editor
         </Button>
@@ -50,17 +53,19 @@ export default function WorkflowDetailPage({ params }: { params: Promise<{ workf
         </PermissionGate>
       </div>
 
-      <div style={{ display: "grid", gap: 12 }}>
-        <Card title="Workflow Summary">
-          <p>Status: {workflow.status}</p>
-          <p>Version: {workflow.version}</p>
-          <p>Updated: {workflow.updatedAt}</p>
+      <div className="detail-card-grid" style={{ display: "grid", gap: 12 }}>
+        <Card className="detail-card" title="Workflow Summary">
+          <div className="detail-kv-list">
+            <p className="detail-kv-item">Status: {workflow.status}</p>
+            <p className="detail-kv-item">Version: {workflow.version}</p>
+            <p className="detail-kv-item">Updated: {workflow.updatedAt}</p>
+          </div>
         </Card>
 
-        <Card title="REX Scores">
-          {rexQuery.isLoading ? <p>Loading REX scores...</p> : null}
-          {rexQuery.isError ? <p>Unable to load REX scores.</p> : null}
-          {rexQuery.data ? <pre style={{ margin: 0 }}>{JSON.stringify(rexQuery.data, null, 2)}</pre> : null}
+        <Card className="detail-card" title="REX Scores">
+          {rexQuery.isLoading ? <p className="detail-inline-state">Loading REX scores...</p> : null}
+          {rexQuery.isError ? <p className="detail-inline-state detail-inline-state-error">Unable to load REX scores.</p> : null}
+          {rexQuery.data ? <pre className="detail-json-block" style={{ margin: 0 }}>{JSON.stringify(rexQuery.data, null, 2)}</pre> : null}
         </Card>
       </div>
     </section>

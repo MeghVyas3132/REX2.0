@@ -15,11 +15,12 @@ export type ActionGroup = {
 export type ActionButtonGroupProps = {
   actions: ActionGroup[];
   isLoading?: boolean;
+  className?: string;
 };
 
-export function ActionButtonGroup({ actions, isLoading = false }: ActionButtonGroupProps) {
+export function ActionButtonGroup({ actions, isLoading = false, className }: ActionButtonGroupProps) {
   return (
-    <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
+    <div className={className ? `action-button-group ${className}` : "action-button-group"} style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
       {actions.map((action, idx) => {
         const baseVariant = action.variant ?? "secondary";
         // Handle backward compatibility: map "ghost" variant to "secondary"
@@ -27,6 +28,7 @@ export function ActionButtonGroup({ actions, isLoading = false }: ActionButtonGr
         return (
           <Button
             key={idx}
+            className="action-button-group-item"
             variant={safeVariant}
             onClick={action.onClick}
             disabled={action.disabled || action.loading || isLoading}
@@ -58,6 +60,7 @@ export function PageHeaderWithActions({
 }: PageHeaderWithActionsProps) {
   return (
     <div
+      className="page-header-with-actions"
       style={{
         display: "flex",
         justifyContent: "space-between",
@@ -68,15 +71,15 @@ export function PageHeaderWithActions({
         borderBottom: "1px solid var(--border)",
       }}
     >
-      <div>
+      <div className="page-header-with-actions-heading">
         <h1 style={{ margin: "0 0 0.5rem 0" }}>{title}</h1>
         {subtitle && (
-          <p style={{ margin: "0", color: "var(--text-secondary)", fontSize: "0.875rem" }}>
+          <p className="page-header-with-actions-subtitle" style={{ margin: "0", color: "var(--text-secondary)", fontSize: "0.875rem" }}>
             {subtitle}
           </p>
         )}
       </div>
-      {actions.length > 0 && <ActionButtonGroup actions={actions} isLoading={isLoading} />}
+      {actions.length > 0 && <ActionButtonGroup className="page-header-with-actions-buttons" actions={actions} isLoading={isLoading} />}
     </div>
   );
 }

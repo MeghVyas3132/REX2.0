@@ -29,10 +29,15 @@ export default function ActiveWorkflowsPage() {
   if (isError) return <div className="page-state">Failed to load active workflows.</div>;
 
   return (
-    <section>
-      <h1>Active Workflows</h1>
-      <p>Live execution activity across workflows.</p>
-      <DataTable columns={columns} data={data ?? []} />
+    <section className="detail-page-shell active-workflows-shell">
+      <header className="detail-page-header">
+        <p className="detail-page-eyebrow">Live Operations</p>
+        <h1>Active Workflows</h1>
+        <p className="detail-page-subtitle">Live execution activity across workflows.</p>
+      </header>
+      <div className="detail-table-wrap">
+        <DataTable columns={columns} data={data ?? []} />
+      </div>
     </section>
   );
 }

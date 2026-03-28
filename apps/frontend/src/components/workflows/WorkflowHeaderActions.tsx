@@ -54,8 +54,8 @@ export function WorkflowHeaderActions({
   if (actions.length === 0) return null;
 
   return (
-    <section className={className}>
-      <ActionButtonGroup actions={actions} isLoading={isLoading} />
+    <section className={className ? `workflow-header-actions ${className}` : "workflow-header-actions"}>
+      <ActionButtonGroup className="workflow-header-actions-group" actions={actions} isLoading={isLoading} />
     </section>
   );
 }

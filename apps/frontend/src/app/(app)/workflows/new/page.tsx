@@ -30,26 +30,39 @@ export default function NewWorkflowPage() {
 
   return (
     <RequireRole roles={["super_admin", "org_admin", "org_editor"]}>
-      <section>
-        <h1>Create Workflow</h1>
-        <p>Create a new workflow draft and continue in the editor.</p>
+      <section className="workflow-create-shell">
+        <header className="workflow-create-header">
+          <p className="workflow-create-eyebrow">Workflow Authoring</p>
+          <h1>Create Workflow</h1>
+          <p>Create a new workflow draft and continue in the editor.</p>
+        </header>
 
-        <Card title="Workflow Details">
-          <form onSubmit={handleSubmit} style={{ display: "grid", gap: 12 }}>
-            <Input
-              value={name}
-              onChange={(event) => setName(event.target.value)}
-              placeholder="Workflow name"
-              required
-            />
-            <Textarea
-              value={description}
-              onChange={(event) => setDescription(event.target.value)}
-              placeholder="Workflow description"
-            />
-            <Button type="submit" loading={createMutation.isPending}>
-              Create Workflow
-            </Button>
+        <Card className="workflow-create-card" title="Workflow Details">
+          <form className="workflow-create-form" onSubmit={handleSubmit} style={{ display: "grid", gap: 12 }}>
+            <label className="workflow-create-field">
+              <span className="workflow-create-label">Workflow Name</span>
+              <Input
+                className="workflow-create-input"
+                value={name}
+                onChange={(event) => setName(event.target.value)}
+                placeholder="Workflow name"
+                required
+              />
+            </label>
+            <label className="workflow-create-field">
+              <span className="workflow-create-label">Description</span>
+              <Textarea
+                className="workflow-create-textarea"
+                value={description}
+                onChange={(event) => setDescription(event.target.value)}
+                placeholder="Workflow description"
+              />
+            </label>
+            <div className="workflow-create-actions">
+              <Button className="workflow-create-submit" type="submit" loading={createMutation.isPending}>
+                Create Workflow
+              </Button>
+            </div>
           </form>
         </Card>
       </section>

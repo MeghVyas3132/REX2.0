@@ -56,6 +56,7 @@ export default function TemplatesPage() {
       subtitle="Browse and instantiate reusable workflow templates"
       filters={
         <FilterBar
+          className="templates-filters"
           onReset={search ? handleResetFilters : undefined}
           showReset={Boolean(search)}
         >

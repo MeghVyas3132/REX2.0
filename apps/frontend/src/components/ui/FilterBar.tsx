@@ -7,11 +7,13 @@ export type FilterBarProps = {
   children: ReactNode;
   onReset?: () => void;
   showReset?: boolean;
+  className?: string;
 };
 
-export function FilterBar({ children, onReset, showReset = true }: FilterBarProps) {
+export function FilterBar({ children, onReset, showReset = true, className }: FilterBarProps) {
   return (
     <div
+      className={className ? `filter-bar ${className}` : "filter-bar"}
       style={{
         display: "flex",
         gap: "1rem",
@@ -24,7 +26,7 @@ export function FilterBar({ children, onReset, showReset = true }: FilterBarProp
     >
       {children}
       {showReset && onReset && (
-        <Button variant="secondary" onClick={onReset} style={{ marginLeft: "auto" }}>
+        <Button className="filter-bar-reset" variant="secondary" onClick={onReset} style={{ marginLeft: "auto" }}>
           Reset Filters
         </Button>
       )}

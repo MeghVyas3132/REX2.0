@@ -20,12 +20,13 @@ export function DataTable<TData>({ columns, data }: DataTableProps<TData>) {
   });
 
   return (
-    <table className="card" style={{ width: "100%", borderCollapse: "collapse" }}>
-      <thead>
+    <div className="data-table-shell card">
+      <table className="data-table" style={{ width: "100%", borderCollapse: "collapse" }}>
+      <thead className="data-table-head">
         {table.getHeaderGroups().map((headerGroup) => (
           <tr key={headerGroup.id}>
             {headerGroup.headers.map((header) => (
-              <th key={header.id} style={{ textAlign: "left", padding: "8px" }}>
+              <th className="data-table-header-cell" key={header.id} style={{ textAlign: "left", padding: "8px" }}>
                 {header.isPlaceholder
                   ? null
                   : flexRender(header.column.columnDef.header, header.getContext())}
@@ -34,17 +35,18 @@ export function DataTable<TData>({ columns, data }: DataTableProps<TData>) {
           </tr>
         ))}
       </thead>
-      <tbody>
+      <tbody className="data-table-body">
         {table.getRowModel().rows.map((row) => (
-          <tr key={row.id}>
+          <tr className="data-table-row" key={row.id}>
             {row.getVisibleCells().map((cell) => (
-              <td key={cell.id} style={{ padding: "8px", borderTop: "1px solid var(--border)" }}>
+              <td className="data-table-cell" key={cell.id} style={{ padding: "8px", borderTop: "1px solid var(--border)" }}>
                 {flexRender(cell.column.columnDef.cell, cell.getContext())}
               </td>
             ))}
           </tr>
         ))}
       </tbody>
-    </table>
+      </table>
+    </div>
   );
 }

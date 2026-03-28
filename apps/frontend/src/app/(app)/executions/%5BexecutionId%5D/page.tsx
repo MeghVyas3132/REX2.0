@@ -31,18 +31,28 @@ export default function ExecutionDetailPage({ params }: { params: Promise<{ exec
   const progress = execution.stepsTotal > 0 ? Math.round((execution.stepsCompleted / execution.stepsTotal) * 100) : 0;
 
   return (
-    <section>
-      <h1>Execution {execution.id}</h1>
-      <p>Workflow: {execution.workflowId}</p>
+    <section className="detail-page-shell execution-detail-shell">
+      <header className="detail-page-header">
+        <p className="detail-page-eyebrow">Execution Detail</p>
+        <h1>Execution {execution.id}</h1>
+        <p className="detail-page-subtitle">Workflow: {execution.workflowId}</p>
+      </header>
 
-      <Card title="Execution Status">
-        <p>Status: {execution.status}</p>
-        <p>Progress: {execution.stepsCompleted}/{execution.stepsTotal} ({progress}%)</p>
-        <p>Started: {execution.startedAt}</p>
-        <p>Completed: {execution.completedAt ?? "-"}</p>
+      <Card className="detail-card" title="Execution Status">
+        <div className="detail-kv-list">
+          <p className="detail-kv-item">Status: {execution.status}</p>
+          <p className="detail-kv-item">Progress: {execution.stepsCompleted}/{execution.stepsTotal} ({progress}%)</p>
+          <p className="detail-kv-item">Started: {execution.startedAt}</p>
+          <p className="detail-kv-item">Completed: {execution.completedAt ?? "-"}</p>
+        </div>
+
+        <div className="execution-progress" role="presentation" aria-hidden="true">
+          <div className="execution-progress-fill" style={{ width: `${progress}%` }} />
+        </div>
 
         <PermissionGate user={user} requireEdit fallback={null}>
           <Button
+            className="execution-stop-button"
             variant="danger"
             onClick={() => {
               telemetry.trackAction("execution_stop_click", "execution", execution.id);

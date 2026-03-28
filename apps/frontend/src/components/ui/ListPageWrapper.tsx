@@ -45,9 +45,10 @@ export function ListPageWrapper({
   showPaginationTop = false,
 }: ListPageWrapperProps) {
   return (
-    <div style={{ padding: "1rem" }}>
+    <div className="list-page-shell" style={{ padding: "1rem" }}>
       {/* Header */}
       <div
+        className="list-page-header"
         style={{
           display: "flex",
           justifyContent: "space-between",
@@ -58,19 +59,19 @@ export function ListPageWrapper({
           paddingBottom: "1rem",
         }}
       >
-        <div>
+        <div className="list-page-heading">
           <h1 style={{ margin: "0 0 0.5rem 0" }}>{title}</h1>
           {subtitle && (
-            <p style={{ margin: "0", color: "var(--text-secondary)", fontSize: "0.875rem" }}>
+            <p className="list-page-subtitle" style={{ margin: "0", color: "var(--text-secondary)", fontSize: "0.875rem" }}>
               {subtitle}
             </p>
           )}
         </div>
-        {headerActions && <div>{headerActions}</div>}
+        {headerActions && <div className="list-page-actions">{headerActions}</div>}
       </div>
 
       {/* Filters */}
-      {filters && <div style={{ marginBottom: "1rem" }}>{filters}</div>}
+      {filters && <div className="list-page-filters" style={{ marginBottom: "1rem" }}>{filters}</div>}
 
       {/* Loading state */}
       {isLoading && (
@@ -112,15 +113,19 @@ export function ListPageWrapper({
 
       {/* Top pagination */}
       {showPaginationTop && !isEmpty && !isError && !isLoading && onPageChange && total > pageSize && (
-        <Pagination current={current} total={total} pageSize={pageSize} onPageChange={onPageChange} />
+        <div className="list-page-pagination list-page-pagination-top">
+          <Pagination current={current} total={total} pageSize={pageSize} onPageChange={onPageChange} />
+        </div>
       )}
 
       {/* Content */}
-      {!isLoading && !isError && !isEmpty && <div>{children}</div>}
+      {!isLoading && !isError && !isEmpty && <div className="list-page-content">{children}</div>}
 
       {/* Bottom pagination */}
       {!isLoading && !isError && !isEmpty && onPageChange && total > pageSize && (
-        <Pagination current={current} total={total} pageSize={pageSize} onPageChange={onPageChange} />
+        <div className="list-page-pagination list-page-pagination-bottom">
+          <Pagination current={current} total={total} pageSize={pageSize} onPageChange={onPageChange} />
+        </div>
       )}
     </div>
   );

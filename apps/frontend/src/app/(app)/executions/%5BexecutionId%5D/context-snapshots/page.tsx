@@ -13,14 +13,19 @@ export default function ContextSnapshotsPage({ params }: { params: Promise<{ exe
   if (query.isError || !query.data) return <div className="page-state">Failed to load context snapshots.</div>;
 
   return (
-    <section>
-      <h1>Context Snapshots</h1>
-      <p>Execution ID: {executionId}</p>
+    <section className="detail-page-shell execution-subdetail-shell">
+      <header className="detail-page-header">
+        <p className="detail-page-eyebrow">Execution Telemetry</p>
+        <h1>Context Snapshots</h1>
+        <p className="detail-page-subtitle">Execution ID: {executionId}</p>
+      </header>
 
-      <Card title="Current Snapshot">
-        <p>Status: {query.data.status}</p>
-        <p>Started: {query.data.startedAt}</p>
-        <p>Completed: {query.data.completedAt ?? "-"}</p>
+      <Card className="detail-card" title="Current Snapshot">
+        <div className="detail-kv-list">
+          <p className="detail-kv-item">Status: {query.data.status}</p>
+          <p className="detail-kv-item">Started: {query.data.startedAt}</p>
+          <p className="detail-kv-item">Completed: {query.data.completedAt ?? "-"}</p>
+        </div>
       </Card>
     </section>
   );

@@ -31,10 +31,15 @@ export default function WorkflowExecutionsPage({ params }: { params: Promise<{ w
   if (isError) return <div className="page-state">Failed to load workflow executions.</div>;
 
   return (
-    <section>
-      <h1>Workflow Executions</h1>
-      <p>Workflow: {workflowId}</p>
-      <DataTable columns={columns} data={data ?? []} />
+    <section className="detail-page-shell workflow-executions-shell">
+      <header className="detail-page-header">
+        <p className="detail-page-eyebrow">Workflow Activity</p>
+        <h1>Workflow Executions</h1>
+        <p className="detail-page-subtitle">Workflow: {workflowId}</p>
+      </header>
+      <div className="detail-table-wrap">
+        <DataTable columns={columns} data={data ?? []} />
+      </div>
     </section>
   );
 }

@@ -23,6 +23,7 @@ export function WorkflowFilters({
   onStatusChange,
   onReset,
   isLoading = false,
+  className,
 }: WorkflowFiltersProps &  { className?: string }) {
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("");
@@ -54,26 +55,31 @@ export function WorkflowFilters({
 
   return (
     <FilterBar
+      className={className ? `workflow-filters ${className}` : "workflow-filters"}
       onReset={hasFilters ? handleReset : undefined}
       showReset={hasFilters}
     >
-      <SearchFilter
-        placeholder="Search workflows by name..."
-        onSearch={handleSearch}
-        isLoading={isLoading}
-      />
-      <Select
-        onChange={handleStatusChange}
-        value={status}
-        disabled={isLoading}
-        options={[
-          { value: "", label: "All Status" },
-          { value: "draft", label: "Draft" },
-          { value: "active", label: "Active" },
-          { value: "archived", label: "Archived" },
-        ]}
-        style={{ minWidth: "150px" }}
-      />
+      <div className="workflow-filters-search">
+        <SearchFilter
+          placeholder="Search workflows by name..."
+          onSearch={handleSearch}
+          isLoading={isLoading}
+        />
+      </div>
+      <div className="workflow-filters-status">
+        <Select
+          onChange={handleStatusChange}
+          value={status}
+          disabled={isLoading}
+          options={[
+            { value: "", label: "All Status" },
+            { value: "draft", label: "Draft" },
+            { value: "active", label: "Active" },
+            { value: "archived", label: "Archived" },
+          ]}
+          style={{ minWidth: "150px" }}
+        />
+      </div>
     </FilterBar>
   );
 }

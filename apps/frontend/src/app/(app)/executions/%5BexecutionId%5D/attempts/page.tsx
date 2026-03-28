@@ -15,14 +15,19 @@ export default function AttemptsPage({ params }: { params: Promise<{ executionId
   const remaining = Math.max(0, query.data.stepsTotal - query.data.stepsCompleted);
 
   return (
-    <section>
-      <h1>Execution Attempts</h1>
-      <p>Execution ID: {executionId}</p>
+    <section className="detail-page-shell execution-subdetail-shell">
+      <header className="detail-page-header">
+        <p className="detail-page-eyebrow">Execution Telemetry</p>
+        <h1>Execution Attempts</h1>
+        <p className="detail-page-subtitle">Execution ID: {executionId}</p>
+      </header>
 
-      <Card title="Attempt Summary">
-        <p>Completed steps: {query.data.stepsCompleted}</p>
-        <p>Remaining steps: {remaining}</p>
-        <p>Status: {query.data.status}</p>
+      <Card className="detail-card" title="Attempt Summary">
+        <div className="detail-kv-list">
+          <p className="detail-kv-item">Completed steps: {query.data.stepsCompleted}</p>
+          <p className="detail-kv-item">Remaining steps: {remaining}</p>
+          <p className="detail-kv-item">Status: {query.data.status}</p>
+        </div>
       </Card>
     </section>
   );

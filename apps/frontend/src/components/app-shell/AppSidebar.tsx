@@ -8,11 +8,14 @@ export function AppSidebar() {
   const { sidebarCollapsed, toggleSidebar } = useUiStore();
 
   return (
-    <aside className="sidebar">
-      <Button variant="secondary" onClick={toggleSidebar}>
-        {sidebarCollapsed ? "Expand" : "Collapse"}
-      </Button>
-      {!sidebarCollapsed ? <AppNav /> : null}
+    <aside className="sidebar shell-sidebar">
+      <div className="shell-sidebar-head">
+        <p className="shell-sidebar-eyebrow">Workspace</p>
+        <Button variant="secondary" className="shell-sidebar-toggle" onClick={toggleSidebar}>
+          {sidebarCollapsed ? "Expand" : "Collapse"}
+        </Button>
+      </div>
+      <div className="shell-sidebar-body">{!sidebarCollapsed ? <AppNav /> : null}</div>
     </aside>
   );
 }

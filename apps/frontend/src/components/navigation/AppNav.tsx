@@ -57,19 +57,19 @@ export function AppNav() {
   const visibleSections = getVisibleNavSections(role);
 
   return (
-    <nav aria-label="Primary navigation">
-      <h3>REX</h3>
+    <nav className="shell-nav" aria-label="Primary navigation">
+      <h3 className="shell-nav-brand">REX</h3>
       {visibleSections.map((section) => (
         <div key={section.title} className="nav-section">
           <p className="nav-section-title">{section.title}</p>
-          <ul>
+          <ul className="shell-nav-list">
             {section.links.map((link) => {
               const isActive = pathname === link.href || pathname.startsWith(`${link.href}/`);
 
               return (
-                <li key={link.href}>
+                <li key={link.href} className="shell-nav-item">
                   <Link
-                    className={isActive ? "active-link" : ""}
+                    className={isActive ? "active-link shell-nav-link shell-nav-link-active" : "shell-nav-link"}
                     href={link.href}
                     aria-current={isActive ? "page" : undefined}
                   >
