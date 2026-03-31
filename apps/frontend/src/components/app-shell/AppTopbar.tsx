@@ -7,13 +7,15 @@ import { Button } from "@/components/ui/Button";
 
 export function AppTopbar() {
   const { user, signOut } = useSession();
+  const title = "REX Workspace";
+  const eyebrow = "REX Platform";
 
   return (
     <header className="topbar shell-topbar">
       <div className="topbar-left">
         <div className="shell-topbar-title-wrap">
-          <p className="shell-topbar-eyebrow">REX Platform</p>
-          <h2>REX Control Plane</h2>
+          <p className="shell-topbar-eyebrow">{eyebrow}</p>
+          <h2>{title}</h2>
         </div>
         {user && <RoleBadge user={user} />}
       </div>

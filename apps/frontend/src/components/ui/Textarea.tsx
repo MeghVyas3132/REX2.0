@@ -1,4 +1,5 @@
 import React, { TextareaHTMLAttributes } from "react";
+import { cn } from "@/lib/utils/cn";
 
 type TextareaProps = TextareaHTMLAttributes<HTMLTextAreaElement> & {
   label?: string;
@@ -7,23 +8,13 @@ type TextareaProps = TextareaHTMLAttributes<HTMLTextAreaElement> & {
 
 export function Textarea({ label, error, className, ...props }: TextareaProps) {
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
-      {label && <label style={{ fontSize: "0.875rem", fontWeight: 500 }}>{label}</label>}
+    <div className="form-row">
+      {label && <label className="form-label">{label}</label>}
       <textarea
-        className={className}
-        style={{
-          width: "100%",
-          padding: "0.75rem",
-          border: error ? "1px solid var(--danger)" : "1px solid var(--border)",
-          borderRadius: "0.5rem",
-          fontFamily: "inherit",
-          fontSize: "0.875rem",
-          minHeight: "100px",
-          resize: "vertical",
-        }}
+        className={cn("textarea", error ? "input-error" : undefined, className)}
         {...props}
       />
-      {error && <span style={{ fontSize: "0.75rem", color: "var(--danger)" }}>{error}</span>}
+      {error && <span className="error-text">{error}</span>}
     </div>
   );
 }

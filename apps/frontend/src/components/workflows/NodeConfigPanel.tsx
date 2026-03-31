@@ -58,16 +58,16 @@ export function NodeConfigPanel({
 
   return (
     <Card title={`Configure: ${nodeType}`} className="mt-4">
-      <div style={{ display: "grid", gap: "16px" }}>
-        <div>
-          <label style={{ display: "block", fontSize: "13px", fontWeight: 600, marginBottom: "4px" }}>
+      <div className="node-config-grid">
+        <div className="form-row">
+          <label className="form-label">
             Node ID
           </label>
           <Input value={nodeId} disabled />
         </div>
 
         {Object.keys(properties).length === 0 && (
-          <div style={{ padding: "16px", textAlign: "center", color: "var(--text-muted)" }}>
+          <div className="node-config-empty">
             No configuration options available for this node.
           </div>
         )}
@@ -77,20 +77,13 @@ export function NodeConfigPanel({
           const value = config[key];
 
           return (
-            <div key={key}>
-              <label
-                style={{
-                  display: "block",
-                  fontSize: "13px",
-                  fontWeight: 600,
-                  marginBottom: "4px",
-                }}
-              >
+            <div key={key} className="form-row">
+              <label className="form-label">
                 {key}
-                {isRequired && <span style={{ color: "var(--error-text)" }}> *</span>}
+                {isRequired && <span className="error-text"> *</span>}
               </label>
               {prop.description && (
-                <p style={{ fontSize: "12px", color: "var(--text-muted)", marginBottom: "6px" }}>
+                <p className="node-config-description">
                   {prop.description}
                 </p>
               )}
@@ -99,13 +92,7 @@ export function NodeConfigPanel({
                 <select
                   value={String(value || prop.default || "")}
                   onChange={(e) => handleChange(key, e.target.value)}
-                  style={{
-                    width: "100%",
-                    padding: "8px 12px",
-                    borderRadius: "6px",
-                    border: "1px solid var(--border-default)",
-                    fontSize: "14px",
-                  }}
+                  className="select"
                 >
                   <option value="">Select...</option>
                   {prop.enum.map((option) => (
@@ -115,13 +102,13 @@ export function NodeConfigPanel({
                   ))}
                 </select>
               ) : prop.type === "boolean" ? (
-                <label style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <label className="node-config-checkbox">
                   <input
                     type="checkbox"
                     checked={Boolean(value ?? prop.default ?? false)}
                     onChange={(e) => handleChange(key, e.target.checked)}
                   />
-                  <span style={{ fontSize: "14px" }}>Enable</span>
+                  <span>Enable</span>
                 </label>
               ) : prop.type === "number" || prop.type === "integer" ? (
                 <Input
@@ -155,7 +142,7 @@ export function NodeConfigPanel({
           );
         })}
 
-        <div style={{ display: "flex", gap: "8px", justifyContent: "flex-end", marginTop: "8px" }}>
+        <div className="node-config-actions">
           <Button variant="secondary" onClick={onClose}>
             Close
           </Button>

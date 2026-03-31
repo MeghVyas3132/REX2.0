@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { useSession } from "@/lib/auth/session-context";
 
@@ -89,7 +90,7 @@ export default function BusinessPage() {
   };
 
   return (
-    <main className="business-shell">
+    <main className="mode-bridge-shell business-shell">
       {showTip ? (
         <div className="mode-tip" role="status">
           <p>Business tip: pick any template and click <strong>Use Template</strong> to launch with minimal setup.</p>
@@ -99,16 +100,14 @@ export default function BusinessPage() {
         </div>
       ) : null}
 
-      <header className="business-header card">
-        <div>
-          <p className="mode-select-eyebrow">Rex Business</p>
-          <h1>Simplified Automation Dashboard</h1>
-          <p>
-            Choose a pre-built template and launch quickly with minimal setup.
-          </p>
-        </div>
+      <section className="mode-bridge-card business-hero-card">
+        <p className="mode-select-eyebrow">Rex Business</p>
+        <h1>Simplified Automation Dashboard</h1>
+        <p>
+          Choose a pre-built template and launch quickly with minimal setup.
+        </p>
 
-        <div className="business-header-actions">
+        <div className="mode-bridge-actions business-header-actions">
           <Link className="button button-secondary" href="/select-mode">
             Switch Mode
           </Link>
@@ -116,12 +115,12 @@ export default function BusinessPage() {
             Open Rex Studio
           </Link>
         </div>
-      </header>
+      </section>
 
-      <section className="business-grid" aria-label="Business templates">
+      <section className="mode-select-grid business-grid" aria-label="Business templates">
         {templates.map((template) => (
-          <article key={template.id} className="business-template-card card">
-            <p className="business-template-category">{template.category}</p>
+          <article key={template.id} className="mode-card business-template-card card">
+            <Badge className="business-template-category" variant="default">{template.category}</Badge>
             <h2>{template.title}</h2>
             <p>{template.description}</p>
             <Button variant="primary" onClick={() => handleUseTemplate(template.id)}>

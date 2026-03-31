@@ -1,29 +1,29 @@
 {
-  "generatedAt": "2026-03-26T15:44:33.462Z",
+  "generatedAt": "2026-03-31T18:45:43.721Z",
   "docs": [
     {
       "relativePath": "docs/API_ENDPOINTS.md",
       "ok": true,
-      "bytes": 7834,
+      "bytes": 8010,
       "nonEmptyLines": 159,
-      "modifiedAt": "2026-03-26T08:44:02.796Z",
-      "sha256": "92ae63b13e7bc04b698d9fd0ef62945e34c7f21050e0c63e5d6ff7e303a90429"
+      "modifiedAt": "2026-03-28T09:06:31.461Z",
+      "sha256": "caae45a827360aed0bfa0e0723c412430d34164f9a1e571782e41d3b49ab8753"
     },
     {
       "relativePath": "docs/PAYLOAD_REGISTRY.md",
       "ok": true,
-      "bytes": 4507,
+      "bytes": 4816,
       "nonEmptyLines": 281,
-      "modifiedAt": "2026-03-26T08:44:02.819Z",
-      "sha256": "194b9b3de7b44153f8ec8a53121bb5a85ab12f577d7adfe6270d37f3f7af4ed0"
+      "modifiedAt": "2026-03-28T09:06:31.474Z",
+      "sha256": "98f656340b73450bb9d1f2c31a729d850f5f21c618a2e44eb8bf89554fcd7257"
     },
     {
       "relativePath": "docs/FEATURE_LIST.md",
       "ok": true,
-      "bytes": 3443,
+      "bytes": 3531,
       "nonEmptyLines": 75,
-      "modifiedAt": "2026-03-26T08:44:02.796Z",
-      "sha256": "86b75bbc140640363d24eba5b52e1f4377b8f7e2b11703632fcdf7b56afdea62"
+      "modifiedAt": "2026-03-28T09:06:31.462Z",
+      "sha256": "d89adb79803ff5b6e1ed1680029e65998cee017ca04ba2a7ef6743d72450e4c7"
     }
   ]
 }

@@ -1,5 +1,19 @@
 import { useQuery } from "@tanstack/react-query";
-import type { Plugin } from "@rex/types";
+
+export type Plugin = {
+  id?: string;
+  slug: string;
+  name: string;
+  description?: string;
+  category: string;
+  version?: string;
+  icon?: string;
+  technicalLevel?: "basic" | "advanced" | string;
+  manifest?: Record<string, unknown>;
+  isPublic?: boolean;
+  isBuiltin?: boolean;
+  isActive?: boolean;
+};
 
 export function usePluginsQuery() {
   return useQuery({

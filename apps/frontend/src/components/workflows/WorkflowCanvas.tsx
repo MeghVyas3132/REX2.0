@@ -16,25 +16,18 @@ import {
   type ReactFlowInstance,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
-import type { Plugin } from "@rex/types";
+import type { Plugin } from "@/features/plugins/queries";
 
 // Custom node component for workflow nodes
 function WorkflowNode({ data }: { data: { label: string; type: string; config: Record<string, unknown>; icon?: string; description?: string } }) {
   return (
-    <div className="workflow-node" style={{
-      padding: "12px 16px",
-      borderRadius: "8px",
-      border: "2px solid #ddd",
-      background: "white",
-      minWidth: "180px",
-      boxShadow: "0 2px 8px rgba(0,0,0,0.1)"
-    }}>
-      <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "4px" }}>
-        {data.icon && <span style={{ fontSize: "18px" }}>{data.icon}</span>}
-        <strong style={{ fontSize: "14px" }}>{data.label || data.type}</strong>
+    <div className="workflow-canvas-node">
+      <div className="workflow-canvas-node-head">
+        {data.icon && <span className="workflow-canvas-node-icon">{data.icon}</span>}
+        <strong className="workflow-canvas-node-title">{data.label || data.type}</strong>
       </div>
       {data.description && (
-        <div style={{ fontSize: "11px", color: "#666", marginTop: "4px" }}>
+        <div className="workflow-canvas-node-description">
           {data.description}
         </div>
       )}
@@ -241,11 +234,12 @@ export function WorkflowCanvas({
   return (
     <div 
       ref={reactFlowWrapper}
-      style={{ width: "100%", height: "600px", border: "1px solid #ddd", borderRadius: "8px" }}
+      className="workflow-canvas-surface"
       onDragOver={onDragOver}
       onDrop={onDrop}
     >
       <ReactFlow
+        className="workflow-flow"
         nodes={nodes}
         edges={edges}
         onNodesChange={handleNodesChange}

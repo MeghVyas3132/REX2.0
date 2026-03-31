@@ -7,6 +7,7 @@ import { createQueryClient } from "@/lib/query/query-client";
 import { AuthProvider } from "@/lib/auth/session-context";
 import { SessionHydrator } from "@/lib/auth/session-hydrator";
 import { SessionExpiryHandler } from "@/lib/auth/session-expiry-handler";
+import { PageMotion } from "@/components/layout/PageMotion";
 
 export function Providers({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(() => createQueryClient());
@@ -16,7 +17,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
       <AuthProvider>
         <SessionHydrator />
         <SessionExpiryHandler />
-        {children}
+        <PageMotion>{children}</PageMotion>
         <Toaster position="top-right" richColors />
       </AuthProvider>
     </QueryClientProvider>

@@ -55,10 +55,11 @@ export function AppNav() {
   const { user } = useSession();
   const role = getAppRole(user);
   const visibleSections = getVisibleNavSections(role);
+  const brand = "REX";
 
   return (
     <nav className="shell-nav" aria-label="Primary navigation">
-      <h3 className="shell-nav-brand">REX</h3>
+      <h3 className="shell-nav-brand">{brand}</h3>
       {visibleSections.map((section) => (
         <div key={section.title} className="nav-section">
           <p className="nav-section-title">{section.title}</p>

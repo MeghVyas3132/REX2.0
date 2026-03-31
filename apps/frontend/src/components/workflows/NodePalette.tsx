@@ -3,9 +3,8 @@
 import { useState, useMemo } from "react";
 import { Input } from "@/components/ui/Input";
 import { Card } from "@/components/ui/Card";
-import { usePluginsQuery } from "@/features/plugins/queries";
+import { usePluginsQuery, type Plugin } from "@/features/plugins/queries";
 import { setDraggedPlugin } from "./WorkflowCanvas";
-import type { Plugin } from "@rex/types";
 
 type NodePaletteProps = {
   interfaceAccess?: "business" | "studio" | "both";

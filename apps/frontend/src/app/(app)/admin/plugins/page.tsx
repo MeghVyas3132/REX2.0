@@ -6,9 +6,8 @@ import { DataTable } from "@/components/ui/DataTable";
 import { ListPageWrapper } from "@/components/ui/ListPageWrapper";
 import { Button } from "@/components/ui/Button";
 import { RequireRole } from "@/lib/rbac/guards";
-import { usePluginsQuery } from "@/features/plugins/queries";
+import { usePluginsQuery, type Plugin } from "@/features/plugins/queries";
 import { PluginFormModal } from "@/components/admin/PluginFormModal";
-import type { Plugin } from "@rex/types";
 
 export default function AdminPluginsPage() {
   const [page, setPage] = useState(1);

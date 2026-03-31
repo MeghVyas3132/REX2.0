@@ -3,8 +3,7 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
-import { usePluginsQuery } from "@/features/plugins/queries";
-import type { Plugin } from "@rex/types";
+import { usePluginsQuery, type Plugin } from "@/features/plugins/queries";
 
 type TenantNodeAccessModalProps = {
   tenant: {

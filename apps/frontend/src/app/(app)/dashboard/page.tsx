@@ -23,11 +23,13 @@ const sampleSeries = [
 
 export default function DashboardPage() {
   return (
-    <section>
-      <h1>Dashboard</h1>
-      <p>Operational summary for workflows and execution activity.</p>
+    <section className="dashboard-page">
+      <header className="dashboard-page-header card">
+        <h1>Dashboard</h1>
+        <p>Operational summary for workflows and execution activity.</p>
+      </header>
 
-      <Card title="Execution Trend (sample baseline)">
+      <Card className="dashboard-trend-card" title="Execution Trend (sample baseline)">
         <div style={{ width: "100%", height: 260 }}>
           <ResponsiveContainer>
             <AreaChart data={sampleSeries}>

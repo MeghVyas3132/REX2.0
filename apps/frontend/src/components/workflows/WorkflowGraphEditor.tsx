@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useCallback } from "react";
+import { motion } from "framer-motion";
 import { Card } from "@/components/ui/Card";
 import { WorkflowCanvas } from "./WorkflowCanvas";
 import { NodeConfigPanel } from "./NodeConfigPanel";
@@ -66,19 +67,11 @@ export function WorkflowGraphEditor({
     <section className={className}>
       <Card title={readOnly ? "Workflow Viewer" : "Workflow Editor"}>
         {!readOnly && hasChanges && (
-          <div style={{ marginBottom: "12px", padding: "8px", background: "#fff3cd", borderRadius: "4px" }}>
+          <div className="workflow-unsaved-banner">
             <span>You have unsaved changes. </span>
             <button 
               onClick={handleSave}
-              style={{ 
-                marginLeft: "8px", 
-                padding: "4px 12px", 
-                background: "#007bff", 
-                color: "white", 
-                border: "none", 
-                borderRadius: "4px",
-                cursor: "pointer"
-              }}
+              className="workflow-unsaved-save"
             >
               Save Workflow
             </button>
@@ -95,14 +88,20 @@ export function WorkflowGraphEditor({
         />
 
         {selectedNode && !readOnly && (
-          <NodeConfigPanel
-            nodeId={selectedNode.id}
-            nodeType={selectedNode.type}
-            config={selectedNode.data}
-            manifest={selectedNode.data.manifest as any}
-            onSave={handleNodeConfigSave}
-            onClose={() => setSelectedNodeId(null)}
-          />
+          <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.32, ease: [0.22, 1, 0.36, 1] }}
+          >
+            <NodeConfigPanel
+              nodeId={selectedNode.id}
+              nodeType={selectedNode.type}
+              config={selectedNode.data}
+              manifest={selectedNode.data.manifest as any}
+              onSave={handleNodeConfigSave}
+              onClose={() => setSelectedNodeId(null)}
+            />
+          </motion.div>
         )}
       </Card>
     </section>
